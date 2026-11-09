@@ -75,17 +75,19 @@ function Invoke-SampleDownload {
         $payload = Join-Path $staging 'payload'
         [IO.Directory]::CreateDirectory($payload) | Out-Null
         Get-ChildItem -LiteralPath $source -Force | Copy-Item -Destination $payload -Recurse -Force -ErrorAction Stop
+        $metadataPath = Join-Path $payload 'upstream-source.json'
+        if (Test-Path -LiteralPath $metadataPath) { throw '원본에 upstream-source.json이 있어 출처 파일을 덮어쓰지 않고 중단합니다.' }
         $licensePresent = $false
-        foreach ($name in @('LICENSE', 'LICENSE.txt', 'LICENSE.md', 'NOTICE', 'NOTICE.txt')) {
-            $notice = Join-Path $checkout $name
-            if (Test-Path -LiteralPath $notice -PathType Leaf) {
-                Copy-Item -LiteralPath $notice -Destination (Join-Path $payload ("UPSTREAM-" + $name)) -ErrorAction Stop
-                if ($name.StartsWith('LICENSE')) { $licensePresent = $true }
-            }
+        $noticePattern = '^(LICENSE|LICENCE|NOTICE|COPYING|COPYRIGHT)([._-].*)?$'
+        foreach ($notice in Get-ChildItem -LiteralPath $checkout -Force -File | Where-Object Name -Match $noticePattern) {
+            $noticePath = Join-Path $payload ("UPSTREAM-" + $notice.Name)
+            if (Test-Path -LiteralPath $noticePath) { throw "원본 파일과 고지 보존 경로가 충돌합니다: $($notice.Name)" }
+            Copy-Item -LiteralPath $notice.FullName -Destination $noticePath -ErrorAction Stop
+            if ($notice.Name -match '^(LICENSE|LICENCE|COPYING)([._-].*)?$') { $licensePresent = $true }
         }
-        if (Get-ChildItem -LiteralPath $source -Force -File | Where-Object Name -Match '^LICENSE(\.|$)') { $licensePresent = $true }
+        if (Get-ChildItem -LiteralPath $source -Force -File | Where-Object Name -Match '^(LICENSE|LICENCE|COPYING)([._-].*)?$') { $licensePresent = $true }
         $metadata = [ordered]@{ repository = $Definition.Repository; commit = $Definition.Commit; subdirectory = $Definition.Subdirectory; licenseFileFound = $licensePresent }
-        $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'upstream-source.json') -Encoding utf8 -ErrorAction Stop
+        $metadata | ConvertTo-Json | Set-Content -LiteralPath $metadataPath -Encoding utf8 -ErrorAction Stop
         Invoke-DownloadGit @('init', '--quiet', $payload)
         $null = Assert-SafeDestination $targetPath $WorkshopRoot
         if (Test-Path -LiteralPath $targetPath) { [IO.Directory]::Delete($targetPath, $false) }

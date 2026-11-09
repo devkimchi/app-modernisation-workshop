@@ -91,6 +91,10 @@ done
 chmod +x "$UPSTREAM/asset-manager/mvnw"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$UPSTREAM/asset-manager/mvnw"
 printf 'Fixture license\n' > "$UPSTREAM/LICENSE"
+printf 'Fixture notice\n' > "$UPSTREAM/NOTICE.md"
+printf 'Fixture alternate license\n' > "$UPSTREAM/license-MIT.txt"
+printf 'Fixture copyright\n' > "$UPSTREAM/COPYRIGHT"
+printf '<project><properties><java.version>1.8</java.version></properties></project>\n' > "$UPSTREAM/asset-manager/pom.xml"
 git init --quiet "$UPSTREAM"
 git -C "$UPSTREAM" config core.autocrlf false
 git -C "$UPSTREAM" add .
@@ -105,9 +109,29 @@ assert 'executable wrapper' test -x "$TARGET/mvnw"
 assert 'hidden files preserved' test -f "$TARGET/.gitignore"
 assert 'license preserved' test -f "$TARGET/UPSTREAM-LICENSE"
 assert 'metadata commit' grep -q "$COMMIT" "$TARGET/upstream-source.json"
+assert 'metadata repository' grep -Fq "\"repository\": \"$UPSTREAM\"" "$TARGET/upstream-source.json"
+assert 'metadata subdirectory' grep -Fq '"subdirectory": "asset-manager"' "$TARGET/upstream-source.json"
+assert 'license metadata' grep -Fq '"licenseFileFound": true' "$TARGET/upstream-source.json"
+for name in LICENSE NOTICE.md license-MIT.txt COPYRIGHT; do
+    assert "notice bytes preserved: $name" cmp "$UPSTREAM/$name" "$TARGET/UPSTREAM-$name"
+done
+for name in pom.xml mvnw .gitignore .mvn/wrapper/maven-wrapper.properties web/test worker/test; do
+    assert "source bytes unchanged: $name" cmp "$UPSTREAM/asset-manager/$name" "$TARGET/$name"
+done
 assert 'independent Git directory' test -d "$TARGET/.git"
 assert 'new Git repository has no origin' test -z "$(git -C "$TARGET" remote)"
 if safe_destination "$TARGET" "$ROOT" >/dev/null 2>&1; then exit 1; else PASSED=$((PASSED + 1)); fi
+for name in upstream-source.json UPSTREAM-NOTICE.md; do
+    printf 'preserve upstream content\n' > "$UPSTREAM/asset-manager/$name"
+    git -C "$UPSTREAM" add .
+    git -C "$UPSTREAM" -c user.name=Fixture -c user.email=fixture@example.invalid commit --quiet -m $'Fixture collision\n\nCo-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>'
+    collision_commit=$(git -C "$UPSTREAM" rev-parse HEAD)
+    if bash -c 'source "$1/scripts/download-sample.sh"; download_sample "$2" "$3" "$4" asset-manager java "$1"' _ "$ROOT" "$TEMPORARY/$name" "$UPSTREAM" "$collision_commit"; then
+        printf 'FAILED: source collision accepted: %s\n' "$name" >&2; exit 1
+    else PASSED=$((PASSED + 1)); fi
+    assert "collision not published: $name" test ! -e "$TEMPORARY/$name"
+    rm -- "$UPSTREAM/asset-manager/$name"
+done
 
 # Failures run in a separate shell so Bash conditional calls cannot disable errexit.
 if bash -c 'source "$1/scripts/download-sample.sh"; download_sample "$2" "$3" "$4" asset-manager java "$1"' _ "$ROOT" "$TEMPORARY/failed" "$UPSTREAM" 0000000000000000000000000000000000000000; then

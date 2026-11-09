@@ -192,6 +192,10 @@ try {
         Set-Content -LiteralPath (Join-Path $app $name) -Value "fixture $name"
     }
     Set-Content -LiteralPath (Join-Path $fixture 'LICENSE') 'Fixture license, not a real sample license'
+    Set-Content -LiteralPath (Join-Path $fixture 'NOTICE.md') 'Fixture notice'
+    Set-Content -LiteralPath (Join-Path $fixture 'license-MIT.txt') 'Fixture alternate license'
+    Set-Content -LiteralPath (Join-Path $fixture 'COPYRIGHT') 'Fixture copyright'
+    Set-Content -LiteralPath (Join-Path $app 'ContosoUniversity.csproj') '<Project><PropertyGroup><TargetFrameworkVersion>v4.8</TargetFrameworkVersion></PropertyGroup></Project>'
     & git init --quiet $fixture
     & git -C $fixture config core.autocrlf false
     & git -C $fixture add .
@@ -206,6 +210,14 @@ try {
     Assert-True (Test-Path (Join-Path $download 'UPSTREAM-LICENSE')) 'license preserved'
     $metadata = Get-Content (Join-Path $download 'upstream-source.json') -Raw | ConvertFrom-Json
     Assert-True ($metadata.commit -eq $commit) 'pinned provenance'
+    Assert-True ($metadata.repository -eq $fixture -and $metadata.subdirectory -eq 'ContosoUniversity') 'repository and subdirectory provenance'
+    Assert-True $metadata.licenseFileFound 'license metadata'
+    foreach ($name in @('LICENSE', 'NOTICE.md', 'license-MIT.txt', 'COPYRIGHT')) {
+        Assert-True ((Get-FileHash (Join-Path $fixture $name)).Hash -eq (Get-FileHash (Join-Path $download "UPSTREAM-$name")).Hash) "notice bytes preserved: $name"
+    }
+    foreach ($file in Get-ChildItem -LiteralPath $app -Force -File) {
+        Assert-True ((Get-FileHash $file.FullName).Hash -eq (Get-FileHash (Join-Path $download $file.Name)).Hash) "source bytes unchanged: $($file.Name)"
+    }
     $gitRoot = (& git -C $download rev-parse --show-toplevel).Trim()
     Assert-True ([IO.Path]::GetFullPath($gitRoot) -eq $download) 'independent repository'
     Assert-Throws { Invoke-SampleDownload $download $definition $root } 'repeat refuses overwrite'
@@ -213,6 +225,16 @@ try {
     [IO.Directory]::CreateDirectory($emptyTarget) | Out-Null
     Invoke-SampleDownload $emptyTarget $definition $root
     Assert-True (Test-Path (Join-Path $emptyTarget 'ContosoUniversity.sln')) 'existing empty destination'
+    foreach ($collisionName in @('upstream-source.json', 'UPSTREAM-NOTICE.md')) {
+        Set-Content -LiteralPath (Join-Path $app $collisionName) 'preserve upstream content'
+        & git -C $fixture add .
+        & git -C $fixture -c user.name=Fixture -c user.email=fixture@example.invalid commit --quiet -m "Fixture collision`n`nCo-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>"
+        $definition.Commit = (& git -C $fixture rev-parse HEAD).Trim()
+        $collisionTarget = Join-Path $temporary $collisionName
+        Assert-Throws { Invoke-SampleDownload $collisionTarget $definition $root } "reject source collision: $collisionName"
+        Assert-True (-not (Test-Path $collisionTarget)) "collision not published: $collisionName"
+        Remove-Item -LiteralPath (Join-Path $app $collisionName)
+    }
     $definition.Commit = '0000000000000000000000000000000000000000'
     $failed = Join-Path $temporary 'failed'
     Assert-Throws { Invoke-SampleDownload $failed $definition $root } 'bad commit fails'

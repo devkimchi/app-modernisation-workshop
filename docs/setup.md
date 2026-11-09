@@ -185,6 +185,8 @@ bash scripts/download-sample.sh --track java --destination "$HOME/workshops/asse
 
 샘플 출처/SHA는 `upstream-source.json`, 앱 루트에는 자체 `.git`이 생깁니다. 커밋, 전역 Git 사용자 설정, GitHub 원격 저장소는 만들지 않습니다. 다운로드만으로 앱 동작 확인이 끝난 것은 아닙니다.
 
+원본 코드와 대상 프레임워크는 수정하지 않습니다. 원본 루트의 `LICENSE`/`LICENCE`, `NOTICE`, `COPYING`, `COPYRIGHT` 파일은 확장자나 접미사가 있어도 원래 파일 이름 앞에 `UPSTREAM-`을 붙여 내용 그대로 보존합니다. 원본에 `upstream-source.json` 또는 보존할 고지와 같은 이름의 파일이 이미 있으면 덮어쓰지 않고 다운로드를 중단합니다.
+
 ## 완료 기준과 다음 단계
 
 필수 자동 검사에 실패가 없고 수동 항목을 확인했으며, `java\pom.xml` 또는 `dotnet\ContosoUniversity.sln`이 존재해야 합니다. 기본 다운로드 폴더는 워크샵 `.gitignore`에서 제외됩니다. 별도 경로를 선택했다면 앱이 다른 저장소에 실수로 포함되지 않는지도 확인하세요.

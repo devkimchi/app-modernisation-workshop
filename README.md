@@ -2,8 +2,6 @@
 
 Java 8 또는 .NET Framework 4.8 앱 하나를 선택해 로컬에서 실행하고, GitHub Copilot app의 **Modernization 플러그인**으로 현대화한 뒤 **Azure Developer CLI(`azd`)로 Azure Container Apps(ACA)에 배포** 하는 한국어 핸즈온 워크샵입니다.
 
-약 2시간 세션을 목표로 하지만 개발 도구 설치, 계정 승인, 모델 응답과 Azure 리소스 생성 시간을 포함한 완주를 보장하지는 않습니다. 설치와 계정 준비는 행사 전에 끝내고, 행사에서는 **사전 점검 스크립트 → 다운로드 스크립트 → 선택한 트랙의 실습 1** 순서를 지킵니다. 막힌 단계를 건너뛰어 배포 성공으로 처리하지 않습니다.
-
 ## 먼저 할 일
 
 참가자에게 다음이 필요합니다.
@@ -62,7 +60,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 | [Java 샘플](https://github.com/Azure-Samples/java-migration-copilot-samples/tree/317d3bbfd61fb1e402bea61f90e385bec12f2070/asset-manager) | `317d3bbfd61fb1e402bea61f90e385bec12f2070` | `asset-manager` 내용 |
 | [.NET 샘플](https://github.com/Azure-Samples/dotnet-migration-copilot-samples/tree/7c1bf47b7e2627fe5a1c764716638815d35e0282/ContosoUniversity) | `7c1bf47b7e2627fe5a1c764716638815d35e0282` | `ContosoUniversity` 내용 |
 
-다운로드는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 남깁니다. 원본 루트의 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다. Java 원본은 MIT 라이선스입니다. .NET 고정 원본에서는 라이선스 파일을 찾지 못했으므로 재배포 권한을 가정하지 않습니다.
+다운로드는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 남깁니다. 원본 루트의 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다.
 
 준비 스크립트 회귀 검사는 외부 패키지 없이 다음과 같이 실행합니다. 실제 계정이나 OS 기능을 바꾸지 않는 fixture/mock 검사이며, macOS/WSL2/Podman 실기기 및 전체 앱 현대화와 Azure 배포를 대신하지 않습니다.
 

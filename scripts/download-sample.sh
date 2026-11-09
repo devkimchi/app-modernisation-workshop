@@ -59,7 +59,7 @@ safe_destination() {
 download_sample() (
     set -e
     local target="$1" repository="$2" commit="$3" subdirectory="$4" track="$5" workshop="$6"
-    local parent staging source required notice license=false payload
+    local parent staging source required notice name normalized license=false payload
     target=$(safe_destination "$target" "$workshop")
     parent="${target%/*}"; parent="${parent:-/}"
     mkdir -p -- "$parent"
@@ -83,12 +83,24 @@ download_sample() (
     payload="$staging/payload"
     mkdir "$payload"
     cp -Rp "$source/." "$payload/"
-    for notice in LICENSE LICENSE.txt LICENSE.md NOTICE NOTICE.txt; do
-        if [[ -f "$staging/checkout/$notice" ]]; then
-            cp -p "$staging/checkout/$notice" "$payload/UPSTREAM-$notice"
-            [[ "$notice" != LICENSE* ]] || license=true
+    if [[ -e "$payload/upstream-source.json" || -L "$payload/upstream-source.json" ]]; then
+        printf '%s\n' '[FAIL] 원본에 upstream-source.json이 있어 덮어쓰지 않고 중단합니다.' >&2; exit 1
+    fi
+    for notice in "$staging/checkout/"*; do
+        [[ -f "$notice" ]] || continue
+        name="${notice##*/}"
+        normalized=$(printf '%s' "$name" | LC_ALL=C tr '[:lower:]' '[:upper:]')
+        [[ "$normalized" =~ ^(LICENSE|LICENCE|NOTICE|COPYING|COPYRIGHT)([._-].*)?$ ]] || continue
+        if [[ -e "$payload/UPSTREAM-$name" || -L "$payload/UPSTREAM-$name" ]]; then
+            printf '[FAIL] 원본 파일과 고지 보존 경로가 충돌합니다: %s\n' "$name" >&2; exit 1
         fi
-        [[ ! -f "$source/$notice" || "$notice" != LICENSE* ]] || license=true
+        cp -p "$notice" "$payload/UPSTREAM-$name"
+        [[ ! "$normalized" =~ ^(LICENSE|LICENCE|COPYING)([._-].*)?$ ]] || license=true
+    done
+    for notice in "$source/"*; do
+        [[ -f "$notice" ]] || continue
+        normalized=$(printf '%s' "${notice##*/}" | LC_ALL=C tr '[:lower:]' '[:upper:]')
+        [[ ! "$normalized" =~ ^(LICENSE|LICENCE|COPYING)([._-].*)?$ ]] || license=true
     done
     # Production values are fixed URLs, SHA-1 and directory names, not user input.
     printf '{\n  "repository": "%s",\n  "commit": "%s",\n  "subdirectory": "%s",\n  "licenseFileFound": %s\n}\n' "$repository" "$commit" "$subdirectory" "$license" > "$payload/upstream-source.json"

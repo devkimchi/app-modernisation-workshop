@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  bash-tests:
+    name: Bash regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Bash tests when present
+        shell: bash
+        run: |
+          if [[ -f tests/scripts.tests.sh ]]; then
+            bash tests/scripts.tests.sh
+          else
+            echo "::notice::Bash regression tests are not present yet; skipping."
+          fi
+
+  powershell-tests:
+    name: PowerShell regression tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run PowerShell tests when present
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath 'tests/scripts.tests.ps1') {
+            pwsh -NoLogo -NoProfile -File .\tests\scripts.tests.ps1
+          }
+          else {
+            Write-Host 'PowerShell regression tests are not present yet; skipping.'
+          }

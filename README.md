@@ -47,7 +47,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 
 ## 자료 구성과 운영
 
-공통 문서는 이 README, [준비](docs/setup.md), [문제 해결](docs/troubleshooting.md)입니다. 각 트랙은 목차 1개와 실습 7개로 구성됩니다. 전체 Markdown은 **19개**입니다.
+공통 문서는 이 README, [준비](docs/setup.md), [문제 해결](docs/troubleshooting.md)입니다. 각 트랙은 목차 1개와 실습 7개로 구성됩니다. 워크샵 Markdown 문서는 **19개**이며 저장소 운영 문서는 별도입니다.
 
 각 실습은 로컬 실행, 평가와 계획, 업그레이드, Azure 서비스 이전, `azd` 산출물 준비, ACA 배포, 정리 순서입니다. 평가 후 계획 승인 전, Azure 리소스 생성 전에는 반드시 멈춰 내용을 검토합니다. 에이전트의 "완료" 응답 대신 빌드 결과와 실제 기능 동작을 확인하세요.
 
@@ -77,3 +77,11 @@ bash tests/scripts.tests.sh
 누락된 도구/잘못된 커밋을 재현하는 시나리오에서는 `FAIL`/`fatal` 출력이 나올 수 있습니다. 테스트 실행 자체의 성공 여부는 마지막 `PASS` 요약과 종료 코드 `0`으로 판단합니다.
 
 공식 근거와 설치 링크는 [준비 문서](docs/setup.md)에 있습니다. 진행 중단 여부와 관계없이 마지막에는 [Java 정리](docs/java/07-cleanup.md) 또는 [.NET 정리](docs/dotnet/07-cleanup.md)를 확인하세요.
+
+## 기여와 보안
+
+기여 절차는 [CONTRIBUTING.md](CONTRIBUTING.md), 행동 강령은 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), 보안 문제 제보는 [SECURITY.md](SECURITY.md)를 참고하세요. 변경 이력은 [CHANGELOG.md](CHANGELOG.md)에 기록합니다.
+
+## 라이선스
+
+이 저장소의 원본 자료에는 [MIT 라이선스](LICENSE)가 적용됩니다. 다운로드하거나 포함한 제3자 샘플은 각 원본 저장소의 라이선스와 고지를 따르며, 이 저장소의 MIT 라이선스가 제3자 자료의 재배포 권한을 부여하지는 않습니다.

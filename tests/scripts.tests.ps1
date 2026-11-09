@@ -40,6 +40,7 @@ try {
 
     $script:Calls = [Collections.Generic.List[string]]::new()
     $script:Stopped = $false
+    $script:MachineFails = $false
     function Invoke-ToolProbe {
         param([string]$Name, [string[]]$Arguments)
         $script:Calls.Add("$Name $($Arguments -join ' ')")
@@ -50,13 +51,26 @@ try {
         }
         elseif ($Arguments[0] -eq 'build') { $text = '--platform' }
         elseif ($Arguments[0] -eq 'buildx') { $code = 127 }
+        elseif ($Arguments[0] -eq 'machine') {
+            if ($script:MachineFails) { $code = 1 } else { $text = 'fixture-machine' }
+        }
         return [pscustomobject]@{ Code = $code; Text = $text }
     }
     New-Results
     Test-ContainerRuntime podman
     Assert-True (-not (Has-Failure 'container-cli')) 'podman CLI'
     Assert-True (-not (Has-Failure 'builder')) 'podman native builder'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-engine' -and $_.Message -like '*설치 위치는 이 검사로 확인하지 않습니다*' }).Count -eq 1) 'engine location is not inferred'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-workload' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*실제 워크로드 성공을 보장하지 않습니다*' }).Count -eq 1) 'actual container workload remains manual'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'docker *' }).Count -eq 0) 'podman never probes docker'
+    if ($IsWindows -or $IsMacOS) {
+        Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'podman-machine' -and $_.Status -eq 'PASS' -and $_.Message -like '*fixture-machine*' }).Count -eq 1) 'podman machine list shown'
+        $script:MachineFails = $true
+        New-Results
+        Test-ContainerRuntime podman
+        Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'podman-machine' -and $_.Status -eq 'WARN' }).Count -eq 1) 'podman machine lookup failure warns'
+        Assert-True (-not (Has-Failure 'container-engine')) 'machine lookup failure does not invalidate working engine'
+    }
     $script:Stopped = $true
     $script:Calls.Clear()
     New-Results
@@ -79,7 +93,17 @@ try {
                 switch ($Arguments[0]) {
                     version { $text='{}' }
                     extension { $text='1.3.0' }
-                    account { if ($script:SignedIn) { $text='Enabled' } else { $code=1 } }
+                    account {
+                        if (-not $script:SignedIn) { $code=1 }
+                        elseif ($Arguments -contains 'state') { $text='Enabled' }
+                        elseif ($script:IdentityFails) { $code=1 }
+                        elseif ($script:MalformedIdentity) { $text='malformed subscription' }
+                        elseif ($Arguments -contains 'tenantId') { $text='11111111-2222-3333-4444-555555555555' }
+                        elseif ($Arguments -contains '[[id,name]]') { $text="subscription-id`tSubscription name" }
+                        else { $code=1 }
+                    }
+                    cloud { $text='https://management.example.invalid/' }
+                    rest { if ($script:TenantFails) { $code=1 } else { $text='Example tenant' } }
                     provider { $text=if ($script:Registered) { 'Registered' } else { 'NotRegistered' } }
                 }
             }
@@ -102,6 +126,26 @@ try {
     New-Results
     Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object Status -EQ FAIL).Count -eq 0) 'complete common tool fixture'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*subscription-id*' }).Count -eq 1) 'subscription identity requires confirmation'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq '구독 이름: Subscription name / 구독 ID: subscription-id' }).Count -eq 1) 'subscription format'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -notlike '*11111111-2222-3333-4444-555555555555*' -and $_.Message -like '*Subscription name*' }).Count -eq 1) 'subscription excludes tenant ID'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq '테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' }).Count -eq 1) 'tenant name and ID require confirmation'
+    $script:TenantFails=$true
+    New-Results
+    Test-CommonTools docker dotnet
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'WARN' -and $_.Message -like '*11111111-2222-3333-4444-555555555555*' }).Count -eq 1) 'tenant lookup failure warns and retains ID'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' }).Count -eq 1) 'subscription preserved when tenant lookup fails'
+    $script:TenantFails=$false
+    $script:IdentityFails=$true
+    New-Results
+    Test-CommonTools docker dotnet
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'WARN' }).Count -eq 1) 'identity lookup failure warns'
+    $script:IdentityFails=$false
+    $script:MalformedIdentity=$true
+    New-Results
+    Show-AzureIdentity
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'WARN' }).Count -eq 1) 'malformed subscription warns'
+    $script:MalformedIdentity=$false
     $script:SignedIn=$false; $script:MissingNode=$true
     New-Results
     Test-CommonTools docker dotnet
@@ -116,18 +160,55 @@ try {
     . (Join-Path $root 'scripts\check-prerequisites.ps1')
 
     if ($IsWindows) {
+        $Track='java'; $ContainerEngine='docker'; $Help=$false
+        $env:AZD_CONTAINER_RUNTIME='docker'
+        $script:HostNodeMissing=$false
+        $script:BashResult=0
+        function Invoke-ToolProbe {
+            param([string]$Name, [string[]]$Arguments)
+            if ($Name -eq 'node' -and $script:HostNodeMissing) { return [pscustomobject]@{ Code=127; Text='' } }
+            return [pscustomobject]@{ Code=0; Text=$(switch ($Name) { node { 'v22.1.0' } azd { 'azd version 1.37.3' } default { 'git version 2.50.0' } }) }
+        }
+        function Invoke-JavaBashScript {
+            param($Script, $Arguments, $Distribution)
+            $script:JavaArguments = $Arguments
+            return $script:BashResult
+        }
+        Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'Windows Java host passes'
+        Assert-True ($script:JavaArguments -contains '--windows-host-checked') 'Windows host check communicated to WSL'
+        Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'windows-host-azd' -and $_.Status -eq 'INFO' -and $_.Message -like '*1.37.3*' }).Count -eq 1) 'host azd shown as informational'
+        $script:HostNodeMissing=$true
+        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'Windows Java host missing Node fails'
+        $script:HostNodeMissing=$false; $script:BashResult=1
+        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'WSL failure propagates'
+        Remove-Item Function:\Invoke-ToolProbe, Function:\Invoke-JavaBashScript
+        . (Join-Path $root 'scripts\check-prerequisites.ps1')
         $env:ProgramFiles = Join-Path $temporary 'program-files'
         ${env:ProgramFiles(x86)} = Join-Path $temporary 'program-files-x86'
         $references = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8'
         [IO.Directory]::CreateDirectory((Join-Path $references 'RedistList')) | Out-Null
         [IO.Directory]::CreateDirectory((Join-Path $env:ProgramFiles 'IIS Express')) | Out-Null
+        [IO.Directory]::CreateDirectory((Join-Path $env:ProgramFiles 'IIS Express\AppServer')) | Out-Null
         Set-Content (Join-Path $references 'mscorlib.dll') 'fixture'
         Set-Content (Join-Path $references 'RedistList\FrameworkList.xml') 'fixture'
         Set-Content (Join-Path $env:ProgramFiles 'IIS Express\iisexpress.exe') 'fixture'
+        Set-Content (Join-Path $env:ProgramFiles 'IIS Express\AppServer\applicationhost.config') 'fixture'
+        $vsRoot = Join-Path $temporary 'VS IDE'
+        $msbuildPath = Join-Path $vsRoot 'MSBuild\Current\Bin\MSBuild.exe'
+        $webTarget = Join-Path $vsRoot 'MSBuild\Microsoft\VisualStudio\v18.0\WebApplications\Microsoft.WebApplication.targets'
+        foreach ($file in @($msbuildPath, $webTarget)) {
+            [IO.Directory]::CreateDirectory((Split-Path $file -Parent)) | Out-Null
+            Set-Content $file 'fixture'
+        }
         $script:FakeRelease = 528040
         $script:FakeSdk = '10.0.100 [fixture]'
         $script:FakeFeature = 1
-        $script:FakeVs = '[{"installationVersion":"18.0.1"}]'
+        $script:FakeVs = @(@{ installationVersion='18.0.1'; installationPath=$vsRoot }) | ConvertTo-Json -AsArray
+        function Invoke-FrameworkProbe {
+            param($File, $Arguments)
+            Assert-True ($Arguments -contains '*') 'vswhere includes Build Tools products'
+            return [pscustomobject]@{ Code=0; Text=$script:FakeVs }
+        }
         function Get-CimInstance { [CmdletBinding()]param($ClassName, $Filter); return [pscustomobject]@{ InstallState=$script:FakeFeature } }
         function Get-Service { [CmdletBinding()]param($Name); return [pscustomobject]@{ Status='Running' } }
         function Get-ItemPropertyValue { [CmdletBinding()]param($LiteralPath, $Name); return $script:FakeRelease }
@@ -141,7 +222,37 @@ try {
         Test-DotnetTools
         Assert-True (-not (Has-Failure framework-runtime)) 'runtime 4.8 accepted'
         Assert-True (-not (Has-Failure framework-targeting)) 'targeting pack accepted'
-        Assert-True (-not (Has-Failure vs2026)) 'VS IDE workload fixture'
+        Assert-True (-not (Has-Failure framework-build)) 'VS IDE web build fixture'
+        $buildToolsRoot = Join-Path $temporary 'Standalone Build Tools'
+        Move-Item $vsRoot $buildToolsRoot
+        $script:FakeVs = @(@{ installationVersion='17.14.1'; installationPath=$buildToolsRoot }) | ConvertTo-Json -AsArray
+        $v18 = Join-Path $buildToolsRoot 'MSBuild\Microsoft\VisualStudio\v18.0'
+        Rename-Item $v18 'v17.0'
+        New-Results
+        Test-DotnetTools
+        Assert-True (-not (Has-Failure framework-build)) 'standalone Build Tools accepted without IDE'
+        $webTarget = Join-Path $buildToolsRoot 'MSBuild\Microsoft\VisualStudio\v17.0\WebApplications\Microsoft.WebApplication.targets'
+        Remove-Item $webTarget
+        New-Results
+        Test-DotnetTools
+        Assert-True (Has-Failure framework-build) 'MSBuild alone without web targets rejected'
+        Set-Content $webTarget 'fixture'
+        $buildToolsMsbuild = Join-Path $buildToolsRoot 'MSBuild\Current\Bin\MSBuild.exe'
+        Remove-Item $buildToolsMsbuild
+        New-Results
+        Test-DotnetTools
+        Assert-True (Has-Failure framework-build) 'web targets without MSBuild rejected'
+        Set-Content $buildToolsMsbuild 'fixture'
+        $script:FakeVs = 'not-json'
+        New-Results
+        Test-DotnetTools
+        Assert-True (Has-Failure framework-build) 'malformed vswhere output fails closed'
+        $script:FakeVs = @(@{ installationVersion='17.14.1'; installationPath=$buildToolsRoot }) | ConvertTo-Json -AsArray
+        Remove-Item (Join-Path $env:ProgramFiles 'IIS Express\AppServer\applicationhost.config')
+        New-Results
+        Test-DotnetTools
+        Assert-True (Has-Failure iis-express) 'IIS exe alone without configuration template rejected'
+        Set-Content (Join-Path $env:ProgramFiles 'IIS Express\AppServer\applicationhost.config') 'fixture'
         Assert-True (-not (Has-Failure dotnet-sdk)) '.NET 10 SDK accepted'
         Remove-Item (Join-Path $references 'mscorlib.dll')
         New-Results
@@ -157,8 +268,8 @@ try {
         Assert-True (Has-Failure framework-runtime) 'old framework rejected'
         Assert-True (Has-Failure dotnet-sdk) 'preview SDK rejected'
         Assert-True (Has-Failure msmq-feature) 'disabled MSMQ rejected'
-        Assert-True (Has-Failure vs2026) 'no qualifying IDE rejected'
-        foreach ($name in @('Get-CimInstance','Get-Service','Get-ItemPropertyValue','Get-Command','Invoke-ToolProbe')) { Remove-Item "Function:\$name" }
+        Assert-True (Has-Failure framework-build) 'no qualifying build tools rejected'
+        foreach ($name in @('Get-CimInstance','Get-Service','Get-ItemPropertyValue','Get-Command','Invoke-ToolProbe','Invoke-FrameworkProbe')) { Remove-Item "Function:\$name" }
         . (Join-Path $root 'scripts\check-prerequisites.ps1')
         $env:ProgramFiles = $savedProgramFiles
         ${env:ProgramFiles(x86)} = $savedProgramFilesX86

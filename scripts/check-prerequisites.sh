@@ -22,8 +22,150 @@ probe() {
 }
 
 check_result() {
-    printf '[%s] %s : %s\n' "$1" "$2" "$3"
+    printf '[%s] [%s] %s: %s\n' "$1" "${4:-${CHECK_CONTEXT:-Bash}}" "$2" "$3"
     if [[ "$1" == FAIL ]]; then CHECK_FAILURES=$((CHECK_FAILURES + 1)); fi
+}
+
+tool_path() {
+    command -v "$1" 2>/dev/null || true
+}
+
+initialize_node_environment() {
+    local node_path nvm_dir
+    node_path=$(tool_path node)
+    if [[ -n "$node_path" && ! ( "${CHECK_CONTEXT:-}" == WSL* && "$node_path" =~ ^/mnt/[a-zA-Z]/ ) ]]; then return 0; fi
+    if [[ -n "${NVM_DIR:-}" ]]; then nvm_dir="$NVM_DIR"
+    elif [[ -n "${XDG_CONFIG_HOME:-}" ]]; then nvm_dir="$XDG_CONFIG_HOME/nvm"
+    else nvm_dir="$HOME/.nvm"; fi
+    [[ -s "$nvm_dir/nvm.sh" ]] || return 0
+    export NVM_DIR="$nvm_dir"
+    if ! source "$NVM_DIR/nvm.sh" --no-use || [[ $(type -t nvm) != function ]]; then
+        check_result WARN nvm "nvm 초기화에 실패했습니다: $NVM_DIR/nvm.sh"
+        return 1
+    fi
+    if ! nvm use --silent default; then
+        check_result WARN nvm 'nvm의 기본 Node.js를 활성화하지 못했습니다. nvm alias default <설치된-버전>으로 기본 버전을 지정하세요.'
+        return 1
+    fi
+}
+
+can_prompt_azure() {
+    [[ -t 0 && -t 1 && -z "${CI:-}" ]]
+}
+
+confirm_azure_action() {
+    local answer
+    can_prompt_azure || return 1
+    read -r -p "$1 [y/N] " answer || return 1
+    [[ "$answer" == y || "$answer" == Y ]]
+}
+
+run_azure_action() {
+    if ! "$@"; then
+        check_result WARN azure-action "명령 실행에 실패했습니다: $*. 위 오류를 확인하세요."
+        return 1
+    fi
+}
+
+prepare_azure_account() {
+    local subscriptions selected id name valid=0
+    can_prompt_azure || return 0
+    probe az account show --query state --output tsv
+    if (( PROBE_CODE != 0 )) || [[ "$PROBE_TEXT" != Enabled ]]; then
+        check_result WARN az-login "활성 구독 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 미로그인 외에 권한 또는 네트워크 문제일 수도 있습니다."
+        if confirm_azure_action '이 셸의 Azure CLI에서 az login을 실행하시겠습니까?'; then
+            run_azure_action az login || return 0
+        fi
+    fi
+    if confirm_azure_action '구독 목록을 조회하고 실습 구독을 직접 선택하시겠습니까?'; then
+        probe az account list --query '[].[id,name]' --output tsv
+        if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
+            check_result WARN azure-subscription "구독 목록 조회 실패: ${PROBE_TEXT:-출력 없음}"
+            return 0
+        fi
+        subscriptions="$PROBE_TEXT"
+        printf '구독 ID / 이름:\n%s\n' "$subscriptions"
+        read -r -p '변경할 구독 ID (Enter: 유지): ' selected || return 0
+        [[ -n "$selected" ]] || return 0
+        while IFS=$'\t' read -r id name; do
+            [[ "$selected" == "$id" ]] && valid=1
+        done <<< "$subscriptions"
+        if (( valid )); then run_azure_action az account set --subscription "$selected" || return 0
+        else check_result WARN azure-subscription '목록에 없는 구독 ID입니다. 구독을 변경하지 않았습니다.'; fi
+    fi
+}
+
+prepare_containerapp_extension() {
+    can_prompt_azure || return 0
+    probe az extension show --name containerapp --query version --output tsv
+    if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
+        check_result WARN az-containerapp "확장 조회 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+        if confirm_azure_action 'containerapp 확장을 설치하거나 업데이트하시겠습니까? 로컬 Azure CLI 확장 파일이 변경됩니다.'; then
+            run_azure_action az extension add --name containerapp --upgrade || return 0
+        fi
+    fi
+}
+
+prepare_azd_login() {
+    can_prompt_azure || return 0
+    probe azd auth login --check-status
+    if (( PROBE_CODE != 0 )); then
+        check_result WARN azd-login "인증 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+        if confirm_azure_action '이 셸에서 azd auth login을 실행하시겠습니까? Azure CLI 로그인과 별개입니다.'; then
+            run_azure_action azd auth login || return 0
+        fi
+    fi
+}
+
+check_azure_provider() {
+    local provider="$1"
+    probe az provider show --namespace "$provider" --query registrationState --output tsv
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then
+        check_result PASS "$provider" Registered
+        return
+    fi
+    check_result WARN "$provider" "등록 상태 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == NotRegistered || "$PROBE_TEXT" == Unregistered || "$PROBE_TEXT" == Registering ]]; then
+        if confirm_azure_action "현재 Azure CLI 구독에 $provider 공급자를 등록하고 완료를 기다리시겠습니까? 구독 설정이 변경되며 등록 권한이 필요합니다."; then
+            run_azure_action az provider register --namespace "$provider" --wait || true
+            probe az provider show --namespace "$provider" --query registrationState --output tsv
+        fi
+    fi
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then check_result PASS "$provider" Registered
+    else check_result FAIL "$provider" "등록을 확인하지 못했습니다 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 대상 구독과 등록 권한을 확인하세요."; fi
+}
+
+check_azure_identity() {
+    local subscription_id subscription_name tenant_id endpoint
+    probe az account show --query '[[id,name]]' --output tsv
+    if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
+        check_result WARN azure-subscription '현재 구독 정보를 조회하지 못했습니다. 대상 구독과 테넌트를 직접 확인하세요.'
+        return
+    fi
+    IFS=$'\t' read -r subscription_id subscription_name <<< "$PROBE_TEXT"
+    if [[ -z "$subscription_id" || -z "$subscription_name" ]]; then
+        check_result WARN azure-subscription '현재 구독 ID와 이름을 해석하지 못했습니다. 대상 구독을 직접 확인하세요.'
+        return
+    fi
+    check_result MANUAL azure-subscription "구독 이름: $subscription_name / 구독 ID: $subscription_id"
+    probe az account show --query tenantId --output tsv
+    tenant_id="$PROBE_TEXT"
+    if (( PROBE_CODE != 0 )) || [[ ! "$tenant_id" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]; then
+        check_result WARN azure-tenant '현재 테넌트 ID를 조회하지 못해 테넌트 이름을 확인할 수 없습니다.'
+        return
+    fi
+    probe az cloud show --query endpoints.resourceManager --output tsv
+    if (( PROBE_CODE != 0 )) || [[ ! "$PROBE_TEXT" =~ ^https:// ]]; then
+        check_result WARN azure-tenant "테넌트 ID: $tenant_id. Azure 클라우드 엔드포인트를 조회하지 못해 테넌트 이름을 확인할 수 없습니다."
+        return
+    fi
+    endpoint="${PROBE_TEXT%/}"
+    probe az rest --method get --url "$endpoint/tenants?api-version=2022-12-01" --query "value[?tenantId=='$tenant_id'].displayName | [0]" --output tsv --only-show-errors
+    if (( PROBE_CODE == 0 )) && [[ -n "$PROBE_TEXT" && "$PROBE_TEXT" != None && "$PROBE_TEXT" != null ]]; then
+        check_result MANUAL azure-tenant "테넌트 이름: $PROBE_TEXT / 테넌트 ID: $tenant_id"
+    else
+        check_result WARN azure-tenant "테넌트 ID: $tenant_id. 테넌트 이름을 조회하지 못했습니다. 권한, 네트워크 및 Azure Portal을 확인하세요."
+    fi
 }
 
 minimum_version() {
@@ -42,7 +184,7 @@ check_container() {
         check_result FAIL container-cli "$engine 실행 실패 (종료 코드 $PROBE_CODE). docs/setup.md를 확인하세요."
         return
     fi
-    check_result PASS container-cli "$PROBE_TEXT"
+    check_result PASS container-cli "$engine CLI 실행: $PROBE_TEXT (경로: $(tool_path "$engine"))"
     if [[ "$engine" == docker ]]; then format='{{.OSType}}'; else format='{{.Host.OS}}'; fi
     probe "$engine" info --format "$format"
     if (( PROBE_CODE != 0 )); then
@@ -50,22 +192,27 @@ check_container() {
     elif [[ "$PROBE_TEXT" != linux ]]; then
         check_result FAIL container-engine 'Linux 컨테이너 환경을 확인하지 못했습니다.'
     else
-        check_result PASS container-engine "$engine Linux 환경에 연결했습니다."
+        check_result PASS container-engine "$engine CLI가 Linux 컨테이너 엔진에 연결했습니다. 엔진의 설치 위치는 이 검사로 확인하지 않습니다."
     fi
     if [[ "$engine" == docker ]]; then
         probe docker build --help
-        if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == *--platform* ]]; then check_result PASS builder-command 'Docker --platform 빌드 기능이 있습니다.'
+        if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == *--platform* ]]; then check_result PASS builder-command 'Docker CLI 도움말에서 --platform 옵션을 확인했습니다. 실제 빌드는 아직 확인하지 않았습니다.'
         else check_result FAIL builder-command 'Docker --platform 빌드 기능을 확인하지 못했습니다.'; fi
         probe docker buildx version
-        if (( PROBE_CODE == 0 )); then check_result PASS builder 'Docker Buildx가 있습니다.'
+        if (( PROBE_CODE == 0 )); then check_result PASS builder 'Docker CLI에서 Buildx 버전 조회에 성공했습니다. 실제 빌드는 아직 확인하지 않았습니다.'
         else check_result WARN builder 'Buildx를 확인하지 못했습니다. 실제 azd package에서 빌드 지원을 확인하세요.'; fi
     else
+        if [[ "$(uname -s)" == Darwin ]]; then
+            probe podman machine list
+            if (( PROBE_CODE == 0 )); then check_result PASS podman-machine "Podman machine 목록 (선택된 연결은 별도로 확인): $PROBE_TEXT"
+            else check_result WARN podman-machine 'Podman machine 목록을 조회하지 못했습니다. machine과 연결 설정을 직접 확인하세요.'; fi
+        fi
         probe podman build --help
         if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == *--platform* ]]; then
-            check_result PASS builder 'Podman 내장 빌더가 있습니다. Docker Buildx는 필요하지 않습니다.'
+            check_result PASS builder 'Podman CLI 도움말에서 --platform 옵션을 확인했습니다. 실제 빌드는 아직 확인하지 않았습니다. Docker Buildx는 필요하지 않습니다.'
         else check_result FAIL builder 'Podman --platform 빌드 기능을 확인하지 못했습니다.'; fi
     fi
-    check_result MANUAL container-workload '실제 linux/amd64 빌드, 포트 접근과 ACR 게시 성공은 실습에서 확인하세요.'
+    check_result MANUAL container-workload '이 실습 셸에서 실제 linux/amd64 이미지 빌드, 컨테이너 포트 접근과 ACR 게시를 실습 중 확인하세요. 위 PASS는 실제 워크로드 성공을 보장하지 않습니다.'
 }
 
 check_java_sdks() {
@@ -107,48 +254,62 @@ check_java_sdks() {
 }
 
 check_common() {
-    local engine="$1" provider
+    local engine="$1" provider path
     probe git --version
     if (( PROBE_CODE == 0 )); then check_result PASS git "$PROBE_TEXT"; else check_result FAIL git 'Git이 필요합니다.'; fi
+    initialize_node_environment || true
     probe node --version
-    if (( PROBE_CODE == 0 )) && minimum_version "$PROBE_TEXT" 22.0.0; then check_result PASS node "$PROBE_TEXT"
-    else check_result FAIL node 'Node.js 22 이상이 필요합니다.'; fi
+    if (( PROBE_CODE == 0 )) && minimum_version "$PROBE_TEXT" 22.0.0; then check_result PASS node "$PROBE_TEXT (실행 파일: $(tool_path node))"
+    elif (( PROBE_CODE == 127 )); then check_result FAIL node '이 Bash 환경의 PATH에서 Node.js를 찾지 못했습니다. 여기에서 Node.js 22 이상을 사용할 수 있도록 설정하세요.'
+    else check_result FAIL node "이 Bash 환경에서 Node.js 22 이상을 실행하지 못했습니다 (종료 코드 $PROBE_CODE, 출력: ${PROBE_TEXT:-없음})."; fi
     probe az version --output json
     if (( PROBE_CODE == 0 )); then
-        check_result PASS az 'Azure CLI를 실행할 수 있습니다.'
+        path=$(tool_path az)
+        check_result PASS az "Azure CLI를 실행할 수 있습니다 (실행 파일: $path)."
+        if [[ "${CHECK_CONTEXT:-}" == WSL* && "$path" =~ ^/mnt/[a-zA-Z]/ ]]; then
+            check_result WARN az-origin 'WSL에서 Windows 드라이브의 Azure CLI를 사용하고 있습니다. 표시된 로그인과 구독은 이 CLI의 설정입니다. WSL에 설치된 CLI를 사용하려면 command -v az로 선택된 경로를 확인하고, 해당 CLI의 로그인과 구독을 다시 확인하세요.'
+        fi
+        prepare_azure_account
+        prepare_containerapp_extension
         probe az extension show --name containerapp --query version --output tsv
         if (( PROBE_CODE == 0 )) && [[ -n "$PROBE_TEXT" ]]; then check_result PASS az-containerapp "확장 버전: $PROBE_TEXT"
         else check_result FAIL az-containerapp '확장 설치 여부와 조회 오류를 확인하세요.'; fi
         probe az account show --query state --output tsv
         if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Enabled ]]; then
-            check_result PASS az-login '활성 구독이 있습니다. 실제 대상 구독은 직접 확인하세요.'
+            check_result PASS az-login '활성 구독이 있습니다.'
+            check_azure_identity
             for provider in Microsoft.App Microsoft.OperationalInsights Microsoft.Storage Microsoft.ContainerRegistry Microsoft.ServiceBus Microsoft.DBforPostgreSQL; do
-                probe az provider show --namespace "$provider" --query registrationState --output tsv
-                if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then check_result PASS "$provider" Registered
-                else check_result FAIL "$provider" '등록 상태를 확인하지 못했습니다. 권한과 공급자 등록을 확인하세요.'; fi
+                check_azure_provider "$provider"
             done
         else check_result FAIL az-login 'az login 및 활성 구독 선택이 필요하거나 구독 조회에 실패했습니다.'; fi
     else check_result FAIL az 'Azure CLI 설치 또는 실행 상태를 확인하세요.'; fi
     probe azd version
     if (( PROBE_CODE == 0 )) && minimum_version "$PROBE_TEXT" 1.37.3; then
-        check_result PASS azd "$PROBE_TEXT"
+        check_result PASS azd "$PROBE_TEXT (실행 파일: $(tool_path azd))"
+        prepare_azd_login
         probe azd auth login --check-status
         if (( PROBE_CODE == 0 )); then check_result PASS azd-login 'azd 로그인 상태를 확인했습니다.'
         else check_result FAIL azd-login 'azd auth login을 직접 실행하거나 인증 오류를 해결하세요.'; fi
-    else check_result FAIL azd '워크샵 기준 azd 1.37.3 이상이 필요합니다.'; fi
+    elif (( PROBE_CODE == 127 )); then check_result FAIL azd '이 Bash 환경의 PATH에서 azd를 찾지 못했습니다. 여기에서 azd 1.37.3 이상을 사용할 수 있도록 설정하세요.'
+    else check_result FAIL azd "이 Bash 환경에서 azd 1.37.3 이상을 실행하지 못했습니다 (종료 코드 $PROBE_CODE, 출력: ${PROBE_TEXT:-없음})."; fi
     check_container "$engine"
-    check_result MANUAL copilot-app 'Copilot app 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.'
-    check_result MANUAL azure-access '대상 구독, 리전, 쿼터, 역할 할당 및 데이터베이스 Entra 관리자 설정 권한을 확인하세요.'
+    if [[ "${CHECK_CONTEXT:-}" == WSL* ]]; then
+        check_result MANUAL copilot-app 'Windows에서 실행하는 Copilot app의 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.' 'Windows 호스트 (수동 확인)'
+    else
+        check_result MANUAL copilot-app 'Copilot app을 실행하는 호스트에서 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.'
+    fi
+    check_result MANUAL azure-access '위에서 조회한 Azure CLI의 구독이 실습 대상인지 확인하고, 해당 구독의 리전, 쿼터, 역할 할당 및 데이터베이스 Entra 관리자 설정 권한을 확인하세요.' 'Azure (수동 확인)'
 }
 
 prerequisite_main() {
-    local track='' requested='' engine os previous_dynamic="${AZURE_EXTENSION_USE_DYNAMIC_INSTALL-}"
+    local track='' requested='' engine os windows_host_checked=0 previous_dynamic="${AZURE_EXTENSION_USE_DYNAMIC_INSTALL-}"
     while (( $# )); do
         case "$1" in
             --track|--container-engine)
                 if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then printf '%s\n' "[FAIL] $1 값이 필요합니다." >&2; return 2; fi
                 if [[ "$1" == --track ]]; then track="$2"; else requested="$2"; fi
                 shift 2 ;;
+            --windows-host-checked) windows_host_checked=1; shift ;;
             --help|-h) printf '%s\n' 'bash scripts/check-prerequisites.sh --track java|dotnet [--container-engine docker|podman]'; return 0 ;;
             *) printf '[FAIL] 알 수 없는 인자: %s\n' "$1" >&2; return 2 ;;
         esac
@@ -171,9 +332,13 @@ prerequisite_main() {
         *) printf '%s\n' '[FAIL] Windows Java는 Git Bash가 아니라 WSL2에서 실행하세요.'; return 1 ;;
     esac
     CHECK_FAILURES=0
-    printf '트랙: java / 엔진: %s / 실행 환경: %s\n' "$engine" "$os"
+    if [[ "$os" == Darwin ]]; then CHECK_CONTEXT='macOS Bash'
+    elif [[ "${WORKSHOP_DEVCONTAINER:-}" == 1 ]]; then CHECK_CONTEXT='Dev Container Bash'
+    else CHECK_CONTEXT="WSL${WSL_DISTRO_NAME:+ $WSL_DISTRO_NAME} Bash"; fi
+    printf '트랙: java / 엔진: %s / 호출 환경: %s\n' "$engine" "$CHECK_CONTEXT"
+    printf '%s\n' '다음 결과는 이 Bash의 PATH와 호출된 도구의 설정을 기준으로 합니다. Windows 호스트 검사와 별개입니다.'
     check_result PASS bash "Bash $BASH_VERSION"
-    if [[ "$os" == Linux && "${WORKSHOP_DEVCONTAINER:-}" != 1 ]]; then check_result MANUAL windows-host 'Windows Copilot app 호스트에도 Git과 Node.js 22 이상이 필요합니다. WSL 내부 검사 결과와 별개입니다.'; fi
+    if [[ "$os" == Linux && "${WORKSHOP_DEVCONTAINER:-}" != 1 && "$windows_host_checked" != 1 ]]; then check_result MANUAL windows-host 'Windows Copilot app 호스트에도 Git과 Node.js 22 이상이 필요합니다. WSL 내부 검사와 별개이며 Windows PowerShell 진입점은 호스트도 검사합니다.'; fi
     export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
     check_common "$engine"
     check_java_sdks

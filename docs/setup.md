@@ -4,28 +4,11 @@
 
 ## 목표와 실행 위치
 
-템플릿으로 개인 계정에 워크숍 저장소를 만들어 복제하고, 선택 트랙의 환경을 확인한 다음 원본 앱 파일을 내려받습니다. **복제한 워크숍 자료 폴더가 현재 작업 폴더**인 상태에서 점검 스크립트를 먼저 실행합니다. 도구가 없어서 실패하면 아래 설치 안내로 보완하고 다시 점검합니다. 다운로드를 먼저 하거나 실패를 무시하지 않습니다.
+템플릿으로 개인 계정에 저장소를 만들고 클론합니다. 복제한 폴더에서 선택한 트랙의 사전 점검을 실행하고, 부족한 항목을 보완한 뒤 다시 점검합니다. 필수 자동 검사를 통과하면 Copilot app 플러그인을 설치하고 원본 앱을 내려받습니다.
 
-스크립트는 소프트웨어 설치, 관리자 권한 상승, 로그인, 공급자 등록, 컨테이너 엔진 시작, SDK 기본 버전 변경을 하지 않습니다. 참가자가 필요한 변경을 직접 승인하고 수행합니다.
+점검 스크립트는 소프트웨어를 설치하거나 관리자 권한을 요청하지 않습니다. 설치 도우미는 별도로 실행하며 도구마다 설치 전에 동의를 받습니다. 두 스크립트 모두 로그인, 공급자 등록, 컨테이너 엔진 시작 또는 JDK 기본 버전 변경을 하지 않습니다.
 
-## 1. 공통 도구와 계정
-
-| 항목 | 기준과 확인 범위 | 설치 안내 |
-| --- | --- | --- |
-| Git | 샘플 다운로드와 워크숍 저장소에서 기준선 관리 | [Git](https://git-scm.com/downloads) |
-| PowerShell | .NET 및 PowerShell 진입점은 7 이상, Windows PowerShell 5.1 아님 | [PowerShell](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) |
-| Bash | Java는 WSL2/macOS, .NET Bash 진입점은 Git Bash | [WSL](https://learn.microsoft.com/windows/wsl/install), [Git for Windows](https://gitforwindows.org/) |
-| Node.js | 워크숍 기준 안정 버전 22 이상 | [Node.js](https://nodejs.org/en/download) |
-| GitHub Copilot app | 로그인, 라이선스, 조직 정책은 수동 확인 | [Copilot app](https://github.com/copilot/app) |
-| Azure CLI | 설치, `containerapp` 확장, 로그인, 구독, 공급자 상태 | [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) |
-| Azure Developer CLI | `azd` 1.37.3 이상, 별도 로그인 상태 | [azd 설치](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
-| 컨테이너 엔진 | Docker 또는 Podman CLI와 Linux 서버 연결, 빌더 기능 | [Docker Desktop](https://docs.docker.com/desktop/), [Podman](https://podman.io/docs/installation) |
-
-`gh`, 독립 Maven 설치, Copilot CLI, VS Code는 공통 필수가 아닙니다. Java 원본의 Maven Wrapper가 Maven 3.9.9를 내려받으므로 최초 실행에 네트워크가 필요합니다.
-
-**Windows Java 환경은 두 실행 공간을 구분합니다.** Windows Copilot app 호스트에도 Git과 Node.js 22 이상을 준비하고, Java 실습 도구(Git, Node, Azure CLI, `azd`, SDKMAN, 선택 엔진의 CLI)는 선택한 WSL2 배포판 안에 준비합니다. Docker Desktop은 해당 배포판과 WSL 통합을 켜야 합니다. Windows 설치나 로그인만으로 WSL 검사를 통과했다고 판단하지 않습니다.
-
-### 템플릿으로 내 저장소 만들기
+## 1. 템플릿으로 저장소 만들고 클론하기
 
 이 워크숍 저장소는 공개 템플릿 저장소입니다. 원본을 직접 복제하거나 포크하지 않고, 템플릿으로 본인 **개인 계정**에 새 저장소를 만들어 사용합니다. GitHub 웹에서 다음 순서로 진행합니다.
 
@@ -55,64 +38,89 @@ cd <저장소-이름>
 
 템플릿으로 만든 저장소는 원본과 이어지지 않은 새 커밋 이력으로 시작하며, 원본 템플릿의 이후 변경을 자동으로 받지 않습니다. 이후 내려받는 앱은 `java` 또는 `dotnet` 폴더에 놓이며, 앱 안에 별도의 `.git` 저장소를 만들지 않습니다. 앱 코드와 기준선 커밋은 이 워크숍 저장소에서 관리합니다.
 
-### Azure 로그인과 권한
+## 2. 사전 점검과 필요한 조치
 
-실습에 사용할 동일한 셸에서 아래 명령을 실행합니다. 구독 ID와 리전은 본인 값으로 바꿉니다. 장치 코드 로그인이나 조직의 인증 절차는 참가자가 직접 완료합니다.
+### 점검 스크립트 실행
 
-```text
-az login
-az account list --output table
-az account set --subscription "<본인-구독-ID>"
-az account show --query "{name:name,id:id,tenantId:tenantId}" --output table
-az extension add --name containerapp --upgrade
-azd auth login
-azd auth login --check-status
-```
+클론에 필요한 Git과 아래 명령을 실행할 셸을 먼저 준비합니다. PowerShell 진입점과 .NET Git Bash 진입점에는 PowerShell 7이 필요합니다. Java는 Windows에서 WSL2, macOS에서 Bash를 사용합니다. 도구가 없다면 [공통 도구 설치 안내](#공통-도구와-계정-보완)를 참고하세요.
 
-`az`와 `azd` 인증은 별개입니다. 로그인했다고 배포 권한이나 쿼터가 확보된 것도 아닙니다. Contributor는 리소스 생성에 사용할 수 있지만 일반적으로 **역할 할당 권한은 포함하지 않습니다**. 관리 ID에 데이터 역할을 부여하려면 적절한 범위의 Role Based Access Control Administrator/User Access Administrator 등의 권한을 관리자에게 요청해야 할 수 있습니다. 워크숍 때문에 구독 전체 Owner 권한을 무조건 요청하지 마세요.
+클론한 **워크숍 자료 루트**에서 선택한 트랙과 환경에 맞는 명령 하나를 실행합니다.
 
-공급자 등록은 구독을 변경합니다. 참가자가 해당 구독을 확인하고 권한이 있을 때만 다음 명령을 실행합니다. `--wait`는 시간이 걸릴 수 있습니다.
+| 환경 | 명령 |
+| --- | --- |
+| Java, WSL2/macOS Bash | `bash scripts/check-prerequisites.sh --track java --container-engine docker` |
+| Java, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker` |
+| .NET, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker` |
+| .NET, Windows Git Bash | `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker` |
 
-PowerShell:
+Podman을 사용할 때는 엔진 인자를 `podman`으로 바꿉니다. `Ubuntu`도 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여러 개라면 PowerShell 명령에 이름을 반드시 지정해야 합니다. macOS의 PowerShell Java 진입점은 로컬 Bash로, .NET Git Bash 진입점은 Windows `pwsh`로 검사를 넘깁니다.
 
-```powershell
-$track = 'java' # .NET이면 'dotnet'
-$providers = @('Microsoft.App', 'Microsoft.OperationalInsights', 'Microsoft.Storage', 'Microsoft.ContainerRegistry', 'Microsoft.ServiceBus')
-$providers += if ($track -eq 'java') { 'Microsoft.DBforPostgreSQL' } else { 'Microsoft.Sql' }
-foreach ($provider in $providers) { az provider register --namespace $provider --wait }
-```
+**Windows Java 트랙의 실행 위치를 구분하세요.** Copilot app은 Windows에서 실행하고 프로젝트 파일을 수정합니다. Java 빌드와 실행, Azure 배포 명령은 WSL Bash에서 수행합니다. 에이전트가 Java 명령을 실행할 때도 WSL 배포판과 프로젝트 경로를 알려 주고 WSL에 위임하도록 요청하세요.
 
-Bash:
+점검 결과의 대괄호는 검사 또는 수동 확인 대상을 나타냅니다. Windows PowerShell의 Java 점검은 Windows의 Git과 Node.js를 검사하고 `azd` 버전을 참고용으로 표시한 뒤, 지정한 WSL 배포판에서 나머지 항목을 검사합니다. WSL Bash에서 직접 실행하면 Windows 호스트는 검사하지 않습니다. Bash에서 Node.js를 찾지 못하거나 WSL에서 Windows 드라이브의 Node.js만 선택되면 nvm을 불러와 기본 버전을 활성화합니다. nvm 경로는 `NVM_DIR`, `$XDG_CONFIG_HOME/nvm`, `~/.nvm` 순서로 결정합니다. 그 밖에 대화형 셸에서만 초기화되는 도구는 비대화형 Bash에서 찾지 못할 수 있습니다.
 
-```bash
-track=java
-providers=(Microsoft.App Microsoft.OperationalInsights Microsoft.Storage Microsoft.ContainerRegistry Microsoft.ServiceBus)
-if [[ "$track" == java ]]; then providers+=(Microsoft.DBforPostgreSQL); else providers+=(Microsoft.Sql); fi
-for provider in "${providers[@]}"; do az provider register --namespace "$provider" --wait; done
-```
+| 결과 | 의미와 다음 조치 |
+| --- | --- |
+| `PASS` | 해당 자동 검사 통과 |
+| `INFO` | 참고 정보. 필수 검사 통과 여부와 별개 |
+| `FAIL` | 필수 검사 실패. 아래 안내를 참고해 해결하고 같은 환경에서 다시 점검 |
+| `WARN` | 제한 또는 추가 확인 필요 |
+| `MANUAL` | 자동으로 확인하지 않은 항목. 직접 확인하고 Copilot 플러그인은 다음 단계에서 설치 |
 
-VNet/Private Endpoint를 계획에 추가하면 `Microsoft.Network` 등 추가 공급자가 필요할 수 있습니다. 배포 계획 검토 때 등록 대상과 비용을 확인합니다. 데이터베이스의 Entra 관리자 지정과 DB 내부 사용자 생성도 별도 권한입니다.
+`FAIL`을 해결한 뒤 같은 환경에서 점검을 다시 실행하세요. `MANUAL`은 성공을 뜻하지 않으므로 직접 확인해야 합니다. 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 잘못된 인자 또는 엔진 충돌입니다. Bash에서는 `echo $?`, PowerShell에서는 `$LASTEXITCODE`로 확인합니다.
 
-### 컨테이너 엔진 선택
+### 선택: 누락된 도구 설치
 
-Docker Desktop은 Linux containers 모드와 실제 서버 연결을 확인합니다. Podman은 macOS/Windows에서 machine이 필요할 수 있습니다. 기존 machine을 먼저 확인하고, 필요한 경우에만 직접 생성하거나 시작합니다. WSL 내부 Podman은 해당 배포판의 엔진과 rootless 설정을 확인합니다.
+누락된 도구를 설치하려면 **대화형 터미널**에서 아래 명령을 실행합니다. 도우미가 도구마다 설치 대상, 출처와 필요한 권한을 표시합니다. `y`로 승인한 항목만 설치하며, 거부하거나 Enter를 누르면 건너뜁니다. CI 또는 입력이나 출력이 리디렉션된 환경에서는 설치하지 않습니다. 일반 점검과 샘플 다운로드는 설치 도우미를 호출하지 않습니다.
 
-```text
-docker info
-docker buildx version
-```
+| 설치 대상 | 명령 |
+| --- | --- |
+| Java, WSL2/macOS | `bash scripts/install-prerequisites.sh --track java --container-engine docker` |
+| Java, Windows Copilot app 호스트 | `pwsh -File ./scripts/install-prerequisites.ps1 -Track java -ContainerEngine docker` |
+| .NET, Windows | `pwsh -File ./scripts/install-prerequisites.ps1 -Track dotnet -ContainerEngine docker` |
 
-또는:
+Windows Java 참가자는 필요한 환경마다 명령을 실행하세요. Windows 도우미는 호스트의 Node.js만 설치합니다. WSL 도구는 선택한 배포판을 열고 워크숍 자료 루트에서 Bash 명령을 실행해 설치합니다.
 
-```text
-podman machine list
-podman info
-podman build --help
-```
+| 환경 | 설치 방식과 주의사항 |
+| --- | --- |
+| WSL/Linux | nvm을 설치한 뒤 Node.js 22를, SDKMAN을 설치한 뒤 JDK 8, 21, 25를 설치합니다. 각 항목은 별도로 동의받습니다. Azure CLI와 `azd`는 Microsoft 설치 스크립트를 사용합니다. Azure CLI에는 `apt-get`과 `sudo`가 필요하며 시스템 패키지와 APT 저장소가 변경됩니다. `azd`도 설치 위치에 따라 `sudo`가 필요할 수 있습니다. |
+| macOS | Node.js와 JDK는 WSL/Linux와 같은 방식으로 설치합니다. Azure CLI와 `azd`에는 기존 Homebrew를 사용합니다. |
+| Windows | 기존 `winget`을 사용합니다. 관리자 승인이 필요할 수 있습니다. |
 
-Podman의 `machine init`/`machine start`를 점검 스크립트가 대신 실행하지 않습니다. Windows native Podman과 WSL Podman이 같은 서버를 가리킨다고 가정하지 마세요.
+Homebrew와 `winget` 자체는 자동으로 설치하지 않습니다. PATH에서 기존 도구가 발견되면 버전이 오래됐거나 실행에 문제가 있어도 덮어쓰거나 업데이트하지 않습니다. WSL에서 Windows 드라이브의 실행 파일이 선택된 경우에는 WSL에 별도로 설치할지 묻습니다.
 
-선택 우선순위는 **명시 인자 → `AZD_CONTAINER_RUNTIME` → 기본 `docker`**입니다. 인자와 기존 환경 변수의 값이 다르면 오류입니다. 선택한 엔진이 멈춰도 다른 엔진으로 자동 전환하지 않습니다. 이후 `azd`가 같은 엔진을 쓰도록 **각 실습 셸**에서 다음 중 하나를 설정하세요.
+SDKMAN에는 Bash 4 이상과 `curl`, `zip`, `unzip`, `tar`, `find`, `sed`가 필요합니다. WSL/Linux에 누락된 명령이 있고 `apt-get`과 `sudo`를 사용할 수 있다면 도우미가 선행 패키지를 설치할지 별도로 묻습니다. 다른 환경에서는 누락된 명령을 직접 설치한 뒤 다시 실행하세요. 이전 설치에 실패해 SDKMAN 경로가 남아 있으면 도우미는 해당 경로를 변경하지 않습니다. 내용을 확인하고 필요한 파일을 보존한 뒤 해당 경로를 직접 옮기거나 정리하고 다시 실행하세요. 기본 경로는 `~/.sdkman`이며 `SDKMAN_DIR`을 설정했다면 그 경로를 사용합니다.
+
+기존 nvm과 SDKMAN은 재사용합니다. JDK는 설치된 정식 버전의 `java`와 `javac`를 확인하고 없는 버전만 설치합니다. 자동 설치에는 현재 환경의 SDKMAN 목록에 있는 Temurin 식별자를 사용합니다. 해당 버전이 없으면 아래 수동 설치 방법으로 다른 배포판을 선택하세요. 기존 기본 JDK는 유지합니다. nvm과 SDKMAN은 셸 설정을 변경할 수 있으며, 현재 터미널에 적용할 초기화 명령은 설치 후 출력됩니다.
+
+컨테이너 엔진은 직접 준비해야 합니다. 도우미는 Windows Java 호스트를 제외하고 설치 후 사전 점검을 다시 실행합니다. 대화형 점검에서는 동의를 받아 Azure 로그인과 누락된 확장 설치도 진행할 수 있습니다. Windows Java 참가자는 WSL 설치까지 마친 뒤 Windows PowerShell 점검 명령을 다시 실행하세요. 새 PATH가 적용되지 않으면 안내된 초기화 명령을 실행하거나 새 터미널에서 점검합니다.
+
+### 공통 도구와 계정 보완
+
+| 항목 | 기준과 확인 범위 | 설치 안내 |
+| --- | --- | --- |
+| Git | 샘플 다운로드와 워크숍 저장소에서 기준선 관리 | [Git](https://git-scm.com/downloads) |
+| PowerShell | .NET 및 PowerShell 진입점은 7 이상, Windows PowerShell 5.1 아님 | [PowerShell](https://learn.microsoft.com/powershell/scripting/install/installing-powershell) |
+| Bash | Java는 WSL2/macOS, .NET Bash 진입점은 Git Bash | [WSL](https://learn.microsoft.com/windows/wsl/install), [Git for Windows](https://gitforwindows.org/) |
+| Node.js | 워크숍 기준 안정 버전 22 이상 | [Node.js](https://nodejs.org/en/download) |
+| GitHub Copilot app | 로그인, 라이선스, 조직 정책은 수동 확인 | [Copilot app](https://github.com/copilot/app) |
+| Azure CLI | 설치, `containerapp` 확장, 로그인, 구독, 공급자 상태 | [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) |
+| Azure Developer CLI | `azd` 1.37.3 이상, 별도 로그인 상태 | [azd 설치](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) |
+| 컨테이너 엔진 | Docker 또는 Podman CLI와 Linux 서버 연결, 빌더 기능 | [Docker Desktop](https://docs.docker.com/desktop/), [Podman](https://podman.io/docs/installation) |
+
+`gh`, 독립 Maven 설치, Copilot CLI, VS Code는 공통 필수가 아닙니다. Java 원본의 Maven Wrapper가 Maven 3.9.9를 내려받으므로 최초 실행에 네트워크가 필요합니다.
+
+Windows Java 참가자는 Windows 호스트에 Git과 Node.js 22 이상을 준비하고, 선택한 WSL2 배포판에도 Git, Node.js, Azure CLI, `azd`, SDKMAN과 선택한 컨테이너 엔진의 CLI를 준비합니다. Windows에 설치하거나 로그인했다고 해서 WSL에서 사용할 수 있는 것은 아닙니다. nvm 초기화는 점검 스크립트가 처리하지만, 다른 도구도 비대화형 Bash에서 실행할 수 있어야 합니다.
+
+### 자동으로 처리되지 않는 항목
+
+대화형 점검에서는 동의를 받아 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치와 공급자 등록을 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요. CI와 비대화형 환경에서는 검사만 합니다. 조치를 거부했거나 실패했다면 [사전 준비 수동 복구](troubleshooting.md#사전-준비-수동-복구)를 참고하세요.
+
+**Azure 대상과 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인하고 리전, 쿼터, 역할 할당 권한 및 데이터베이스 Entra 관리자 설정 권한을 준비합니다. Contributor에는 일반적으로 역할 할당 권한이 포함되지 않습니다. 필요한 범위의 권한을 관리자에게 요청하고, 구독 전체 Owner 권한을 무조건 요청하지 마세요. 배포 계획에 네트워크 리소스를 추가하면 별도 공급자 등록과 비용 검토도 필요할 수 있습니다.
+
+**컨테이너 엔진**: Docker 또는 Podman을 직접 설치하고 시작합니다. Windows Java에서 Docker Desktop을 사용하면 Linux containers 모드와 선택한 WSL 배포판의 통합을 켜세요. Podman은 필요한 경우에만 machine을 직접 생성하거나 시작합니다. Windows와 WSL의 CLI가 같은 엔진에 연결된다고 가정하지 마세요.
+
+`azd`가 선택한 엔진을 사용하도록 **각 실습 셸**에서 설정합니다. 스크립트는 부모 셸의 환경 변수를 변경하지 않습니다.
 
 ```powershell
 $env:AZD_CONTAINER_RUNTIME = 'docker' # Podman은 'podman'
@@ -122,33 +130,20 @@ $env:AZD_CONTAINER_RUNTIME = 'docker' # Podman은 'podman'
 export AZD_CONTAINER_RUNTIME=docker # Podman은 podman
 ```
 
-스크립트 실행은 부모 셸의 환경 변수를 바꾸지 않습니다. Docker Buildx가 없으면 경고를 표시하지만, 실제 `azd package` 성공 전까지 빌드 준비 완료로 보지 않습니다. Podman은 내장 빌더를 사용하며 Docker/Buildx가 없어도 됩니다. Docker 호환 대체 제품은 Linux 실행, `linux/amd64` 빌드, 포트 접근, 인증과 ACR 푸시까지 성공한 경우에만 조건부 지원합니다.
+`linux/amd64` 이미지 빌드, 포트 접근과 ACR 게시는 실습 중 확인합니다. CLI와 엔진 연결 검사의 `PASS`만으로 실제 워크로드 성공이 보장되지는 않습니다. Podman은 내장 빌더를 사용하므로 Docker Buildx가 필요하지 않습니다.
 
-## 2. 트랙별 도구
+**.NET Windows 구성요소**: 아래 항목은 자동 설치하지 않습니다. 누락된 항목만 준비한 뒤 점검을 다시 실행하세요. Visual Studio IDE는 실행할 필요가 없으며, 원본 빌드와 실행은 [실습 1](dotnet/01-run-locally.md)의 CLI 도우미를 사용합니다.
 
-### Java: SDKMAN, JDK 8/21/25
+| 구성요소 | 수동 준비 |
+| --- | --- |
+| Framework 웹 빌드 도구 | [Visual Studio 2022/2026 IDE 또는 Build Tools](https://visualstudio.microsoft.com/downloads/). IDE는 **ASP.NET 및 웹 개발**, Build Tools는 **Web development build tools** 워크로드 |
+| .NET Framework | **4.8 이상 런타임과 4.8 Targeting Pack** 모두 필요. 런타임이나 .NET 10 SDK만으로 대체할 수 없음 |
+| IIS Express | Visual Studio Installer 개별 구성요소 또는 [IIS Express 10](https://www.microsoft.com/download/details.aspx?id=48264) |
+| SQL Server Express LocalDB | Visual Studio Installer 개별 구성요소 또는 [SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)의 LocalDB 설치 옵션. 실습 전용 DB 사용 |
+| .NET 10 SDK | [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0). 현대화 이후 빌드용 |
+| MSMQ Server | [Windows 기능 활성화](https://learn.microsoft.com/dotnet/framework/wcf/samples/installing-message-queuing-msmq) 후 필요한 재부팅 완료. MSMQ 서비스가 Running인지 확인 |
 
-Windows에서는 WSL2를 사용합니다. `wsl --list --verbose`의 VERSION이 2인지 확인하세요. Windows Git Bash는 Java 실습 환경이 아닙니다. macOS는 Bash에서 실행합니다.
-
-[SDKMAN 설치 안내](https://sdkman.io/install/)에 따라 설치한 뒤, **같은 Bash 환경**에서 다음을 실행합니다.
-
-```bash
-source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
-sdk version
-sdk list java
-```
-
-배포판과 CPU 아키텍처에 맞는 **정식 JDK 8, 21, 25** 식별자를 골라 각각 `sdk install java <식별자>`로 설치합니다. 표시 이름을 추측하지 마세요. 설치 과정에서 기본 JDK를 바꾸겠느냐는 질문은 직접 결정하고, 실습 1에서는 `sdk use java <설치한-8-식별자>`로 현재 셸만 전환합니다. JRE나 EA 버전은 요구사항을 충족하지 않습니다. 점검은 `SDKMAN_DIR` 또는 `~/.sdkman` 아래의 `java`와 `javac`를 실제 실행해 버전이 맞는지 확인합니다.
-
-### .NET: Windows 도구
-
-[Visual Studio](https://visualstudio.microsoft.com/downloads/) 2026(18.x) IDE와 **ASP.NET 및 웹 개발** 워크로드를 설치합니다. Build Tools만 설치한 환경은 이 워크숍의 원본 IIS Express 실습을 충족하지 않습니다.
-
-Visual Studio Installer의 개별 구성요소에서 .NET Framework 4.8 Targeting Pack, IIS Express와 SQL Server Express LocalDB를 확인하고, [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)도 설치합니다.
-
-원본 README의 "4.8.2" 표기와 달리 고정 커밋의 `ContosoUniversity.csproj`는 **`v4.8`**입니다. 이 자료에서는 원본을 변경하지 않고 **4.8 이상 런타임 + 4.8 Targeting Pack**을 각각 확인합니다. 4.8.1 런타임이 있어도 4.8 참조 어셈블리가 없으면 빌드할 수 없습니다. [공식 버전 확인 안내](https://learn.microsoft.com/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed)를 기준으로 하며, "4.8.2 설치 파일"을 임의 사이트에서 받지 않습니다.
-
-Windows 기능의 **Microsoft Message Queue(MSMQ) Server**를 활성화하고 필요한 재부팅을 마칩니다. [MSMQ 설치 안내](https://learn.microsoft.com/dotnet/framework/wcf/samples/installing-message-queuing-msmq)를 참고하세요. `Get-Service MSMQ`가 Running인지 확인합니다. 스크립트가 기능이나 서비스 상태를 변경하지 않습니다.
+필수 `FAIL`을 해결하고 `MANUAL` 항목을 확인한 뒤 다음 단계로 진행합니다. 설치 오류나 지원되지 않는 JDK 배포판은 [문제 해결](troubleshooting.md#사전-준비-수동-복구)을 참고하세요.
 
 ## 3. Copilot app에 플러그인 설치
 
@@ -157,31 +152,9 @@ Windows 기능의 **Microsoft Message Queue(MSMQ) Server**를 활성화하고 �
 3. Agent picker에서 `modernize` 또는 `github-copilot-modernization:modernize`가 보이는지 확인합니다. 내부 coordinator/worker를 직접 선택하지 않습니다.
 4. .NET 참가자는 [공식 Upgrade 설치 링크와 app 안내](https://github.com/microsoft/upgrade-agent-plugins#github-copilot-app)를 열어 `microsoft/upgrade-agent-plugins` 마켓플레이스를 추가하고 `upgrade-agent`를 설치합니다. Agent picker의 **Upgrade**를 확인합니다.
 
-설치 뒤 목록이 갱신되지 않으면 앱 새 세션/재시작과 조직 정책을 확인합니다. .NET 안내의 예시가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다. 무인 자동 승인이나 모든 권한 허용을 켜지 않습니다. 앱 UI에서 플러그인이 보이지 않으면 [문제 해결](troubleshooting.md)을 확인하고 멈춥니다. CLI로 임의 전환하지 않습니다.
+설치 후 목록이 갱신되지 않으면 앱에서 새 세션을 열거나 앱을 다시 시작하고, 조직 정책도 확인합니다. .NET 안내의 예시가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 앱 UI에 플러그인이 보이지 않으면 [문제 해결](troubleshooting.md)을 확인하고 멈춥니다. CLI로 임의 전환하지 않습니다.
 
-## 4. 사전 점검을 먼저 실행
-
-복제한 **워크숍 자료 루트**에서 선택한 명령 하나를 실행합니다. 기본 Docker 대신 Podman을 선택했다면 엔진 인자도 바꿉니다.
-
-| 환경 | 명령 |
-| --- | --- |
-| Java, WSL2/macOS Bash | `bash scripts/check-prerequisites.sh --track java --container-engine docker` |
-| Java, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker` |
-| .NET, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker` |
-| .NET, Windows Git Bash | `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker` |
-
-`Ubuntu`는 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여럿이면 PowerShell 진입점은 이름을 명시해야 합니다. macOS에서 PowerShell Java 진입점을 사용하면 로컬 Bash로 위임합니다. .NET Bash 진입점은 Windows `pwsh`로 위임합니다.
-
-| 결과 | 의미 |
-| --- | --- |
-| `PASS` | 해당 자동 검사 통과 |
-| `FAIL` | 필수 검사 실패. 해결하고 재실행 |
-| `WARN` | 제한 또는 추가 확인 필요 |
-| `MANUAL` | 자동 검증하지 못한 항목. 참가자 직접 확인 필요 |
-
-종료 코드 `0`은 필수 자동 검사 통과, `1`은 환경 검사 실패, `2`는 잘못된 인자 또는 엔진 충돌입니다. Bash는 `echo $?`, PowerShell은 `$LASTEXITCODE`로 확인합니다. `MANUAL`은 성공을 뜻하지 않습니다.
-
-## 5. 점검 통과 후 다운로드
+## 4. 점검과 플러그인 설치 후 다운로드
 
 같은 트랙, 같은 엔진, 같은 실행 환경을 사용합니다.
 
@@ -219,7 +192,7 @@ bash scripts/download-sample.sh --track java --destination "$HOME/workshops/asse
 
 ## 완료 기준과 다음 단계
 
-다음 조건을 모두 충족해야 합니다. 개인 계정에 템플릿 기반 저장소를 만들어 복제했고, 필수 자동 검사에 실패가 없으며, 수동 항목을 확인했습니다. 또한 선택한 앱 폴더에 Java의 `pom.xml` 또는 .NET의 `ContosoUniversity.sln`이 있어야 합니다. 기본 위치라면 각각 `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`입니다. 기본 다운로드 위치의 앱 파일은 워크숍 저장소에서 추적됩니다. 실습 1에서 생성 파일과 비밀이 없는지 확인한 뒤 기준선 커밋을 만드세요. 사용자 지정 경로를 쓴 경우 그 경로가 어느 저장소에 속하는지 먼저 확인합니다.
+다음 조건을 모두 충족해야 합니다. 개인 계정에 템플릿 기반 저장소를 만들어 복제했고, 필수 자동 검사에 실패가 없으며, Copilot 플러그인과 이 단계에서 확인 가능한 수동 항목을 확인했습니다. 실제 컨테이너 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다. 또한 선택한 앱 폴더에 Java의 `pom.xml` 또는 .NET의 `ContosoUniversity.sln`이 있어야 합니다. 기본 위치라면 각각 `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`입니다. 기본 다운로드 위치의 앱 파일은 워크숍 저장소에서 추적됩니다. 실습 1에서 생성 파일과 비밀이 없는지 확인한 뒤 기준선 커밋을 만드세요. 사용자 지정 경로를 쓴 경우 그 경로가 어느 저장소에 속하는지 먼저 확인합니다.
 
 [Java 실습 1: 원본 실행](java/01-run-locally.md) 또는 [.NET 실습 1: 원본 실행](dotnet/01-run-locally.md)으로 이동합니다.
 

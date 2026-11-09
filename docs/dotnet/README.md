@@ -6,11 +6,11 @@
 
 Windows의 ASP.NET MVC 5/.NET Framework **`v4.8`** 앱을 .NET 10/ASP.NET Core로 바꾸고, Windows 전용 의존성을 제거해 **Linux ACA**에 배포합니다. 원본 README의 "4.8.2" 표기를 설치 요구사항으로 사용하지 않습니다.
 
-[공통 준비](../setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `dotnet`이며 `ContosoUniversity.sln`과 `.csproj`가 바로 아래에 있습니다. Visual Studio 2026은 원본 실행용이고, 현대화 대화는 **GitHub Copilot app**에서 진행합니다.
+[공통 준비](../setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `dotnet`이며 `ContosoUniversity.sln`과 `.csproj`가 바로 아래에 있습니다. **GitHub Copilot app**에서 앱 폴더를 열고 Windows 터미널의 MSBuild와 IIS Express로 원본을 빌드/실행합니다. VS 2022/2026 IDE 또는 독립 Build Tools의 웹 빌드 도구를 사용할 수 있으며, **Visual Studio IDE를 열 필요는 없습니다.**
 
 | 순서 | 실습 | 도구와 완료 기준 |
 | --- | --- | --- |
-| 1 | [원본 로컬 실행](01-run-locally.md) | Visual Studio/IIS Express, LocalDB/MSMQ, 워크숍 저장소 기준선 커밋 |
+| 1 | [원본 로컬 실행](01-run-locally.md) | Copilot app → PowerShell/MSBuild → IIS Express, LocalDB/MSMQ, 워크숍 저장소 기준선 커밋 |
 | 2 | [평가와 계획](02-assess-and-plan.md) | `modernize`, 평가와 실행 범위 승인 |
 | 3 | [.NET 10 업그레이드](03-upgrade.md) | `Upgrade`, ASP.NET Core와 회귀 검사 |
 | 4 | [Azure 서비스 이전](04-migrate-azure-services.md) | `modernize`, SQL/Service Bus/Blob 및 Windows 의존성 제거 |

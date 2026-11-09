@@ -26,6 +26,61 @@
 
 다운로드의 필수 파일 오류를 해결하려고 `main` 최신 커밋으로 자동 전환하지 않습니다. 자료에 고정된 SHA 변경은 원본 차이와 실행 절차를 다시 검토해야 합니다.
 
+## 사전 준비 수동 복구
+
+점검과 설치 도우미의 조치를 거부했거나 실패한 경우에만 아래에서 필요한 항목을 수행합니다. Java는 선택한 WSL2/macOS Bash에서, .NET은 Windows PowerShell 7에서 실행합니다. 조치 후 같은 환경에서 사전 점검을 다시 실행하세요.
+
+### Azure 인증과 공급자 등록
+
+먼저 오류가 미로그인, 권한 부족, 네트워크 중 어느 문제인지 확인합니다. `az`와 `azd` 인증은 별개이며, 브라우저나 장치 코드 인증은 직접 완료해야 합니다. 필요한 명령만 실행하세요.
+
+```text
+az login
+az account list --output table
+az account set --subscription "<본인-구독-ID>"
+az account show --query "{name:name,id:id,tenantId:tenantId}" --output table
+az extension add --name containerapp --upgrade
+azd auth login
+azd auth login --check-status
+```
+
+WSL에서 Windows 드라이브의 `az`가 호출되면 그 CLI의 인증 설정을 사용합니다. WSL 전용 CLI를 사용하려면 `command -v az`로 Linux 실행 파일을 확인한 뒤 해당 CLI에서 로그인과 구독을 확인하세요.
+
+공급자 등록 실패 시 **대상 구독과 등록 권한을 먼저 확인**하고, 오류에 표시된 미등록 공급자만 아래 명령으로 등록합니다. 구독 설정이 변경되며 `--wait`는 시간이 걸릴 수 있습니다.
+
+```text
+az provider register --namespace "<미등록-공급자>" --wait
+az provider show --namespace "<미등록-공급자>" --query registrationState --output tsv
+```
+
+공통 대상은 `Microsoft.App`, `Microsoft.OperationalInsights`, `Microsoft.Storage`, `Microsoft.ContainerRegistry`, `Microsoft.ServiceBus`입니다. Java는 `Microsoft.DBforPostgreSQL`, .NET은 `Microsoft.Sql`도 필요합니다. VNet/Private Endpoint를 추가하면 `Microsoft.Network` 등 추가 공급자를 배포 계획에 맞춰 확인합니다. 공급자 등록이나 로그인 성공이 역할 할당, 데이터베이스 Entra 관리자 지정 또는 DB 내부 사용자 생성 권한까지 보장하지는 않습니다.
+
+### SDKMAN과 JDK 설치
+
+SDKMAN 자체 설치가 실패하면 [공식 설치 안내](https://sdkman.io/install/)와 오류에 표시된 선행 도구를 확인합니다. 기존 설치 경로는 내용을 확인하고 필요한 파일을 보존한 뒤 직접 옮기거나 정리하세요. 도우미는 기존 경로를 덮어쓰지 않습니다.
+
+Temurin을 제공하지 않는 OS/아키텍처에서는 같은 Bash에서 목록을 확인하고 다른 배포판의 **정식 JDK 8, 21, 25**를 선택합니다.
+
+```bash
+source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
+sdk version
+sdk list java
+sdk install java <목록에서-선택한-식별자>
+```
+
+필요한 버전마다 설치를 반복합니다. JRE와 EA 버전은 제외하고, 식별자의 `+빌드번호`도 그대로 사용하세요. 수동 설치 중 기본 JDK 변경 질문은 직접 결정합니다. 실습 1에서는 `sdk use java <설치한-8-식별자>`로 현재 셸만 전환합니다. 점검은 SDKMAN 후보의 `java`와 `javac`를 실제 실행해 버전을 확인합니다.
+
+### .NET 빌드 구성요소
+
+기본 MSBuild만으로는 원본 웹 프로젝트를 빌드할 수 없습니다. Visual Studio Installer에서 IDE의 `Microsoft.VisualStudio.Workload.NetWeb` 또는 Build Tools의 `Microsoft.VisualStudio.Workload.WebBuildTools`를 준비하세요. 설치본에 다음 파일이 있어야 합니다.
+
+- `MSBuild\Current\Bin\MSBuild.exe`
+- `MSBuild\Microsoft\VisualStudio\v17.0` 또는 `v18.0` 아래의 `WebApplications\Microsoft.WebApplication.targets`
+
+IIS Express에는 실행 파일뿐 아니라 `AppServer\applicationhost.config` 템플릿도 필요합니다. 원본은 전체 Framework MSBuild와 IIS Express로 빌드하고 실행하며, `dotnet build`/`dotnet run`으로 대체하지 않습니다.
+
+원본 README의 "4.8.2" 표기와 달리 고정 커밋의 프로젝트 대상은 `v4.8`입니다. **4.8 이상 런타임과 4.8 참조 어셈블리**를 각각 준비합니다. 4.8.1 런타임만으로는 4.8 Targeting Pack을 대체할 수 없습니다. [공식 버전 확인 안내](https://learn.microsoft.com/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed)를 따르고, "4.8.2 설치 파일"을 임의 사이트에서 받지 마세요.
+
 ## Copilot app과 플러그인
 
 | 증상 | 확인과 조치 |
@@ -48,13 +103,19 @@
 | Java 포트/컨테이너 이름 충돌 | 현재 PID/컨테이너의 소유 프로젝트를 먼저 확인합니다. 다른 앱을 종료하거나 원본 start 스크립트를 반복 실행하지 않습니다. |
 | Podman인데 Java 원본이 docker 호출 | [Java 실습 1](java/01-run-locally.md)의 Podman 수동 서비스/Maven 실행 경로를 사용합니다. |
 | Framework 참조 어셈블리 누락 | 런타임과 별개로 **4.8 Targeting Pack**을 설치합니다. 4.8.2 다운로드를 찾거나 csproj를 임의 retarget하지 않습니다. |
-| VS 2026 검사 실패 | 18.x IDE와 ASP.NET 및 웹 개발 워크로드를 확인합니다. Build Tools 단독 설치는 불충분합니다. |
+| `framework-build` 검사 실패 | VS 2022/2026 IDE 또는 Build Tools를 사용할 수 있습니다. `vswhere`와 선택 설치본의 MSBuild 실행 파일, `WebApplications\Microsoft.WebApplication.targets`를 확인합니다. Build Tools에는 Web development build tools가 필요하며 기본 MSBuild만으로는 부족합니다. IDE 실행은 필요하지 않습니다. |
+| MSB4019 / 웹 타깃 import 실패 | `dotnet build`가 아니라 도우미의 전체 Framework MSBuild를 사용합니다. 도우미는 해당 설치본의 `VSToolsPath`/`VisualStudioVersion`을 전달합니다. 웹 타깃 없이 프로젝트 import를 삭제해 우회하지 않습니다. |
+| 패키지/HintPath 누락 | 원본은 `packages.config`이며 앱 루트의 `packages`를 참조합니다. 도우미의 `/t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=...` 성공을 먼저 확인하고 프록시/패키지 소스 오류를 해결합니다. |
+| IIS Express CLI가 종료되거나 주소 접근 실패 | 장기 실행 터미널, 실행 PID와 로그를 확인합니다. 기본 CLI는 `http://localhost:58801/`이며 IDE의 HTTPS 44300과 다릅니다. 포트 충돌은 `-Port`로 해결하고 관리자 실행/URL ACL/방화벽 전역 변경으로 우회하지 않습니다. HTTP 응답 확인은 DB 초기화를 유발할 수 있습니다. |
+| IIS 401 / 500.19 / 500.21 | 생성 구성의 Windows 인증(활성), 익명 인증(비활성), CLR4 Integrated 풀과 IIS Express ASP.NET 모듈을 확인합니다. Windows 통합 인증을 지원하는 로컬 브라우저를 사용하고 로그의 모듈/설정 오류를 구분합니다. 전역 인증을 풀거나 무조건 관리자 실행하지 않습니다. |
 | MSMQ 오류 | Windows 기능, Running 서비스, 정확한 private queue 이름/권한/트랜잭션 설정을 확인합니다. Linux로 MSMQ를 가져가지 않습니다. |
 | .NET 10 SDK 검사 실패 | `dotnet --list-sdks`를 봅니다. 런타임만 설치했거나 preview만 있는 경우는 통과하지 않습니다. `global.json`도 확인합니다. |
 | LocalDB/IIS Express 없음 | Visual Studio Installer 개별 구성요소를 확인합니다. 일반 SQL Server를 다른 DB에 연결해 대신 쓰지 않습니다. |
 | HTTPS 인증서 경고 | 개발 인증서와 발급/신뢰 상태를 참가자가 확인해 해결합니다. 보안 경고 우회나 TLS 검증 비활성화를 기본으로 하지 않습니다. |
 
 ## 엔진, azd와 Azure
+
+엔진 선택은 명시 인자, `AZD_CONTAINER_RUNTIME`, 기본값 `docker` 순서입니다. 인자와 환경 변수가 다르면 오류가 발생하고, 선택한 엔진이 멈춰도 다른 엔진으로 전환하지 않습니다. Podman machine 목록만으로 현재 연결된 엔진을 판단하지 말고 `podman info`와 연결 설정을 함께 확인하세요. Docker 호환 대체 제품은 Linux 실행, `linux/amd64` 빌드, 포트 접근과 ACR 게시까지 직접 확인한 경우에만 조건부로 사용합니다.
 
 | 증상 | 확인과 조치 |
 | --- | --- |

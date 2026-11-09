@@ -46,6 +46,8 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 
 선택형 개발 환경은 [Dev Container 안내](.devcontainer/README.md)를 참고하세요. .NET Framework 원본 실습은 여전히 Windows에서 진행합니다.
 
+.NET 원본도 **Copilot app → Windows PowerShell/MSBuild → IIS Express**로 빌드/실행합니다. Visual Studio IDE를 열지 않아도 되며, 설치된 IDE 또는 독립 Build Tools의 웹 빌드 구성요소를 사용합니다. LocalDB와 MSMQ는 여전히 필요합니다. [실습 1](docs/dotnet/01-run-locally.md)의 도우미는 기본적으로 복원/빌드만 하고, DB 초기화 위험을 확인한 경우에만 실행합니다.
+
 ## 트랙 선택
 
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
@@ -84,6 +86,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 
 ```powershell
 pwsh -File ./tests/scripts.tests.ps1
+pwsh -File ./tests/dotnet-original.tests.ps1
 ```
 
 ```bash

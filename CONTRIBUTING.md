@@ -14,7 +14,10 @@ PowerShell:
 
 ```powershell
 pwsh -File ./tests/scripts.tests.ps1
+pwsh -File ./tests/dotnet-original.tests.ps1
 ```
+
+The .NET original-app tests use isolated fixtures and mocked native invocations; they never start IIS Express or access LocalDB/MSMQ. A real Windows sample restore/build and browser workflow remain separate rehearsal checks.
 
 Bash:
 

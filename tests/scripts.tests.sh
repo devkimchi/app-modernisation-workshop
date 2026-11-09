@@ -147,7 +147,7 @@ for name in pom.xml mvnw .gitignore .mvn/wrapper/maven-wrapper.properties web/te
     assert "source bytes unchanged: $name" cmp "$UPSTREAM/asset-manager/$name" "$TARGET/$name"
 done
 assert 'download has no nested Git directory' test ! -e "$TARGET/.git"
-assert 'download uses workshop Git root' test "$(cygpath -u "$(git -C "$TARGET" rev-parse --show-toplevel)")" = "$ROOT"
+assert 'download uses workshop Git root' test "$(git -C "$TARGET" rev-parse --show-prefix)" = ".test-output/${TEMPORARY##*/}/download with spaces/"
 if safe_destination "$TARGET" "$ROOT" >/dev/null 2>&1; then exit 1; else PASSED=$((PASSED + 1)); fi
 for name in upstream-source.json UPSTREAM-NOTICE.md; do
     printf 'preserve upstream content\n' > "$UPSTREAM/asset-manager/$name"

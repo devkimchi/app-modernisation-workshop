@@ -22,8 +22,8 @@ bash scripts/download-sample.sh --track java --container-engine docker
 .NET:
 
 ```powershell
-pwsh -File .\scripts\check-prerequisites.ps1 -Track dotnet -ContainerEngine docker &&
-pwsh -File .\scripts\download-sample.ps1 -Track dotnet -ContainerEngine docker
+pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker &&
+pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
 ```
 
 Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다. Windows에서 Java를 PowerShell로 시작하거나 .NET을 Git Bash로 시작하는 방법은 [공통 준비](docs/setup.md)에 있습니다. 다운로드 스크립트 자체도 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다.
@@ -39,7 +39,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 | 서비스 이전 | PostgreSQL, RabbitMQ, 파일 → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
 | 배포 단위 | web + worker, ACA 2개 | 웹 앱, 필요하면 처리기 분리 여부를 계획에서 결정 |
 
-기본 다운로드 결과는 `java\pom.xml` 또는 `dotnet\ContosoUniversity.sln`입니다. `docs\java`, `docs\dotnet`은 **문서** 폴더이고 최상위 `java`, `dotnet`은 **앱** 폴더입니다. 다운로드 위치는 `-Destination`/`--destination`으로 바꿀 수 있습니다.
+기본 다운로드 결과는 `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`입니다. `docs/java`, `docs/dotnet`은 **문서** 폴더이고 최상위 `java`, `dotnet`은 **앱** 폴더입니다. 다운로드 위치는 `-Destination`/`--destination`으로 바꿀 수 있습니다.
 
 선택한 앱 폴더는 원본 저장소와 별개의 Git 저장소입니다. 원본 실행과 기준선 커밋을 마친 뒤 Copilot app에 **앱 폴더 자체**를 추가합니다. 워크샵 최상위를 현대화 대상으로 열지 마세요.
 
@@ -65,7 +65,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 준비 스크립트 회귀 검사는 외부 패키지 없이 다음과 같이 실행합니다. 실제 계정이나 OS 기능을 바꾸지 않는 fixture/mock 검사이며, macOS/WSL2/Podman 실기기 및 전체 앱 현대화와 Azure 배포를 대신하지 않습니다.
 
 ```powershell
-pwsh -File .\tests\scripts.tests.ps1
+pwsh -File ./tests/scripts.tests.ps1
 ```
 
 ```bash

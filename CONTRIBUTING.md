@@ -13,7 +13,7 @@ The current branch contains repository setup files only. When the workshop mater
 PowerShell:
 
 ```powershell
-pwsh -File .\tests\scripts.tests.ps1
+pwsh -File ./tests/scripts.tests.ps1
 ```
 
 Bash:

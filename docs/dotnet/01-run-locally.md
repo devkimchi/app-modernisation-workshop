@@ -9,8 +9,8 @@
 터미널은 **Windows PowerShell 7**, 작업 위치는 **앱 루트 `dotnet`**입니다. 빌드와 최초 실행은 Visual Studio 2026에서 수행합니다.
 
 ```powershell
-Set-Location .\dotnet
-Get-Content .\ContosoUniversity.csproj | Select-String TargetFrameworkVersion
+Set-Location ./dotnet
+Get-Content ./ContosoUniversity.csproj | Select-String TargetFrameworkVersion
 Get-Service MSMQ
 dotnet --list-sdks
 ```
@@ -41,7 +41,7 @@ MSMQ 오류가 나면 서비스 상태, 앱이 사용하는 private queue 이름
 Visual Studio 실행을 중지하고 변경/생성 파일을 확인합니다. 저장소에 이미 있는 `.gitignore`는 보존하면서 실습 생성물의 제외 규칙을 보완합니다.
 
 ```powershell
-Add-Content .\.gitignore "`n.azure/`n.vs/`n**/bin/`n**/obj/`npackages/`n*.mdf`n*.ldf`n.env`n.env.*"
+Add-Content ./.gitignore "`n.azure/`n.vs/`n**/bin/`n**/obj/`npackages/`n*.mdf`n*.ldf`n.env`n.env.*"
 git status --short
 git add .
 git diff --cached --stat
@@ -51,7 +51,7 @@ git commit -m "Baseline: verified .NET Framework sample"
 
 업로드 파일, 로그, 인증 토큰과 실제 연결 비밀이 포함되지 않았는지 커밋 전에 확인합니다. Git 신원이 없으면 참가자가 이 저장소 범위에 본인 설정을 추가합니다. 원격 GitHub 저장소는 만들 필요가 없습니다.
 
-Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크샵 최상위나 `docs\dotnet`을 열지 않습니다. 앱의 세션이 별도 작업 경로를 사용하면 이후 Visual Studio/터미널도 그 경로를 사용해야 합니다.
+Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크샵 최상위나 `docs/dotnet`을 열지 않습니다. 앱의 세션이 별도 작업 경로를 사용하면 이후 Visual Studio/터미널도 그 경로를 사용해야 합니다.
 
 ## 완료 기준과 문제 해결
 

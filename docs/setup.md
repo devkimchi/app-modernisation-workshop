@@ -136,8 +136,8 @@ Windows 기능의 **Microsoft Message Queue(MSMQ) Server**를 활성화하고 �
 | 환경 | 명령 |
 | --- | --- |
 | Java, WSL2/macOS Bash | `bash scripts/check-prerequisites.sh --track java --container-engine docker` |
-| Java, Windows PowerShell 7 | `pwsh -File .\scripts\check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker` |
-| .NET, Windows PowerShell 7 | `pwsh -File .\scripts\check-prerequisites.ps1 -Track dotnet -ContainerEngine docker` |
+| Java, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker` |
+| .NET, Windows PowerShell 7 | `pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker` |
 | .NET, Windows Git Bash | `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker` |
 
 `Ubuntu`는 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여럿이면 PowerShell 진입점은 이름을 명시해야 합니다. macOS에서 PowerShell Java 진입점을 사용하면 로컬 Bash로 위임합니다. .NET Bash 진입점은 Windows `pwsh`로 위임합니다.
@@ -162,19 +162,19 @@ bash scripts/download-sample.sh --track java --container-engine docker
 
 ```powershell
 # .NET Windows
-pwsh -File .\scripts\download-sample.ps1 -Track dotnet -ContainerEngine docker
+pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
 # Java Windows는 WSL2로 위임
-pwsh -File .\scripts\download-sample.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
+pwsh -File ./scripts/download-sample.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
 ```
 
 위 PowerShell 예시는 **두 트랙을 모두 실행하라는 의미가 아닙니다**. 선택한 명령 하나만 실행합니다.
 
 기본 위치는 호출한 터미널 폴더가 아니라 스크립트 상위의 워크샵 루트를 기준으로 한 `java` 또는 `dotnet`입니다. 사용자 지정 **상대 경로**는 호출자의 현재 작업 폴더 기준입니다.
 
-Bash 인자에는 POSIX 경로를 사용합니다. Windows Git Bash의 사용자 지정 경로는 `/c/workshops/contoso-app`처럼 쓰고, Windows PowerShell에서는 `C:\workshops\contoso-app`처럼 씁니다. Bash의 `//server/...` 및 Windows 확장/장치 경로는 지원하지 않습니다.
+Bash 인자에는 POSIX 경로를 사용합니다. Windows Git Bash의 사용자 지정 경로는 `/c/workshops/contoso-app`처럼 쓰고, Windows PowerShell에서는 `C:/workshops/contoso-app`처럼 씁니다. Bash의 `//server/...` 및 Windows 확장/장치 경로는 지원하지 않습니다.
 
 ```powershell
-pwsh -File .\scripts\download-sample.ps1 -Track dotnet -Destination 'C:\workshops\contoso-app' -ContainerEngine podman
+pwsh -File ./scripts/download-sample.ps1 -Track dotnet -Destination 'C:/workshops/contoso-app' -ContainerEngine podman
 ```
 
 ```bash
@@ -189,7 +189,7 @@ bash scripts/download-sample.sh --track java --destination "$HOME/workshops/asse
 
 ## 완료 기준과 다음 단계
 
-필수 자동 검사에 실패가 없고 수동 항목을 확인했으며, `java\pom.xml` 또는 `dotnet\ContosoUniversity.sln`이 존재해야 합니다. 기본 다운로드 폴더는 워크샵 `.gitignore`에서 제외됩니다. 별도 경로를 선택했다면 앱이 다른 저장소에 실수로 포함되지 않는지도 확인하세요.
+필수 자동 검사에 실패가 없고 수동 항목을 확인했으며, `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`이 존재해야 합니다. 기본 다운로드 폴더는 워크샵 `.gitignore`에서 제외됩니다. 별도 경로를 선택했다면 앱이 다른 저장소에 실수로 포함되지 않는지도 확인하세요.
 
 [Java 실습 1: 원본 실행](java/01-run-locally.md) 또는 [.NET 실습 1: 원본 실행](dotnet/01-run-locally.md)으로 이동합니다.
 

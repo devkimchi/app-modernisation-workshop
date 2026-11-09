@@ -95,9 +95,7 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,linux,visualstudiocode
 
-# Downloaded workshop applications and local test output
-/java/
-/dotnet/
+# Local test output
 /.test-output/
 
 # Local environment and generated files

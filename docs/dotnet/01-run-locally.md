@@ -46,7 +46,7 @@ MSMQ 오류가 나면 서비스 상태, 앱이 사용하는 private queue 이름
 
 ## 기준선 커밋과 Copilot app
 
-Visual Studio 실행을 중지하고 변경/생성 파일을 확인합니다. 저장소에 이미 있는 `.gitignore`는 보존하면서 실습 생성물의 제외 규칙을 보완합니다.
+Visual Studio 실행을 중지하고 변경/생성 파일을 확인합니다. 앱 폴더에는 별도의 `.git` 저장소가 없습니다. Git은 워크숍 루트 저장소를 사용하며, 저장소에 이미 있는 제외 규칙은 보존하면서 실습 생성물의 제외 규칙을 앱 폴더의 `.gitignore`에 보완합니다.
 
 ```powershell
 Add-Content ./.gitignore "`n.azure/`n.vs/`n**/bin/`n**/obj/`npackages/`n*.mdf`n*.ldf`n.env`n.env.*"
@@ -72,7 +72,7 @@ git diff --cached
 git commit -m "Baseline: verified .NET Framework sample"
 ```
 
-Git 신원이 없으면 참가자가 이 저장소 범위에 본인 설정을 추가합니다. 원격 GitHub 저장소는 만들 필요가 없습니다.
+Git 신원이 없으면 참가자가 워크숍 저장소 범위에 본인 설정을 추가합니다. 템플릿 저장소를 복제할 때 설정된 원격을 새로 만들 필요는 없습니다.
 
 Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 앱의 세션이 별도 작업 경로를 사용하면 이후 Visual Studio/터미널도 그 경로를 사용해야 합니다.
 

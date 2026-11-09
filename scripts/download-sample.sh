@@ -104,13 +104,12 @@ download_sample() (
     done
     # Production values are fixed URLs, SHA-1 and directory names, not user input.
     printf '{\n  "repository": "%s",\n  "commit": "%s",\n  "subdirectory": "%s",\n  "licenseFileFound": %s\n}\n' "$repository" "$commit" "$subdirectory" "$license" > "$payload/upstream-source.json"
-    git init --quiet "$payload"
     safe_destination "$target" "$workshop" >/dev/null
     [[ ! -d "$target" ]] || rmdir -- "$target"
     # mkdir reserves the destination; cp will never merge into another writer's directory.
     mkdir -- "$target"
     cp -Rp "$payload/." "$target/"
-    printf '[PASS] 샘플 다운로드: %s\n[PASS] 원본 커밋: %s / 독립 Git 저장소\n' "$target" "$commit"
+    printf '[PASS] 샘플 다운로드: %s\n[PASS] 원본 커밋: %s / 앱 폴더에 Git 저장소를 만들지 않음\n' "$target" "$commit"
     if [[ "$license" == false ]]; then printf '%s\n' '[WARN] 원본 라이선스 파일이 없습니다. 재배포 권한을 가정하지 마세요.'; fi
 )
 

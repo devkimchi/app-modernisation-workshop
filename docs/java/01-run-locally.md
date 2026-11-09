@@ -104,7 +104,7 @@ bash ../mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
 DB나 worker가 실패한 상태에서 홈 화면만 열린 것을 성공으로 처리하지 않습니다. 원본의 장애가 있다면 오류와 수정 내용을 따로 남겨 기준선을 명확히 합니다.
 
-기본 `dev` 저장 폴더는 앱 루트의 `storage`입니다. `local.storage.directory`를 바꿨다면 실제 저장 경로도 확인하고 저장소 안의 생성 파일을 제외합니다. 실습 생성물과 비밀이 Git에 들어가지 않도록 제외 규칙을 보완합니다.
+기본 `dev` 저장 폴더는 앱 루트의 `storage`입니다. `local.storage.directory`를 바꿨다면 실제 저장 경로도 확인하고 저장소 안의 생성 파일을 제외합니다. 앱 폴더에는 별도의 `.git` 저장소가 없으며, Git은 워크숍 루트 저장소를 사용합니다. 실습 생성물과 비밀이 Git에 들어가지 않도록 앱 폴더의 제외 규칙을 보완합니다.
 
 ```bash
 printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.*\n' >> .gitignore
@@ -130,7 +130,7 @@ git diff --cached
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
-사용자 이름/이메일이 없어서 커밋이 거부되면 본인이 사용할 Git 신원을 **이 저장소 범위**로 설정합니다. 스크립트가 대신 설정하지 않습니다.
+사용자 이름/이메일이 없어서 커밋이 거부되면 본인이 사용할 Git 신원을 **워크숍 저장소 범위**로 설정합니다. 스크립트가 대신 설정하지 않습니다.
 
 이제 Copilot app에 앱 루트를 추가하고 작업 세션을 만듭니다. Windows에서는 Windows 경로로 앱 폴더를 열되 WSL2에서 같은 폴더를 참조하는 경로를 확인합니다. 에이전트 실행 환경과 작업 디렉터리를 확인하고, 원본을 실행하던 세션과 다른 복사본을 수정하지 않도록 합니다.
 

@@ -1,6 +1,18 @@
 # GitHub Copilot app으로 앱 현대화하기
 
-Java 8 또는 .NET Framework 4.8 앱 하나를 선택해 로컬에서 실행하고, GitHub Copilot app의 **Modernization 플러그인**으로 현대화한 뒤 **Azure Developer CLI(`azd`)로 Azure Container Apps(ACA)에 배포하는** 한국어 핸즈온 워크숍입니다.
+GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 핸즈온 워크숍입니다.
+
+## 워크샵 구조
+
+```text
+.
+├── README.md       # 워크숍 안내와 진행 순서
+├── docs
+│   ├── java        # Java 트랙 실습 문서
+│   └── dotnet      # .NET 트랙 실습 문서
+├── java            # 다운로드되는 Java 앱
+└── dotnet          # 다운로드되는 .NET 앱
+```
 
 ## 먼저 할 일
 
@@ -39,25 +51,25 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
 | --- | --- | --- |
 | 참가자 환경 | Windows + WSL2 또는 macOS | Windows |
-| 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, ASP.NET MVC 5, 프로젝트 대상 `v4.8` |
-| 최종 런타임 | JDK 25. JDK 21은 중간 단계 | .NET 10, ASP.NET Core, Linux |
+| 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, .NET Framework 4.8, ASP.NET MVC 5 |
+| 최종 런타임 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
 | 도구 | Modernization의 `modernize` | 업그레이드는 `Upgrade`, Azure 이전은 `modernize` |
 | 서비스 이전 | PostgreSQL, RabbitMQ, 파일(`dev`: 로컬, 그 외: AWS S3) → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
 | 배포 단위 | web + worker, ACA 2개 | 웹 앱, 필요하면 처리기 분리 여부를 계획에서 결정 |
 
-기본 다운로드 결과는 `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`입니다. `docs/java`, `docs/dotnet`은 **문서** 폴더이고 최상위 `java`, `dotnet`은 **앱** 폴더입니다. 다운로드 위치는 `-Destination`/`--destination`으로 바꿀 수 있습니다.
+## 워크숍 진행 순서
 
-선택한 앱 폴더는 원본 저장소와 별개의 Git 저장소입니다. 원본 실행과 기준선 커밋을 마친 뒤 Copilot app에 **앱 폴더 자체**를 추가합니다. 워크숍 최상위를 현대화 대상으로 열지 마세요.
-
-## 자료 구성과 운영
-
-공통 문서는 이 README, [준비](docs/setup.md), [문제 해결](docs/troubleshooting.md)입니다. 각 트랙은 목차 1개와 실습 7개로 구성됩니다. 워크숍 Markdown 문서는 **19개**이며 저장소 운영 문서는 별도입니다.
-
-각 실습은 로컬 실행, 평가와 계획, 업그레이드, Azure 서비스 이전, `azd` 산출물 준비, ACA 배포, 정리 순서입니다. 평가 후 계획 승인 전, Azure 리소스 생성 전에는 반드시 멈춰 내용을 검토합니다. 에이전트의 "완료" 응답 대신 빌드 결과와 실제 기능 동작을 확인하세요.
-
-이 자료에는 완성 앱, 완성 배포 템플릿 또는 자동 배포 스크립트가 들어 있지 않습니다. 참가자가 플러그인과 대화하며 산출물을 만드는 실습입니다. Copilot CLI의 `/plugin` 명령이나 VS Code 전용 명령 팔레트로 워크숍을 진행하지 않습니다.
-
-배포에는 `azd provision`, `azd package`, `azd deploy`를 사용하고 마지막에 `azd down`으로 정리합니다. Docker Desktop이 기본이며 Podman도 안내합니다. **로컬에서 이미지를 빌드한 뒤 Azure Container Registry(ACR)에 푸시**하는 방식이 기본입니다. ACR Tasks, `az acr build` 또는 원본의 배포 스크립트로 대체하지 않습니다.
+| 순서 | Java 트랙 | .NET 트랙 |
+| --- | --- | --- |
+| 0 | [준비](docs/setup.md) | [준비](docs/setup.md) |
+| 1 | [원본 로컬 실행](docs/java/01-run-locally.md) | [원본 로컬 실행](docs/dotnet/01-run-locally.md) |
+| 2 | [평가와 계획](docs/java/02-assess-and-plan.md) | [평가와 계획](docs/dotnet/02-assess-and-plan.md) |
+| 3 | [JDK 25 업그레이드](docs/java/03-upgrade.md) | [.NET 10 업그레이드](docs/dotnet/03-upgrade.md) |
+| 4 | [Azure 서비스 이전](docs/java/04-migrate-azure-services.md) | [Azure 서비스 이전](docs/dotnet/04-migrate-azure-services.md) |
+| 5 | [azd 배포 준비](docs/java/05-prepare-azd.md) | [azd 배포 준비](docs/dotnet/05-prepare-azd.md) |
+| 6 | [ACA 배포](docs/java/06-deploy-aca.md) | [ACA 배포](docs/dotnet/06-deploy-aca.md) |
+| 7 | [정리](docs/java/07-cleanup.md) | [정리](docs/dotnet/07-cleanup.md) |
+| 8 | [문제 해결](docs/troubleshooting.md) | [문제 해결](docs/troubleshooting.md) |
 
 ## 원본과 검증 범위
 

@@ -247,6 +247,16 @@ try {
         Assert-True ($bash.Contains($sample.Commit)) "same commit in both shells: $trackName"
         Assert-True ($bash.Contains($sample.Repository)) "same source in both shells: $trackName"
     }
+    $devContainer = Get-Content -LiteralPath (Join-Path $root '.devcontainer\devcontainer.json') -Raw | ConvertFrom-Json
+    Assert-True (@($devContainer.features.PSObject.Properties.Name | Where-Object { $_ -notmatch ':latest$' }).Count -eq 0) 'Dev Container features use latest tags'
+    $javaFeature = $devContainer.features.'ghcr.io/devcontainers/features/java:latest'
+    Assert-True ($javaFeature.version -eq '8' -and @($javaFeature.additionalVersions -split ',') -contains '21' -and @($javaFeature.additionalVersions -split ',') -contains '25') 'Dev Container includes JDK 8, 21 and 25'
+    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/dotnet:latest'.version -eq '10.0') 'Dev Container includes .NET 10 SDK'
+    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/node:latest'.version -eq '22') 'Dev Container includes Node 22'
+    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/azure-cli:latest' -and $null -ne $devContainer.features.'ghcr.io/azure/azure-dev/azd:latest') 'Dev Container includes Azure CLI and azd'
+    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/docker-in-docker:latest') 'Dev Container includes isolated Docker engine'
+    Assert-True ($devContainer.containerEnv.WORKSHOP_DEVCONTAINER -eq '1' -and $devContainer.containerEnv.AZD_CONTAINER_RUNTIME -eq 'docker') 'Dev Container selects the documented Java and Docker environment'
+    Assert-True (@($devContainer.forwardPorts) -contains 8080 -and @($devContainer.forwardPorts) -contains 15672) 'Dev Container forwards app and management ports'
     $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
     $env:AZD_CONTAINER_RUNTIME='docker'
     function pwsh { $global:LASTEXITCODE=1 }

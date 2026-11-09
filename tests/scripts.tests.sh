@@ -28,6 +28,33 @@ assert 'azd minimum' minimum_version 'azd version 1.37.3 (commit abc)' 1.37.3
 if minimum_version 1.37.2 1.37.3; then exit 1; else PASSED=$((PASSED + 1)); fi
 if minimum_version 22.0.0-rc.1 22.0.0; then exit 1; else PASSED=$((PASSED + 1)); fi
 
+previous_devcontainer="${WORKSHOP_DEVCONTAINER-}"
+unset WORKSHOP_DEVCONTAINER
+devcontainer_output=$(
+    export WORKSHOP_DEVCONTAINER=1
+    uname() { printf '%s\n' Linux; }
+    check_common() { check_result PASS fixture-common 'common checks reached'; }
+    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
+    prerequisite_main --track java --container-engine docker
+)
+assert 'Dev Container reaches common checks' grep -q 'fixture-common' <<< "$devcontainer_output"
+assert 'Dev Container reaches SDK checks' grep -q 'fixture-sdks' <<< "$devcontainer_output"
+if [[ "$devcontainer_output" == *windows-host* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
+if ( uname() { printf '%s\n' Linux; }; grep() { return 1; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
+if ( export WORKSHOP_DEVCONTAINER=true; uname() { printf '%s\n' Linux; }; grep() { return 1; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
+if ( export WORKSHOP_DEVCONTAINER=1; uname() { printf '%s\n' MINGW64_NT; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
+if ( export WORKSHOP_DEVCONTAINER=1; uname() { printf '%s\n' Linux; }; prerequisite_main --track dotnet --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
+wsl_output=$(
+    unset WORKSHOP_DEVCONTAINER
+    uname() { printf '%s\n' Linux; }
+    grep() { return 0; }
+    check_common() { check_result PASS fixture-common 'common checks reached'; }
+    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
+    prerequisite_main --track java --container-engine docker
+)
+assert 'WSL still prompts for Windows host' grep -q 'MANUAL.*windows-host' <<< "$wsl_output"
+if [[ -n "$previous_devcontainer" ]]; then export WORKSHOP_DEVCONTAINER="$previous_devcontainer"; else unset WORKSHOP_DEVCONTAINER; fi
+
 CALLS="$TEMPORARY/calls"
 STOPPED=0
 probe() {

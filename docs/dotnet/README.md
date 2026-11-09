@@ -6,7 +6,7 @@
 
 Windows의 ASP.NET MVC 5/.NET Framework **`v4.8`** 앱을 .NET 10/ASP.NET Core로 바꾸고, Windows 전용 의존성을 제거해 **Linux ACA**에 배포합니다. 원본 README의 "4.8.2" 표기를 설치 요구사항으로 사용하지 않습니다.
 
-[공통 준비](../setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크샵 최상위의 `dotnet`이며 `ContosoUniversity.sln`과 `.csproj`가 바로 아래에 있습니다. Visual Studio 2026은 원본 실행용이고, 현대화 대화는 **GitHub Copilot app**에서 진행합니다.
+[공통 준비](../setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `dotnet`이며 `ContosoUniversity.sln`과 `.csproj`가 바로 아래에 있습니다. Visual Studio 2026은 원본 실행용이고, 현대화 대화는 **GitHub Copilot app**에서 진행합니다.
 
 | 순서 | 실습 | 도구와 완료 기준 |
 | --- | --- | --- |

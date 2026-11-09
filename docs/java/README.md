@@ -10,7 +10,7 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드�
 
 | 순서 | 실습 | 완료 시 확인할 것 |
 | --- | --- | --- |
-| 1 | [원본 로컬 실행](01-run-locally.md) | Java 8의 웹, DB 연결, 큐, worker 동작과 기준선 커밋 |
+| 1 | [원본 로컬 실행](01-run-locally.md) | Java 8의 웹, DB 연결, 큐, worker 동작과 워크숍 저장소 기준선 커밋 |
 | 2 | [평가와 계획](02-assess-and-plan.md) | 평가 결과, 제약조건, 단계별 승인 계획 |
 | 3 | [JDK 25 업그레이드](03-upgrade.md) | 중간 JDK 21과 최종 JDK 25에서 회귀 검사 |
 | 4 | [Azure 서비스 이전](04-migrate-azure-services.md) | PostgreSQL, Service Bus, private Blob 코드와 단위 검사 |

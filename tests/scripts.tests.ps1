@@ -207,6 +207,8 @@ try {
     Invoke-SampleDownload $download $definition $root
     Assert-True (Test-Path (Join-Path $download 'ContosoUniversity.sln')) 'flattened solution'
     Assert-True (Test-Path (Join-Path $download '.gitignore')) 'hidden files preserved'
+    $workshopIgnore = Get-Content (Join-Path $root '.gitignore') -Raw
+    Assert-True ($workshopIgnore -notmatch '(?m)^/(java|dotnet)/$') 'workshop tracks downloaded app directories'
     Assert-True (Test-Path (Join-Path $download 'UPSTREAM-LICENSE')) 'license preserved'
     $metadata = Get-Content (Join-Path $download 'upstream-source.json') -Raw | ConvertFrom-Json
     Assert-True ($metadata.commit -eq $commit) 'pinned provenance'
@@ -218,8 +220,9 @@ try {
     foreach ($file in Get-ChildItem -LiteralPath $app -Force -File) {
         Assert-True ((Get-FileHash $file.FullName).Hash -eq (Get-FileHash (Join-Path $download $file.Name)).Hash) "source bytes unchanged: $($file.Name)"
     }
+    Assert-True (-not (Test-Path (Join-Path $download '.git'))) 'download has no nested Git repository'
     $gitRoot = (& git -C $download rev-parse --show-toplevel).Trim()
-    Assert-True ([IO.Path]::GetFullPath($gitRoot) -eq $download) 'independent repository'
+    Assert-True ([IO.Path]::GetFullPath($gitRoot) -eq $root) 'download uses workshop Git root'
     Assert-Throws { Invoke-SampleDownload $download $definition $root } 'repeat refuses overwrite'
     $emptyTarget = Join-Path $temporary 'empty'
     [IO.Directory]::CreateDirectory($emptyTarget) | Out-Null

@@ -88,12 +88,11 @@ function Invoke-SampleDownload {
         if (Get-ChildItem -LiteralPath $source -Force -File | Where-Object Name -Match '^(LICENSE|LICENCE|COPYING)([._-].*)?$') { $licensePresent = $true }
         $metadata = [ordered]@{ repository = $Definition.Repository; commit = $Definition.Commit; subdirectory = $Definition.Subdirectory; licenseFileFound = $licensePresent }
         $metadata | ConvertTo-Json | Set-Content -LiteralPath $metadataPath -Encoding utf8 -ErrorAction Stop
-        Invoke-DownloadGit @('init', '--quiet', $payload)
         $null = Assert-SafeDestination $targetPath $WorkshopRoot
         if (Test-Path -LiteralPath $targetPath) { [IO.Directory]::Delete($targetPath, $false) }
         [IO.Directory]::Move($payload, $targetPath)
         Write-Host "[PASS] 샘플 다운로드: $targetPath"
-        Write-Host "[PASS] 원본 커밋: $head / 독립 Git 저장소. 원격 저장소와 커밋은 생성하지 않았습니다."
+        Write-Host "[PASS] 원본 커밋: $head / 앱 폴더에 Git 저장소를 만들지 않음"
         if (-not $licensePresent) { Write-Host '[WARN] 원본에서 라이선스 파일을 찾지 못했습니다. 재배포 권한을 가정하지 마세요.' }
     }
     finally {

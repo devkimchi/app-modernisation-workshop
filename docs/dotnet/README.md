@@ -10,7 +10,7 @@ Windows의 ASP.NET MVC 5/.NET Framework **`v4.8`** 앱을 .NET 10/ASP.NET Core�
 
 | 순서 | 실습 | 도구와 완료 기준 |
 | --- | --- | --- |
-| 1 | [원본 로컬 실행](01-run-locally.md) | Visual Studio/IIS Express, LocalDB/MSMQ, 기준선 커밋 |
+| 1 | [원본 로컬 실행](01-run-locally.md) | Visual Studio/IIS Express, LocalDB/MSMQ, 워크숍 저장소 기준선 커밋 |
 | 2 | [평가와 계획](02-assess-and-plan.md) | `modernize`, 평가와 실행 범위 승인 |
 | 3 | [.NET 10 업그레이드](03-upgrade.md) | `Upgrade`, ASP.NET Core와 회귀 검사 |
 | 4 | [Azure 서비스 이전](04-migrate-azure-services.md) | `modernize`, SQL/Service Bus/Blob 및 Windows 의존성 제거 |

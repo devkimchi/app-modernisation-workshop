@@ -134,6 +134,7 @@ assert 'flattened Maven project' test -f "$TARGET/pom.xml"
 assert 'wrapper files preserved' test -f "$TARGET/.mvn/wrapper/maven-wrapper.properties"
 assert 'executable wrapper' test -x "$TARGET/mvnw"
 assert 'hidden files preserved' test -f "$TARGET/.gitignore"
+if grep -Eq '^/(java|dotnet)/$' "$ROOT/.gitignore"; then exit 1; else PASSED=$((PASSED + 1)); fi
 assert 'license preserved' test -f "$TARGET/UPSTREAM-LICENSE"
 assert 'metadata commit' grep -q "$COMMIT" "$TARGET/upstream-source.json"
 assert 'metadata repository' grep -Fq "\"repository\": \"$UPSTREAM\"" "$TARGET/upstream-source.json"
@@ -145,8 +146,8 @@ done
 for name in pom.xml mvnw .gitignore .mvn/wrapper/maven-wrapper.properties web/test worker/test; do
     assert "source bytes unchanged: $name" cmp "$UPSTREAM/asset-manager/$name" "$TARGET/$name"
 done
-assert 'independent Git directory' test -d "$TARGET/.git"
-assert 'new Git repository has no origin' test -z "$(git -C "$TARGET" remote)"
+assert 'download has no nested Git directory' test ! -e "$TARGET/.git"
+assert 'download uses workshop Git root' test "$(cygpath -u "$(git -C "$TARGET" rev-parse --show-toplevel)")" = "$ROOT"
 if safe_destination "$TARGET" "$ROOT" >/dev/null 2>&1; then exit 1; else PASSED=$((PASSED + 1)); fi
 for name in upstream-source.json UPSTREAM-NOTICE.md; do
     printf 'preserve upstream content\n' > "$UPSTREAM/asset-manager/$name"

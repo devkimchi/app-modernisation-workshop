@@ -19,7 +19,7 @@ Copilot app에서 동일한 **앱 루트**를 대상으로 **Upgrade** 에이전
 Azure 리소스 생성이나 배포는 하지 마.
 ```
 
-SDK 스타일 프로젝트, ASP.NET Core 시작/DI/미들웨어, MVC/Razor, 설정, 정적 파일, EF Core와 관련 NuGet 변경 범위를 확인합니다. EF Core 3.1에서 최신 버전으로 옮길 때 쿼리 번역과 DB schema 차이도 검토합니다.
+SDK 스타일 프로젝트, ASP.NET Core 시작/DI/미들웨어, MVC/Razor, 설정, 정적 파일, EF Core와 관련 NuGet 변경 범위를 확인합니다. EF Core 3.1에서 최신 버전으로 옮길 때 쿼리 번역과 DB 스키마 차이도 검토합니다.
 
 ## 승인한 업그레이드 실행
 

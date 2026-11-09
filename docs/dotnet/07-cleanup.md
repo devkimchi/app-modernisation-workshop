@@ -10,23 +10,57 @@
 
 ## Azure 정리
 
+각 코드 블록을 실행한 뒤 성공 여부와 출력을 확인하고 다음 블록으로 진행합니다. 실제 환경명으로 `<이번-실습-환경명>`을 바꿉니다.
+
 ```powershell
 azd env list
+```
+
+이번 실습 환경이 없거나 명령이 실패하면 다른 환경을 선택하지 않습니다. 리소스를 만들지 않았다면 Azure 정리를 건너뛰고 로컬 정리로 이동합니다. 프로비저닝 중 실패해 리소스가 남았을 가능성이 있다면 Azure Portal에서 정확한 환경명/태그/활동 로그로 찾습니다.
+
+```powershell
 azd env select <이번-실습-환경명>
+```
+
+선택이 실패하거나 대상이 불분명하면 중단합니다. 이전에 선택된 환경을 대신 사용하지 않습니다. 선택한 환경의 구독 ID와 Azure CLI 구독 ID를 각각 확인합니다.
+
+```powershell
+azd env get-value AZURE_SUBSCRIPTION_ID
+```
+
+```powershell
 az account show --query "{name:name,id:id}" --output table
+```
+
+두 구독이 승인한 본인 실습 구독과 다르거나 값을 확인하지 못하면 중단합니다. 다음 명령으로 리소스 그룹을 확인합니다.
+
+```powershell
 $rg = azd env get-value AZURE_RESOURCE_GROUP
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($rg)) { throw '리소스 그룹을 확인하지 못했습니다. Azure 정리를 중단하세요.' }
+$rg
+```
+
+```powershell
 az group show --name $rg --query "{name:name,id:id,tags:tags}" --output json
+```
+
+```powershell
 az resource list --resource-group $rg --query "[].{name:name,type:type}" --output table
+```
+
+위 명령이 모두 성공했고 구독, 그룹과 리소스가 삭제를 승인한 본인 실습 대상인지 확인한 경우에만 다음 명령을 실행합니다. 공유 리소스, 다른 환경 또는 기존 서비스가 포함되어 있으면 실행하지 않습니다. 삭제 확인 메시지도 읽고 직접 승인합니다. `--force`/`--purge`를 기본으로 사용하지 않습니다.
+
+```powershell
 azd down
 ```
 
-`azd down`의 삭제 확인 메시지를 읽고 직접 승인합니다. `--force`/`--purge`를 기본으로 사용하지 않습니다. 삭제가 끝난 후 확인합니다.
+삭제가 끝난 후 확인합니다.
 
 ```powershell
 az group exists --name $rg
 ```
 
-이번에 새로 만든 전용 그룹이라면 최종적으로 `false`인지 확인합니다. 기존 그룹을 재사용했거나 일부 리소스를 보존했다면 남은 리소스와 비용을 별도로 확인합니다. 프로비저닝이 중단되어 출력 값이 없을 때는 Azure Portal의 실제 환경 태그/이름/활동 로그로 찾고 임의의 그룹을 지우지 않습니다.
+이번에 새로 만든 전용 그룹이라면 최종적으로 `false`인지 확인합니다. 기존 그룹을 재사용했거나 일부 리소스를 보존했다면 남은 리소스와 비용을 별도로 확인합니다. 프로비저닝이 중단되어 출력 값이 없을 때는 Azure Portal에서 확인하고 임의의 그룹을 지우지 않습니다.
 
 별도 역할 할당, 네트워크, Data Protection 키 저장소 및 soft-delete 보존도 확인합니다. 실패한 삭제를 성공으로 표시하지 말고 남은 ID와 오류를 기록합니다. Azure 정리가 끝나기 전 `.azure`를 먼저 지우지 않습니다.
 

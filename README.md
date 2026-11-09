@@ -1,6 +1,6 @@
 # GitHub Copilot app으로 앱 현대화하기
 
-Java 8 또는 .NET Framework 4.8 앱 하나를 선택해 로컬에서 실행하고, GitHub Copilot app의 **Modernization 플러그인**으로 현대화한 뒤 **Azure Developer CLI(`azd`)로 Azure Container Apps(ACA)에 배포** 하는 한국어 핸즈온 워크샵입니다.
+Java 8 또는 .NET Framework 4.8 앱 하나를 선택해 로컬에서 실행하고, GitHub Copilot app의 **Modernization 플러그인**으로 현대화한 뒤 **Azure Developer CLI(`azd`)로 Azure Container Apps(ACA)에 배포하는** 한국어 핸즈온 워크숍입니다.
 
 ## 먼저 할 일
 
@@ -10,7 +10,11 @@ Java 8 또는 .NET Framework 4.8 앱 하나를 선택해 로컬에서 실행하�
 - GitHub 계정과 유효한 GitHub Copilot 라이선스. 조직 정책에 따라 플러그인 사용이 제한될 수 있습니다.
 - [공통 준비](docs/setup.md)의 선택 트랙 도구와 컨테이너 엔진.
 
-**워크샵 자료 폴더에서**, Java는 WSL2/macOS Bash, .NET은 Windows PowerShell 7로 실행합니다. 아래 두 명령은 첫 명령이 성공한 경우에만 이어서 실행합니다.
+이 저장소는 공개 템플릿 저장소입니다. 원본을 직접 복제하거나 포크하지 말고, **Use this template** > **Create a new repository**로 본인 **개인 계정**에 새 저장소를 만든 뒤 로컬에 복제합니다. 자세한 절차는 [공통 준비](docs/setup.md)에 있습니다. 복제한 폴더가 이후 명령을 실행할 **워크숍 자료 폴더**입니다.
+
+[![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)
+
+**워크숍 자료 폴더에서**, Java는 WSL2/macOS Bash, .NET은 Windows PowerShell 7로 실행합니다. 아래 두 명령은 첫 명령이 성공한 경우에만 이어서 실행합니다.
 
 Java:
 
@@ -28,6 +32,8 @@ pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
 
 Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다. Windows에서 Java를 PowerShell로 시작하거나 .NET을 Git Bash로 시작하는 방법은 [공통 준비](docs/setup.md)에 있습니다. 다운로드 스크립트 자체도 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다.
 
+선택형 개발 환경은 [Dev Container 안내](.devcontainer/README.md)를 참고하세요. .NET Framework 원본 실습은 여전히 Windows에서 진행합니다.
+
 ## 트랙 선택
 
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
@@ -36,22 +42,22 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 | 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, ASP.NET MVC 5, 프로젝트 대상 `v4.8` |
 | 최종 런타임 | JDK 25. JDK 21은 중간 단계 | .NET 10, ASP.NET Core, Linux |
 | 도구 | Modernization의 `modernize` | 업그레이드는 `Upgrade`, Azure 이전은 `modernize` |
-| 서비스 이전 | PostgreSQL, RabbitMQ, 파일 → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
+| 서비스 이전 | PostgreSQL, RabbitMQ, 파일(`dev`: 로컬, 그 외: AWS S3) → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
 | 배포 단위 | web + worker, ACA 2개 | 웹 앱, 필요하면 처리기 분리 여부를 계획에서 결정 |
 
 기본 다운로드 결과는 `java/pom.xml` 또는 `dotnet/ContosoUniversity.sln`입니다. `docs/java`, `docs/dotnet`은 **문서** 폴더이고 최상위 `java`, `dotnet`은 **앱** 폴더입니다. 다운로드 위치는 `-Destination`/`--destination`으로 바꿀 수 있습니다.
 
-선택한 앱 폴더는 원본 저장소와 별개의 Git 저장소입니다. 원본 실행과 기준선 커밋을 마친 뒤 Copilot app에 **앱 폴더 자체**를 추가합니다. 워크샵 최상위를 현대화 대상으로 열지 마세요.
+선택한 앱 폴더는 원본 저장소와 별개의 Git 저장소입니다. 원본 실행과 기준선 커밋을 마친 뒤 Copilot app에 **앱 폴더 자체**를 추가합니다. 워크숍 최상위를 현대화 대상으로 열지 마세요.
 
 ## 자료 구성과 운영
 
-공통 문서는 이 README, [준비](docs/setup.md), [문제 해결](docs/troubleshooting.md)입니다. 각 트랙은 목차 1개와 실습 7개로 구성됩니다. 워크샵 Markdown 문서는 **19개**이며 저장소 운영 문서는 별도입니다.
+공통 문서는 이 README, [준비](docs/setup.md), [문제 해결](docs/troubleshooting.md)입니다. 각 트랙은 목차 1개와 실습 7개로 구성됩니다. 워크숍 Markdown 문서는 **19개**이며 저장소 운영 문서는 별도입니다.
 
 각 실습은 로컬 실행, 평가와 계획, 업그레이드, Azure 서비스 이전, `azd` 산출물 준비, ACA 배포, 정리 순서입니다. 평가 후 계획 승인 전, Azure 리소스 생성 전에는 반드시 멈춰 내용을 검토합니다. 에이전트의 "완료" 응답 대신 빌드 결과와 실제 기능 동작을 확인하세요.
 
-이 자료에는 완성 앱, 완성 배포 템플릿 또는 자동 배포 스크립트가 들어 있지 않습니다. 참가자가 플러그인과 대화하며 산출물을 만드는 실습입니다. Copilot CLI의 `/plugin` 명령이나 VS Code 전용 명령 팔레트로 워크샵을 진행하지 않습니다.
+이 자료에는 완성 앱, 완성 배포 템플릿 또는 자동 배포 스크립트가 들어 있지 않습니다. 참가자가 플러그인과 대화하며 산출물을 만드는 실습입니다. Copilot CLI의 `/plugin` 명령이나 VS Code 전용 명령 팔레트로 워크숍을 진행하지 않습니다.
 
-배포에는 `azd provision`, `azd package`, `azd deploy`를 사용하고 마지막에 `azd down`으로 정리합니다. Docker Desktop이 기본이며 Podman도 안내합니다. **로컬 이미지 빌드 후 ACR 푸시**가 기본입니다. ACR Tasks, `az acr build` 또는 원본의 배포 스크립트로 대체하지 않습니다.
+배포에는 `azd provision`, `azd package`, `azd deploy`를 사용하고 마지막에 `azd down`으로 정리합니다. Docker Desktop이 기본이며 Podman도 안내합니다. **로컬에서 이미지를 빌드한 뒤 Azure Container Registry(ACR)에 푸시**하는 방식이 기본입니다. ACR Tasks, `az acr build` 또는 원본의 배포 스크립트로 대체하지 않습니다.
 
 ## 원본과 검증 범위
 

@@ -165,15 +165,15 @@ prerequisite_main() {
     case "$os" in
         Darwin) ;;
         Linux)
-            if ! grep -Eqi 'microsoft.*wsl2|wsl2.*microsoft' /proc/sys/kernel/osrelease; then
-                printf '%s\n' '[FAIL] 이 자료의 Java 지원 환경은 macOS 또는 Windows WSL2입니다.'; return 1
+            if [[ "${WORKSHOP_DEVCONTAINER:-}" != 1 ]] && ! grep -Eqi 'microsoft.*wsl2|wsl2.*microsoft' /proc/sys/kernel/osrelease; then
+                printf '%s\n' '[FAIL] Java 지원 환경은 macOS, Windows WSL2 또는 워크숍 Dev Container입니다.'; return 1
             fi ;;
         *) printf '%s\n' '[FAIL] Windows Java는 Git Bash가 아니라 WSL2에서 실행하세요.'; return 1 ;;
     esac
     CHECK_FAILURES=0
     printf '트랙: java / 엔진: %s / 실행 환경: %s\n' "$engine" "$os"
     check_result PASS bash "Bash $BASH_VERSION"
-    if [[ "$os" == Linux ]]; then check_result MANUAL windows-host 'Windows Copilot app 호스트에도 Git과 Node.js 22 이상이 필요합니다. WSL 내부 검사 결과와 별개입니다.'; fi
+    if [[ "$os" == Linux && "${WORKSHOP_DEVCONTAINER:-}" != 1 ]]; then check_result MANUAL windows-host 'Windows Copilot app 호스트에도 Git과 Node.js 22 이상이 필요합니다. WSL 내부 검사 결과와 별개입니다.'; fi
     export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
     check_common "$engine"
     check_java_sdks

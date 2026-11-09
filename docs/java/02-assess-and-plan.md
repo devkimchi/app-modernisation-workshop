@@ -40,10 +40,12 @@ web/worker의 책임, DB/큐/파일 의존성, 화면과 API, 환경 설정과 �
 - 최종 Java는 JDK 25다. JDK 21은 중간 업그레이드/검증 단계다.
 - Spring Boot 2.7에서 3.x의 지원되는 안정 버전을 거쳐 JDK 25를 지원하는
   Spring Boot 안정 버전으로 올린다. 최종 후보는 4.1.2이며 라이브러리 호환성을 확인한다.
-- 기존 화면, 업로드, DB 기록과 비동기 처리 동작을 보존한다.
+- 기존 화면, 업로드, 파일 저장과 비동기 처리 동작을 보존한다.
+- 원본 dev 업로드 경로는 DB 메타데이터 행을 만들지 않는다. dev 외 S3 경로의
+  메타데이터 기록과 조회 로직은 이전 범위에 포함하고 dev 기준선과 구분한다.
 - web과 worker 모듈을 유지한다. 불필요한 프런트엔드 재작성은 하지 않는다.
 - PostgreSQL -> Azure Database for PostgreSQL Flexible Server,
-  RabbitMQ -> Service Bus, 파일 저장 -> private Blob으로 이전한다.
+  RabbitMQ -> Service Bus, dev의 로컬 파일 및 dev 외 AWS S3 -> private Blob으로 이전한다.
 - 관리 ID, 최소 권한, TLS를 기본으로 하고 비밀을 코드/Git에 저장하지 않는다.
 - 최종 실행 대상은 Linux Azure Container Apps다. AKS/App Service가 아니다.
 - 배포는 azd와 Bicep, 이미지 빌드는 선택한 로컬 Docker/Podman 엔진을 사용한다.

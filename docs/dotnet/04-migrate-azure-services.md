@@ -28,7 +28,7 @@ Upgrade 에이전트가 현재 앱을 .NET 10/ASP.NET Core로 전환했다.
   새 데모 DB의 migration/seed는 명시적으로 승인한 별도 절차로 만든다.
 - System.Web, LocalDB, MSMQ, 레지스트리, 드라이브 문자와 Windows 전용 API의
   잔존 여부를 조사하고 Linux 최종 경로에서 제거한다.
-- DB 내부 사용자/역할과 schema 준비, Azure 데이터 역할, 환경 변수를 문서화한다.
+- DB 내부 사용자와 역할, 스키마 준비, Azure 데이터 역할과 환경 변수를 문서화한다.
 - 단위 검사와 외부 Azure가 필요한 통합 검사를 분리하고 필요한 테스트를 추가한다.
 
 현재는 코드/테스트만 수행하고 리소스 생성이나 배포는 하지 마.
@@ -55,4 +55,4 @@ git diff
 
 ## 완료 기준과 문제 해결
 
-MSMQ가 SDK 패키지 이름만 바뀐 채 남아 있지 않고, SQL/Service Bus/Blob/Data Protection 경로와 환경 설정이 연결되어야 합니다. 단위 검사와 DB 초기화 절차가 있고 미실행 통합 항목이 명확해야 합니다. Linux 컨테이너 빌드와 실제 서비스 연결은 다음 실습에서 확인합니다. [문제 해결](../troubleshooting.md)에서 인증과 Linux 의존성 항목을 참고하세요.
+MSMQ가 SDK 패키지 이름만 바뀐 채 남아 있지 않고, SQL/Service Bus/Blob/Data Protection 경로와 환경 설정이 연결되어야 합니다. 단위 검사와 DB 초기화 절차가 있고 미실행 통합 항목이 명확해야 합니다. Linux 컨테이너 빌드와 실제 서비스 연결은 실습 6에서 확인합니다. [문제 해결](../troubleshooting.md)에서 인증과 Linux 의존성 항목을 참고하세요.

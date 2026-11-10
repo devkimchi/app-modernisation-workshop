@@ -34,21 +34,21 @@ cd <저장소-이름>
 >
 > 템플릿 저장소를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
 
-## 2. 점검하고 부족한 항목 준비하기
+## 2. 필수 도구 설치여부 확인하기
 
 WSL2 또는 macOS Bash에서 실행합니다.
 
 ```bash
-bash scripts/check-prerequisites.sh --track java --container-engine docker
+bash scripts/check-prerequisites.sh --track java
 ```
 
 Windows 호스트의 Git과 Node.js까지 함께 검사하려면 **Windows PowerShell 7**에서 다음 명령을 대신 실행합니다. `Ubuntu`는 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여러 개라면 이름을 반드시 지정하세요.
 
 ```powershell
-pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
+pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu
 ```
 
-Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바꿉니다.
+컨테이너 엔진 옵션을 생략하면 현재 셸의 `AZD_CONTAINER_RUNTIME` 값을 사용하고, 설정되어 있지 않으면 `docker`를 사용합니다. Podman을 사용한다면 Bash 명령에 `--container-engine podman`, PowerShell 명령에 `-ContainerEngine podman`을 지정하세요. 이후 명령에 `docker`가 명시되어 있다면 `podman`으로 바꿉니다.
 
 | 결과 | 할 일 |
 | --- | --- |

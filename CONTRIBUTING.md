@@ -32,7 +32,10 @@ Bash:
 
 ```bash
 bash tests/scripts.tests.sh
+bash tests/install-prerequisites.tests.sh
 ```
+
+Run the installer suite in WSL2/macOS Bash; its SDKMAN fixtures require real symbolic links rather than Git Bash's link emulation. It covers opt-in Bash `--update`, per-tool consent, provenance checks, version selection and failures with isolated SDKMAN/nvm/Homebrew/APT fixtures. It never installs or updates real tools. Windows CLI updates are deliberately out of scope; the PowerShell installer retains missing-tool-only behavior.
 
 Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
 

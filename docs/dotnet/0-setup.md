@@ -57,6 +57,8 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Containe
 
 기존 PATH의 도구는 오래됐더라도 자동 업데이트하지 않습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다. Node.js는 안정 버전 22 이상, azd는 1.37.3 이상이 필요합니다.
 
+Java용 Bash의 `--update`는 Windows/.NET용 옵션이 아닙니다. PowerShell 도우미에는 `-Update`가 없으며, winget 목록만으로 현재 PATH 실행 파일의 설치 출처를 확인할 수 없어 기존 Windows 도구는 변경하지 않습니다. `Get-Command node, az, azd`의 실행 경로와 원래 설치 관리자를 확인한 뒤 해당 관리자의 업데이트 절차를 사용하세요. PowerShell 7/WSL2나 OS 전체를 자동 업그레이드하지 않습니다.
+
 ### Windows 빌드 및 실행 도구 준비
 
 아래 구성요소는 도우미가 **자동 설치하지 않습니다**. 점검에서 누락된 항목만 준비하세요.

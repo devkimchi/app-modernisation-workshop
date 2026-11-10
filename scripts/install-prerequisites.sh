@@ -124,6 +124,196 @@ install_node_with_nvm() {
         printf '%s\n' '[FAIL] 설치된 Node.js 22 또는 npm 실행에 실패했습니다.' >&2; return 1
     fi
     printf '[INFO] 현재 터미널에도 적용하려면: export NVM_DIR=%q; source "$NVM_DIR/nvm.sh"; nvm use 22\n' "$NVM_DIR"
+    if [[ "${1:-0}" == 1 ]]; then update_node_with_nvm || return 1; fi
+}
+
+update_node_with_nvm() (
+    local current latest nvm_dir installed active resolved_dir
+    current=$(node --version) || { printf '%s\n' '[FAIL] Node.js 버전 확인에 실패했습니다.' >&2; return 1; }
+    if [[ "$current" =~ ^v([0-9]+)\. ]] && (( BASH_REMATCH[1] > 22 )); then
+        printf '[INFO] Node.js %s: 더 높은 major를 22로 낮추지 않습니다.\n' "$current"
+        return 0
+    fi
+    nvm_dir=$(nvm_directory)
+    if [[ ! -s "$nvm_dir/nvm.sh" ]]; then
+        printf '%s\n' '[MANUAL] 기존 Node.js는 nvm 관리 설치로 확인되지 않았습니다. 기존 설치 관리자로 업데이트하세요.'
+        return 0
+    fi
+    export NVM_DIR="$nvm_dir"
+    if ! source "$NVM_DIR/nvm.sh" --no-use || [[ $(type -t nvm) != function ]]; then
+        printf '%s\n' '[FAIL] nvm 초기화에 실패했습니다.' >&2; return 1
+    fi
+    # nvm이 있어도 현재 실행 파일이 다른 관리자 소유라면 덮어쓰지 않는다.
+    installed=$(nvm which current) || return 1
+    resolved_dir=$(cd -P -- "$NVM_DIR" && pwd) || return 1
+    active=$(canonical_tool_path "$(tool_path node)") || return 1
+    installed=$(canonical_tool_path "$installed") || return 1
+    if [[ "$active" != "$installed" || "$installed" != "$resolved_dir"/versions/node/*/bin/node ]]; then
+        printf '%s\n' '[MANUAL] 현재 Node.js의 nvm 출처를 확인하지 못했습니다. 기존 설치 관리자로 업데이트하세요.'
+        return 0
+    fi
+    latest=$(nvm version-remote 22) || { printf '%s\n' '[FAIL] 최신 Node.js 22 조회에 실패했습니다.' >&2; return 1; }
+    if [[ ! "$latest" =~ ^v22\.[0-9]+\.[0-9]+$ ]]; then
+        printf '%s\n' '[FAIL] 정식 Node.js 22 식별자를 확인하지 못했습니다.' >&2; return 1
+    fi
+    if [[ "$current" == "$latest" ]]; then
+        npm --version || return 1
+        printf '[INFO] Node.js %s: 이미 최신입니다.\n' "$latest"; return 0
+    fi
+    if ! version_not_older "${latest#v}" "${current#v}"; then
+        printf '%s\n' '[FAIL] Node.js를 이전 버전으로 낮추지 않습니다.' >&2; return 1
+    fi
+    if [[ $(type -t nvm_ensure_default_set) != function ]]; then
+        printf '%s\n' '[MANUAL] 이 nvm의 기본 alias 보존 방식을 확인하지 못했습니다. 수동으로 업데이트하세요.'
+        return 0
+    fi
+    if ! confirm_install "Node.js 22: nvm으로 최신 정식 $latest를 추가 설치합니다. 네트워크가 필요하며 기존 버전과 기본 alias는 유지합니다."; then return 0; fi
+    # nvm install에는 --no-alias 옵션이 없다. 이 하위 셸에서 기본 alias 생성만 막는다.
+    nvm_ensure_default_set() { return 0; }
+    if ! nvm install "$latest" || ! nvm use "$latest" ||
+        [[ $(node --version) != "$latest" ]] || ! npm --version; then
+        printf '%s\n' '[FAIL] Node.js 업데이트 또는 실행 확인에 실패했습니다.' >&2; return 1
+    fi
+    printf '[INFO] 현재 터미널에서 선택하려면: nvm use %s (기본 alias는 유지).\n' "$latest"
+)
+
+canonical_tool_path() (
+    local path="$1" link count=0
+    [[ -e "$path" ]] || return 1
+    while [[ -L "$path" ]]; do
+        (( count++ < 40 )) || return 1
+        link=$(readlink "$path") || return 1
+        if [[ "$link" == /* ]]; then path="$link"; else path="$(dirname "$path")/$link"; fi
+    done
+    cd -P -- "$(dirname "$path")" || return 1
+    printf '%s/%s\n' "$PWD" "${path##*/}"
+)
+
+version_not_older() {
+    local next="$1" previous="$2" i
+    local -a a b
+    [[ "$next" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$previous" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+    IFS=. read -r -a a <<< "$next"
+    IFS=. read -r -a b <<< "$previous"
+    for i in 0 1 2; do
+        (( 10#${a[i]} > 10#${b[i]} )) && return 0
+        (( 10#${a[i]} < 10#${b[i]} )) && return 1
+    done
+    return 0
+}
+
+azure_tool_version() {
+    local text
+    if [[ "$1" == az ]]; then
+        text=$(az version --query '"azure-cli"' --output tsv) || return 1
+        [[ "$text" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+        printf '%s\n' "$text"
+    else
+        text=$(azd version) || return 1
+        [[ "$text" =~ ^azd[[:space:]]version[[:space:]]([0-9]+\.[0-9]+\.[0-9]+)([[:space:]]|$) ]] || return 1
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
+}
+
+ensure_homebrew() {
+    command -v brew >/dev/null 2>&1 && return 0
+    if ! confirm_install 'Homebrew: 공식 설치 스크립트를 실행합니다. 네트워크, 디스크와 관리자 권한이 필요하며 macOS 개발 도구가 설치될 수 있습니다. 출처: https://brew.sh'; then return 1; fi
+    if ! run_remote_installer 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh' user; then
+        printf '%s\n' '[FAIL] Homebrew 설치에 실패했습니다.' >&2; return 1
+    fi
+    if ! command -v brew >/dev/null 2>&1; then
+        if [[ -x /opt/homebrew/bin/brew ]]; then export PATH="/opt/homebrew/bin:$PATH"
+        elif [[ -x /usr/local/bin/brew ]]; then export PATH="/usr/local/bin:$PATH"; fi
+    fi
+    if ! brew --version; then printf '%s\n' '[FAIL] Homebrew 실행 확인에 실패했습니다.' >&2; return 1; fi
+}
+
+microsoft_apt_candidate() {
+    local policy
+    policy=$(LC_ALL=C apt-cache policy "$1") || return 2
+    printf '%s\n' "$policy" | awk '
+        /Candidate:/ { candidate=$2 }
+        /^[[:space:]]*(\*\*\*[[:space:]]*)?[^[:space:]]+[[:space:]]+[0-9]+$/ {
+            version=$1 == "***" ? $2 : $1
+        }
+        version == candidate && $2 ~ /^https:\/\/packages\.microsoft\.com\// { found=1 }
+        END { if(found) print candidate; else exit 1 }'
+}
+
+update_azure_tool() {
+    local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed
+    case "$tool" in az) package=azure-cli ;; azd) package=azd ;; esac
+    if [[ "$os" == Darwin ]] && command -v brew >/dev/null 2>&1; then
+        [[ "$tool" != azd ]] || package=azure/azd/azd
+        if prefix=$(brew --prefix "$package") && brew list --versions "$package" >/dev/null 2>&1 &&
+            [[ -x "$prefix/bin/$tool" ]] &&
+            [[ "$(canonical_tool_path "$path")" == "$(canonical_tool_path "$prefix/bin/$tool")" ]]; then managed=brew; fi
+    elif [[ "$os" == Linux ]] && command -v dpkg-query >/dev/null 2>&1 &&
+        command -v apt-cache >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+        # 패키지 이름 외에 선택된 실행 파일의 소유자와 Microsoft 업데이트 원본도 확인한다.
+        if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" == 'install ok installed' ]] &&
+            { [[ "$(dpkg-query -S "$path" 2>/dev/null)" == "$package: $path" ]] ||
+              [[ "$(dpkg-query -S "$(canonical_tool_path "$path")" 2>/dev/null)" == "$package: $(canonical_tool_path "$path")" ]]; }; then
+            if candidate=$(microsoft_apt_candidate "$package"); then
+                installed=$(dpkg-query -W -f='${Version}' "$package") || return 1
+                if ! dpkg --compare-versions "$candidate" ge "$installed"; then
+                    printf '[FAIL] %s: APT 후보가 현재 버전보다 낮습니다. 변경하지 않습니다.\n' "$tool" >&2; return 1
+                fi
+                managed=apt
+            else
+                case $? in
+                    1) ;;
+                    *) printf '[FAIL] %s: APT 업데이트 원본 조회에 실패했습니다.\n' "$tool" >&2; return 1 ;;
+                esac
+            fi
+        fi
+    fi
+    if [[ -z "$managed" ]]; then
+        printf '[MANUAL] %s: 실행 파일의 Homebrew/APT(Microsoft 저장소) 출처를 확인하지 못했습니다. 덮어쓰지 않습니다. docs/java/8-troubleshooting.md를 참고하세요.\n' "$tool"
+        return 0
+    fi
+    if ! before=$(azure_tool_version "$tool"); then printf '[FAIL] %s 버전 실행 확인에 실패했습니다.\n' "$tool" >&2; return 1; fi
+    if ! confirm_install "$tool $before: 확인된 $managed 패키지 $package와 필요한 의존성을 업데이트합니다. 네트워크와 관리자 권한이 필요할 수 있습니다. OS 전체 업그레이드는 하지 않습니다."; then return 0; fi
+    if [[ "$managed" == brew ]]; then
+        if ! brew upgrade "$package"; then printf '[FAIL] %s 업데이트에 실패했습니다.\n' "$tool" >&2; return 1; fi
+    else
+        if ! sudo apt-get update; then
+            printf '[FAIL] %s 업데이트 목록 갱신에 실패했습니다.\n' "$tool" >&2; return 1
+        fi
+        # 갱신 후 후보의 출처/다운그레이드 여부를 다시 확인하고 그 버전만 요청한다.
+        if ! candidate=$(microsoft_apt_candidate "$package") ||
+            ! dpkg --compare-versions "$candidate" ge "$installed"; then
+            printf '[FAIL] %s 갱신 후 안전한 Microsoft APT 후보를 확인하지 못했습니다.\n' "$tool" >&2; return 1
+        fi
+        if ! sudo apt-get install --only-upgrade --no-remove -y "$package=$candidate"; then
+            printf '[FAIL] %s 업데이트에 실패했습니다.\n' "$tool" >&2; return 1
+        fi
+    fi
+    hash -r
+    if ! after=$(azure_tool_version "$tool") || ! version_not_older "$after" "$before"; then
+        printf '[FAIL] %s 업데이트 후 버전/실행 확인에 실패했습니다.\n' "$tool" >&2; return 1
+    fi
+    printf '[PASS] %s: %s → %s (이미 최신이면 유지).\n' "$tool" "$before" "$after"
+}
+
+latest_temurin_identifier() {
+    local major="$1"
+    awk -F '|' -v major="$major" '
+        function newer(a,b, av,bv,ab,bb,an,bn,i,n) {
+            split(a,ab,/\+/); split(b,bb,/\+/)
+            an=split(ab[1],av,/\./); bn=split(bb[1],bv,/\./); n=an>bn?an:bn
+            for(i=1;i<=n;i++) { if(av[i]+0>bv[i]+0) return 1; if(av[i]+0<bv[i]+0) return 0 }
+            an=split(ab[2],av,/\./); bn=split(bb[2],bv,/\./); n=an>bn?an:bn
+            for(i=1;i<=n;i++) { if(av[i]+0>bv[i]+0) return 1; if(av[i]+0<bv[i]+0) return 0 }
+            return 0
+        }
+        { id=$NF; gsub(/\033\[[0-9;]*m/,"",id); gsub(/^[ \t]+|[ \t\r]+$/,"",id)
+          if(id ~ ("^" major "\\.[0-9]+(\\.[0-9]+)*(\\+[0-9]+(\\.[0-9]+)*)?-tem$")) {
+              version=id; sub(/-tem$/,"",version)
+              if(best=="" || newer(version,best)) { best=version; selected=id }
+          }
+        }
+        END { if(selected!="") print selected }'
 }
 
 jdk_matches_major() {
@@ -139,9 +329,34 @@ jdk_matches_major() {
     fi
 }
 
+jdk_matches_identifier() {
+    local candidate="$1" identifier="$2" major="${2%%.*}" expected actual runtime compiler
+    jdk_matches_major "$candidate" "$major" || return 1
+    expected="${identifier%-tem}"
+    expected="${expected%%+*}"
+    if [[ "$major" == 8 ]]; then
+        expected="${expected#8.0.}"
+        expected="1.8.0_${expected%%.*}"
+    else
+        while [[ "$expected" == *.0 ]]; do expected="${expected%.0}"; done
+    fi
+    runtime=$("$candidate/bin/java" -version 2>&1) || return 1
+    compiler=$("$candidate/bin/javac" -version 2>&1) || return 1
+    [[ "$runtime" =~ version[[:space:]]+\"([^\"]+)\" ]] || return 1
+    actual="${BASH_REMATCH[1]}"
+    actual="${actual%%+*}"
+    if [[ "$major" != 8 ]]; then while [[ "$actual" == *.0 ]]; do actual="${actual%.0}"; done; fi
+    [[ "$actual" == "$expected" ]] || return 1
+    [[ "$compiler" =~ javac[[:space:]]+([^[:space:]]+) ]] || return 1
+    actual="${BASH_REMATCH[1]}"
+    actual="${actual%%+*}"
+    if [[ "$major" != 8 ]]; then while [[ "$actual" == *.0 ]]; do actual="${actual%.0}"; done; fi
+    [[ "$actual" == "$expected" ]]
+}
+
 install_java_sdks() (
     export SDKMAN_DIR="$1"
-    local major candidate identifier listing failed=0 found USE
+    local update="${2:-0}" major candidate identifier listing failed=0 found USE
     if ! source "$SDKMAN_DIR/bin/sdkman-init.sh"; then
         printf '%s\n' '[FAIL] JDK 설치를 위한 SDKMAN 초기화에 실패했습니다.' >&2; return 1
     fi
@@ -154,21 +369,39 @@ install_java_sdks() (
             [[ "${candidate##*/}" != current ]] || continue
             if jdk_matches_major "$candidate" "$major"; then found=1; break; fi
         done
-        if (( found )); then printf '[INFO] JDK %s: 기존 SDKMAN 설치를 사용합니다 (%s).\n' "$major" "${candidate##*/}"; continue; fi
-        if ! confirm_install "JDK $major: SDKMAN 목록에서 이 환경에 제공되는 정식 Temurin JDK를 선택해 설치합니다. 네트워크와 디스크 공간이 필요합니다. 기존 기본 JDK는 유지합니다."; then continue; fi
+        if (( found && ! update )); then printf '[INFO] JDK %s: 기존 SDKMAN 설치를 사용합니다 (%s).\n' "$major" "${candidate##*/}"; continue; fi
+        if (( ! update )) && ! confirm_install "JDK $major: SDKMAN 목록에서 이 환경에 제공되는 정식 Temurin JDK를 선택해 설치합니다. 네트워크와 디스크 공간이 필요합니다. 기존 기본 JDK는 유지합니다."; then continue; fi
         if ! listing=$(PAGER=cat sdk list java); then
             printf '[FAIL] JDK %s 설치 목록을 조회하지 못했습니다.\n' "$major" >&2; failed=1; continue
         fi
-        identifier=$(printf '%s\n' "$listing" | awk -F '|' -v major="$major" '
+        if (( update )); then
+            identifier=$(printf '%s\n' "$listing" | latest_temurin_identifier "$major")
+        else
+            identifier=$(printf '%s\n' "$listing" | awk -F '|' -v major="$major" '
             { id=$NF; gsub(/\033\[[0-9;]*m/, "", id); gsub(/^[ \t]+|[ \t\r]+$/, "", id)
               if (id ~ ("^" major "\\.[0-9]+(\\.[0-9]+)*(\\+[0-9]+(\\.[0-9]+)*)?-tem$")) { print id; exit } }')
+        fi
         if [[ -z "$identifier" ]]; then
             printf '[FAIL] 이 환경의 SDKMAN 목록에 정식 Temurin JDK %s가 없습니다. sdk list java로 다른 배포판을 확인하세요.\n' "$major" >&2
             failed=1; continue
         fi
+        if (( update )); then
+            candidate="$SDKMAN_DIR/candidates/java/$identifier"
+            if [[ -e "$candidate" || -L "$candidate" ]]; then
+                if jdk_matches_identifier "$candidate" "$identifier"; then
+                    printf '[INFO] JDK %s: 최신 %s가 이미 설치되어 있습니다.\n' "$major" "$identifier"
+                else
+                    printf '[FAIL] 기존 JDK %s 실행 확인에 실패했습니다. 덮어쓰지 않습니다.\n' "$identifier" >&2; failed=1
+                fi
+                continue
+            fi
+            if ! confirm_install "JDK $major: 최신 정식 Temurin $identifier를 추가 설치합니다. 네트워크와 디스크가 필요하며 기존 버전과 기본 JDK는 유지합니다."; then continue; fi
+        fi
         USE=n
         if ! sdk install java "$identifier" <<< n || ! jdk_matches_major "$SDKMAN_DIR/candidates/java/$identifier" "$major"; then
             printf '[FAIL] JDK %s 설치 또는 실행 확인에 실패했습니다 (%s).\n' "$major" "$identifier" >&2; failed=1
+        elif (( update )) && ! jdk_matches_identifier "$SDKMAN_DIR/candidates/java/$identifier" "$identifier"; then
+            printf '[FAIL] JDK %s의 실제 버전이 요청한 %s와 다릅니다.\n' "$major" "$identifier" >&2; failed=1
         fi
     done
     printf '[INFO] 현재 터미널에서 SDKMAN을 사용하려면: source %q\n' "$SDKMAN_DIR/bin/sdkman-init.sh"
@@ -176,7 +409,7 @@ install_java_sdks() (
 )
 
 install_missing_tools() {
-    local os="$1" tool path sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" failed=0
+    local os="$1" update="${2:-0}" tool path sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" failed=0
     for tool in node az azd sdkman; do
         if [[ "$tool" == sdkman ]]; then
             if [[ -e "$sdk_dir" || -L "$sdk_dir" ]]; then
@@ -187,13 +420,20 @@ install_missing_tools() {
                     printf '[WARN] 기존 SDKMAN 경로를 자동으로 변경하지 않습니다. 내용을 확인하세요: %s\n' "$sdk_dir" >&2
                     failed=1
                 else
-                    install_java_sdks "$sdk_dir" || failed=1
+                    install_java_sdks "$sdk_dir" "$update" || failed=1
                 fi
                 continue
             fi
         else
             path=$(tool_path "$tool")
             if [[ -n "$path" && ! ( "$os" == Linux && -n "${WSL_DISTRO_NAME:-}" && "$path" =~ ^/mnt/[a-zA-Z]/ ) ]]; then
+                if (( update )); then
+                    case "$tool" in
+                        node) update_node_with_nvm || failed=1 ;;
+                        az|azd) update_azure_tool "$os" "$tool" "$path" || failed=1 ;;
+                    esac
+                    continue
+                fi
                 printf '[INFO] %s: PATH에서 발견했습니다 (%s). 설치하거나 업데이트하지 않습니다.\n' "$tool" "$path"
                 continue
             fi
@@ -203,7 +443,7 @@ install_missing_tools() {
         fi
         case "$os:$tool" in
             Linux:node|Darwin:node)
-                install_node_with_nvm || failed=1 ;;
+                install_node_with_nvm "$update" || failed=1 ;;
             Linux:az)
                 if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
                     printf '%s\n' '[WARN] Azure CLI 자동 설치에는 apt-get과 sudo가 필요합니다. docs/java/0-setup.md에서 수동 설치 방법을 확인하세요.'
@@ -218,8 +458,12 @@ install_missing_tools() {
                 fi ;;
             Darwin:az|Darwin:azd)
                 if ! command -v brew >/dev/null 2>&1; then
-                    printf '[WARN] %s 자동 설치에는 Homebrew가 필요합니다. Homebrew는 자동 설치하지 않습니다.\n' "$tool"
-                    continue
+                    if (( update )); then
+                        if ! ensure_homebrew; then failed=1; continue; fi
+                    else
+                        printf '[WARN] %s 자동 설치에는 Homebrew가 필요합니다. Homebrew는 자동 설치하지 않습니다.\n' "$tool"
+                        continue
+                    fi
                 fi
                 case "$tool" in
                     az) set -- azure-cli ;;
@@ -237,7 +481,7 @@ install_missing_tools() {
                     elif ! verify_sdkman_installation "$sdk_dir"; then
                         failed=1
                     else
-                        install_java_sdks "$sdk_dir" || failed=1
+                        install_java_sdks "$sdk_dir" "$update" || failed=1
                     fi
                 fi ;;
         esac
@@ -246,14 +490,15 @@ install_missing_tools() {
 }
 
 install_prerequisite_main() {
-    local track='' requested='' engine os result=0
+    local track='' requested='' engine os result=0 update=0
     while (( $# )); do
         case "$1" in
             --track|--container-engine)
                 if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then printf '[FAIL] %s 값이 필요합니다.\n' "$1" >&2; return 2; fi
                 if [[ "$1" == --track ]]; then track="$2"; else requested="$2"; fi
                 shift 2 ;;
-            --help|-h) printf '%s\n' 'bash scripts/install-prerequisites.sh --track java [--container-engine docker|podman]'; return 0 ;;
+            --update) update=1; shift ;;
+            --help|-h) printf '%s\n' 'bash scripts/install-prerequisites.sh --track java [--container-engine docker|podman] [--update]'; return 0 ;;
             *) printf '[FAIL] 알 수 없는 인자: %s\n' "$1" >&2; return 2 ;;
         esac
     done
@@ -272,8 +517,12 @@ install_prerequisite_main() {
         printf '%s\n' '[FAIL] 설치는 대화형 터미널에서만 가능합니다. 비대화형 환경에서는 설치하지 않습니다.' >&2
         return 1
     fi
-    printf '설치 대상: %s%s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os" "${WSL_DISTRO_NAME:+ / WSL $WSL_DISTRO_NAME}"
-    install_missing_tools "$os" || result=1
+    if (( update )); then
+        printf '%s\n' '업데이트 모드: 도구별 출처 확인과 별도 동의 후 변경합니다. Node.js/JDK의 기존 버전과 기본 런타임은 유지합니다.'
+    else
+        printf '설치 대상: %s%s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os" "${WSL_DISTRO_NAME:+ / WSL $WSL_DISTRO_NAME}"
+    fi
+    install_missing_tools "$os" "$update" || result=1
     hash -r
     printf '%s\n' '설치 후 사전 점검을 다시 실행합니다. 로그인, 확장과 수동 항목은 직접 확인하세요.'
     prerequisite_main --track java --container-engine "$engine" || result=1

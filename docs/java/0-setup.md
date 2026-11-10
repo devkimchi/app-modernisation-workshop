@@ -78,6 +78,25 @@ bash scripts/install-prerequisites.sh --track java --container-engine docker
 
 WSL의 Azure CLI 설치에는 `apt-get`과 `sudo`가 필요하며 APT 저장소와 시스템 패키지가 변경됩니다. azd도 설치 위치에 따라 sudo가 필요할 수 있습니다. SDKMAN의 선행 도구가 없으면 APT 환경에서 패키지 설치 여부를 별도로 묻습니다. Homebrew 자체는 설치하지 않습니다.
 
+### 기존 도구를 선택적으로 업데이트하기
+
+위 기본 명령은 그대로 유지됩니다. 기존 도구도 업데이트하려면 **WSL2/macOS의 대화형 Bash, 워크숍 루트**에서 `--update`를 명시합니다. 누락된 도구의 설치 동의와 별도로, 업데이트할 도구마다 `y`로 승인해야 합니다.
+
+```bash
+bash scripts/install-prerequisites.sh --track java --container-engine docker --update
+```
+
+| 대상 | `--update` 동작 |
+| --- | --- |
+| nvm 관리 Node.js | 최신 정식 **22.x**를 추가 설치합니다. 기존 버전과 기본 alias를 유지하며 활성 Node.js가 24/25 등 더 높은 major이면 22로 낮추지 않습니다. 현재 Node.js의 nvm 출처를 확인하지 못하면 수동 안내만 합니다. |
+| SDKMAN JDK 8, 21, 25 | major마다 목록에서 최신 정식 **Temurin**을 숫자 버전/빌드 순으로 선택합니다. EA는 제외하고 `+빌드번호`를 보존합니다. 이미 설치된 최신 버전은 실행 확인만 하고, 기존 버전과 기본 JDK는 유지합니다. |
+| Azure CLI, azd | macOS는 선택된 실행 파일의 Homebrew 소유 경로를 확인한 뒤 해당 formula만 업데이트합니다. WSL은 실행 파일을 소유한 설치된 APT 패키지와 Microsoft 저장소의 후보를 확인한 경우만 해당 패키지를 업데이트합니다. 독립 설치 스크립트, pip 등 출처가 확인되지 않는 설치는 덮어쓰지 않고 `MANUAL`로 안내합니다. |
+| 누락된 Homebrew | **이 옵션에서만** 공식 Homebrew 설치를 별도 동의로 제안합니다. 관리자 권한과 macOS 개발 도구 설치가 필요할 수 있습니다. 이후 Azure 도구 설치도 별도로 묻습니다. |
+
+CI와 입력·출력이 리디렉션된 비대화형 환경에서는 이 옵션도 설치/업데이트하지 않습니다. OS 전체 업그레이드를 수행하지 않으며, 승인한 패키지의 의존성은 패키지 관리자가 변경할 수 있습니다. 업데이트 실패나 실제 버전/실행 검증 실패는 종료 코드 `1`로 보고합니다. 기존 기본 런타임을 보존하므로 새 Node.js/JDK를 현재 터미널에서 사용할지는 `nvm use <새-버전>` 또는 `sdk use java <새-식별자>`로 직접 선택하세요. 출처 확인이나 수동 복구는 [문제 해결](8-troubleshooting.md#기존-도구-업데이트와-설치-출처)을 참고하세요.
+
+### Windows 호스트 도구 설치
+
 Windows 호스트의 선행 도구나 Node.js가 없다면 **대화형 PowerShell 7 또는 Windows PowerShell 5.1**에서 별도로 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다.
 
 ```powershell
@@ -85,6 +104,8 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -ContainerE
 ```
 
 누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻고 `y`로 승인한 항목만 설치합니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 필요하면 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. CI와 입력·출력이 리디렉션된 비대화형 환경에서는 설치하지 않습니다. Linux 배포판과 WSL 안의 도구는 설치하지 않으므로 Java용 WSL2 배포판은 따로 준비합니다. 두 항목이 준비되면 PowerShell 7에서 누락된 Windows Node.js의 설치 동의를 받습니다.
+
+`--update`는 Java용 Bash 설치 도우미에만 있습니다. PowerShell 도우미는 `-Update`를 지원하지 않으며 기존 Windows CLI, PowerShell 7, WSL2를 업데이트하지 않습니다. winget의 설치 목록만으로 현재 PATH 실행 파일의 관리 출처를 보장할 수 없으므로 Windows 도구는 기존 설치 관리자를 확인한 뒤 수동 업데이트합니다.
 
 설치 후 같은 점검 명령을 다시 실행하세요. Bash 점검은 필요한 경우 `NVM_DIR`, `$XDG_CONFIG_HOME/nvm`, `~/.nvm` 중 설정에 맞는 경로에서 nvm을 불러와 기본 Node.js를 활성화합니다. 다른 도구도 비대화형 Bash에서 실행할 수 있어야 합니다.
 

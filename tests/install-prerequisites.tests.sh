@@ -115,7 +115,8 @@ manual_output=$(
 assert 'non-APT environment requires manual action' grep -q '직접 설치' <<< "$manual_output"
 assert 'missing manual dependency fails' grep -q 'EXPECTED FAILURE' <<< "$manual_output"
 
-test_dir=$(mktemp -d "${TMPDIR:-/tmp}/workshop-sdkman-test.XXXXXXXX")
+mkdir -p "$ROOT/.test-output"
+test_dir=$(mktemp -d "$ROOT/.test-output/workshop-sdkman-test.XXXXXXXX")
 trap 'rm -rf -- "$test_dir"' EXIT
 mkdir -p "$test_dir/bin"
 printf 'preserve\n' > "$test_dir/marker"
@@ -209,8 +210,13 @@ sdk() {
             printf 'sdk-install: %s\n' "$3"
             [[ "${MOCK_JDK_FAILURE:-0}" == 0 ]] || return 1
             local folder="$SDKMAN_DIR/candidates/java/$3" major="${3%%.*}" version
-            version="$major.0.1"
-            [[ "$major" != 8 ]] || version=1.8.0_472
+            version="${3%-tem}"
+            version="${version%%+*}"
+            if [[ "$major" == 8 ]]; then
+                version="${version#8.0.}"
+                version="1.8.0_${version%%.*}"
+            fi
+            version="${MOCK_JDK_ACTUAL:-$version}"
             mkdir -p "$folder/bin"
             printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "openjdk version \"$version\"" > "$folder/bin/java"
             printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "javac $version" > "$folder/bin/javac"
@@ -268,4 +274,277 @@ for identifier in 8.0.512.0+9-tem 21.0.13.0+9-tem 25.0.5.0+8-tem; do
     assert "build identifier $identifier installed" grep -Fxq "sdk-install: $identifier" <<< "$java_build_output"
 done
 if [[ "$java_build_output" == *'sdk-install: 25.0.6-ea-tem'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
+
+update_noninteractive=$(
+    uname() { printf 'Darwin\n'; }
+    install_missing_tools() { printf 'UNEXPECTED INSTALL\n'; }
+    export CI=1
+    if install_prerequisite_main --track java --update 2>&1; then exit 1; else printf 'EXPECTED FAILURE\n'; fi
+)
+assert 'update flag accepted but CI rejected' grep -q '비대화형 환경에서는 설치하지 않습니다' <<< "$update_noninteractive"
+assert 'CI update returns nonzero' grep -q 'EXPECTED FAILURE' <<< "$update_noninteractive"
+assert 'CI update never dispatches installer' test "${update_noninteractive#*UNEXPECTED}" = "$update_noninteractive"
+redirected_update=$(
+    unset CI
+    uname() { printf 'Darwin\n'; }
+    install_missing_tools() { printf 'UNEXPECTED INSTALL\n'; }
+    if install_prerequisite_main --track java --update </dev/null 2>&1; then exit 1; else printf 'EXPECTED FAILURE\n'; fi
+)
+assert 'redirected update rejected without CI' grep -q 'EXPECTED FAILURE' <<< "$redirected_update"
+assert 'redirected update never dispatches' test "${redirected_update#*UNEXPECTED}" = "$redirected_update"
+
+mkdir -p "$test_dir/update-nvm/versions/node/v22.1.0/bin" "$test_dir/update-nvm/alias"
+printf 'v22.1.0\n' > "$test_dir/update-nvm/alias/default"
+printf '#!/usr/bin/env bash\nprintf "v22.1.0\\n"\n' > "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
+chmod +x "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
+cat > "$test_dir/update-nvm/nvm.sh" <<'FIXTURE'
+nvm_ensure_default_set() { printf '%s\n' "$1" > "$NVM_DIR/alias/default"; }
+nvm() {
+    printf 'nvm-call: %s\n' "$*" >&2
+    case "$1" in
+        which) printf '%s/versions/node/v22.1.0/bin/node\n' "$NVM_DIR" ;;
+        version-remote) printf '%s\n' "${MOCK_REMOTE:-v22.99.1}"; return "${MOCK_REMOTE_FAILURE:-0}" ;;
+        install)
+            [[ "${MOCK_UPDATE_FAILURE:-0}" == 0 ]] || return 1
+            [[ "$#" == 2 && "$2" == v22.99.1 ]] || return 1
+            nvm_ensure_default_set "$2"
+            ;;
+        use)
+            [[ "${MOCK_NVM_USE_FAILURE:-0}" == 0 ]] || return 1
+            node() { printf '%s\n' "${MOCK_NODE_AFTER:-v22.99.1}"; }
+            npm() { return "${MOCK_NPM_FAILURE:-0}"; }
+            ;;
+    esac
+}
+FIXTURE
+node_update_case() (
+    NVM_DIR="$test_dir/update-nvm"
+    tool_path() { printf '%s/versions/node/v22.1.0/bin/node\n' "$NVM_DIR"; }
+    node() { printf '%s\n' "${MOCK_NODE_BEFORE:-v22.1.0}"; }
+    npm() { return 0; }
+    confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
+    if update_node_with_nvm; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+node_updated=$(node_update_case 2>&1)
+assert 'Node exact latest installed using supported nvm arguments' grep -q 'nvm-call: install v22.99.1' <<< "$node_updated"
+assert 'Node default alias preserved' grep -Fxq v22.1.0 "$test_dir/update-nvm/alias/default"
+rm -- "$test_dir/update-nvm/alias/default"
+node_no_default=$(node_update_case 2>&1)
+assert 'Node update succeeds without a default alias' grep -q '^SUCCESS$' <<< "$node_no_default"
+assert 'unset Node default remains unset' test ! -e "$test_dir/update-nvm/alias/default"
+printf 'v22.1.0\n' > "$test_dir/update-nvm/alias/default"
+assert 'old Node remains installed' test -x "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
+assert 'Node separately approved' grep -q 'approval: Node.js 22' <<< "$node_updated"
+for major in 24 25; do
+    newer_node=$(MOCK_NODE_BEFORE="v$major.1.0" node_update_case 2>&1)
+    assert "Node $major not downgraded" grep -q '높은 major를 22로 낮추지 않습니다' <<< "$newer_node"
+    assert "Node $major no installer or prompt" test "${newer_node#*nvm-call:}" = "$newer_node"
+    assert "Node $major no approval needed" test "${newer_node#*approval:}" = "$newer_node"
+done
+node_decline=$(MOCK_APPROVED=0 node_update_case 2>&1)
+assert 'Node decline does not install' test "${node_decline#*nvm-call: install}" = "$node_decline"
+assert 'Node decline does not activate another version' test "${node_decline#*nvm-call: use}" = "$node_decline"
+node_latest=$(MOCK_NODE_BEFORE=v22.99.1 node_update_case 2>&1)
+assert 'latest Node skipped' grep -q '이미 최신' <<< "$node_latest"
+assert 'latest Node not reinstalled' test "${node_latest#*nvm-call: install}" = "$node_latest"
+assert 'latest Node does not need approval' test "${node_latest#*approval:}" = "$node_latest"
+for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v22.0.0 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.1 MOCK_UPDATE_FAILURE=1 MOCK_NVM_USE_FAILURE=1 MOCK_NODE_AFTER=v22.1.0 MOCK_NPM_FAILURE=1; do
+    node_failed=$(export "$setting"; node_update_case 2>&1)
+    assert "Node error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$node_failed"
+done
+unknown_node=$(
+    NVM_DIR="$test_dir/update-nvm"
+    node() { printf 'v22.1.0\n'; }
+    tool_path() { printf '%s/bin/sdkman-init.sh\n' "$test_dir"; }
+    confirm_install() { return 0; }
+    update_node_with_nvm 2>&1
+)
+assert 'foreign Node not overwritten even with nvm installed' grep -q MANUAL <<< "$unknown_node"
+assert 'foreign Node never installed' test "${unknown_node#*nvm-call: install}" = "$unknown_node"
+missing_path_update=$(
+    NVM_DIR="$test_dir/nvm"
+    confirm_install() { return 0; }
+    update_node_with_nvm() { printf 'update-after-node-activation\n'; }
+    install_node_with_nvm 1
+)
+assert 'update also handles nvm Node absent from initial PATH' grep -q update-after-node-activation <<< "$missing_path_update"
+
+unordered=$'vendor | 21.0.9+99-tem\n | 21.0.10+2-tem\n | 21.0.10+11-tem\n | 21.0.11-ea-tem\n | 21.0.10+3-tem\n | 21.0.99-zulu'
+assert 'latest JDK ordering uses version and numeric build, excludes EA/vendor' test "$(latest_temurin_identifier 21 <<< "$unordered")" = 21.0.10+11-tem
+assert 'JDK extra numeric components retained' test "$(latest_temurin_identifier 25 <<< $' | 25.0.1+99-tem\n | 25.0.1.1+2-tem\n | 25.0.1.1+10-tem')" = 25.0.1.1+10-tem
+assert 'Java 8 update sorted numerically' test "$(latest_temurin_identifier 8 <<< $' | 8.0.99-tem\n | 8.0.512+9-tem\n | 8.0.512+10-tem\n | 8.0.513-ea-tem')" = 8.0.512+10-tem
+ln -s 21.0.9-tem "$test_dir/candidates/java/current"
+default_java=$(readlink "$test_dir/candidates/java/current")
+java_updated=$(
+    MOCK_BUILD_IDENTIFIERS=1
+    confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
+    install_java_sdks "$test_dir" 1
+)
+for major in 8 21 25; do
+    assert "JDK $major update separately approved" grep -q "approval: JDK $major:" <<< "$java_updated"
+    assert "JDK $major previous version retained" test -d "$test_dir/candidates/java/$([[ "$major" == 8 ]] && printf 8.0.472-tem || { [[ "$major" == 21 ]] && printf 21.0.9-tem || printf 25.0.1-tem; })"
+done
+assert 'default JDK link preserved' test "$(readlink "$test_dir/candidates/java/current")" = "$default_java"
+assert 'wrong JDK patch rejected' test "$(jdk_matches_identifier "$test_dir/candidates/java/21.0.9-tem" 21.0.13-tem && printf accepted || printf rejected)" = rejected
+java_latest=$(
+    MOCK_BUILD_IDENTIFIERS=1
+    confirm_install() { printf 'UNEXPECTED APPROVAL\n'; return 1; }
+    install_java_sdks "$test_dir" 1
+)
+assert 'latest JDKs not reinstalled' test "${java_latest#*sdk-install:}" = "$java_latest"
+assert 'latest JDKs not prompted' test "${java_latest#*UNEXPECTED}" = "$java_latest"
+broken_latest="$test_dir/candidates/java/21.0.13.0+9-tem/bin/javac"
+cp "$broken_latest" "$test_dir/saved-javac"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$broken_latest"
+java_broken_latest=$(
+    MOCK_BUILD_IDENTIFIERS=1
+    confirm_install() { return 0; }
+    if install_java_sdks "$test_dir" 1 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+assert 'broken latest JDK fails execution validation' grep -q 'EXPECTED FAILURE' <<< "$java_broken_latest"
+assert 'broken latest JDK is not overwritten' test "${java_broken_latest#*sdk-install:}" = "$java_broken_latest"
+cp "$test_dir/saved-javac" "$broken_latest"
+mkdir -p "$test_dir/update-empty/bin"
+cp "$test_dir/bin/sdkman-init.sh" "$test_dir/update-empty/bin/sdkman-init.sh"
+java_update_declined=$(confirm_install() { return 1; }; install_java_sdks "$test_dir/update-empty" 1)
+assert 'JDK update decline does not install' test "${java_update_declined#*sdk-install:}" = "$java_update_declined"
+for setting in MOCK_LIST_FAILURE=1 MOCK_NO_CANDIDATE=1 MOCK_JDK_FAILURE=1 MOCK_JDK_ACTUAL=21.0.1; do
+    java_update_failed=$(
+        export "$setting"
+        confirm_install() { return 0; }
+        if install_java_sdks "$test_dir/update-empty" 1 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    )
+    assert "JDK update error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$java_update_failed"
+done
+mkdir -p "$test_dir/brew/bin" "$test_dir/foreign/bin"
+for tool in az azd; do
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$test_dir/brew/bin/$tool"
+    cp "$test_dir/brew/bin/$tool" "$test_dir/foreign/bin/$tool"
+    chmod +x "$test_dir/brew/bin/$tool" "$test_dir/foreign/bin/$tool"
+done
+azure_update_case() (
+    local platform="$1" tool="$2" path="$3" changed=0
+    brew() {
+        case "$1" in
+            --prefix) printf '%s/brew\n' "$test_dir" ;;
+            list) return 0 ;;
+            upgrade) printf 'brew-upgrade: %s\n' "$2"; changed=1; return "${MOCK_AZURE_FAILURE:-0}" ;;
+        esac
+    }
+    dpkg-query() {
+        case "$1:$2" in
+            '-W:-f=${Status}') printf 'install ok installed\n' ;;
+            '-W:-f=${Version}') printf '2.1.0-1\n' ;;
+            -S:*) printf '%s: %s\n' "${MOCK_OWNER:-azure-cli}" "$2" ;;
+        esac
+    }
+    dpkg() { [[ "${MOCK_APT_DOWNGRADE:-0}" == 0 ]]; }
+    apt-cache() {
+        [[ "${MOCK_APT_POLICY_FAILURE:-0}" == 0 ]] || return 1
+        local origin="${MOCK_APT_ORIGIN:-packages.microsoft.com}"
+        if (( changed )); then origin="${MOCK_APT_UPDATED_ORIGIN:-$origin}"; fi
+        printf 'azure-cli:\n  Installed: 2.1.0-1\n  Candidate: 2.2.0-1\n  Version table:\n     2.2.0-1 500\n        500 https://%s/repos/azure-cli stable/main amd64 Packages\n *** 2.1.0-1 100\n        100 /var/lib/dpkg/status\n' "$origin"
+    }
+    apt-get() { printf 'UNEXPECTED DIRECT APT\n'; return 1; }
+    sudo() { printf 'sudo-call: %s\n' "$*"; changed=1; return "${MOCK_AZURE_FAILURE:-0}"; }
+    az() {
+        [[ "${MOCK_VERSION_FAILURE:-0}" == 0 ]] || return 1
+        if (( changed )); then printf '%s\n' "${MOCK_AZURE_AFTER:-2.2.0}"; else printf '2.1.0\n'; fi
+    }
+    azd() { printf 'azd version '; az; }
+    confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
+    if update_azure_tool "$platform" "$tool" "$path"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+for tool in az azd; do
+    brew_update=$(azure_update_case Darwin "$tool" "$test_dir/brew/bin/$tool")
+    assert "Homebrew $tool targeted update" grep -q 'brew-upgrade:' <<< "$brew_update"
+    assert "Homebrew $tool runtime verified" grep -q '\[PASS\]' <<< "$brew_update"
+    brew_declined=$(MOCK_APPROVED=0 azure_update_case Darwin "$tool" "$test_dir/brew/bin/$tool")
+    assert "Homebrew $tool decline prevents mutation" test "${brew_declined#*brew-upgrade:}" = "$brew_declined"
+    foreign_tool=$(azure_update_case Darwin "$tool" "$test_dir/foreign/bin/$tool")
+    assert "foreign $tool path untouched" grep -q MANUAL <<< "$foreign_tool"
+    assert "foreign $tool no package update" test "${foreign_tool#*brew-upgrade:}" = "$foreign_tool"
+done
+apt_azd=$(MOCK_OWNER=azd azure_update_case Linux azd "$test_dir/foreign/bin/azd")
+assert 'APT azd targeted package updated' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y azd=2.2.0-1' <<< "$apt_azd"
+apt_updated=$(azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT only verified package/version requested without removals' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y azure-cli=2.2.0-1' <<< "$apt_updated"
+assert 'APT metadata refresh separately approved' grep -q 'approval: az 2.1.0' <<< "$apt_updated"
+apt_unknown=$(MOCK_OWNER=other azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT foreign owner manual' grep -q MANUAL <<< "$apt_unknown"
+assert 'APT foreign owner never updated' test "${apt_unknown#*sudo-call:}" = "$apt_unknown"
+apt_untrusted=$(MOCK_APT_ORIGIN=example.invalid azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT untrusted origin manual' grep -q MANUAL <<< "$apt_untrusted"
+assert 'APT untrusted origin untouched' test "${apt_untrusted#*sudo-call:}" = "$apt_untrusted"
+apt_policy_failed=$(MOCK_APT_POLICY_FAILURE=1 azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT policy command failure is not manual success fallback' grep -q 'EXPECTED FAILURE' <<< "$apt_policy_failed"
+assert 'APT policy failure never updates' test "${apt_policy_failed#*sudo-call:}" = "$apt_policy_failed"
+apt_changed=$(MOCK_APT_UPDATED_ORIGIN=example.invalid azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT origin change after refresh fails' grep -q 'EXPECTED FAILURE' <<< "$apt_changed"
+assert 'APT origin change prevents package install' test "${apt_changed#*sudo-call: apt-get install}" = "$apt_changed"
+apt_refresh_failed=$(MOCK_AZURE_FAILURE=1 azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT refresh failure prevents package install' test "${apt_refresh_failed#*sudo-call: apt-get install}" = "$apt_refresh_failed"
+apt_declined=$(MOCK_APPROVED=0 azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT declined update untouched' test "${apt_declined#*sudo-call:}" = "$apt_declined"
+apt_downgrade=$(MOCK_APT_DOWNGRADE=1 azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'APT downgrade candidate fails before mutation' grep -q 'EXPECTED FAILURE' <<< "$apt_downgrade"
+assert 'APT downgrade never invoked' test "${apt_downgrade#*sudo-call:}" = "$apt_downgrade"
+for platform in Darwin Linux; do
+    for setting in MOCK_AZURE_FAILURE=1 MOCK_VERSION_FAILURE=1 MOCK_AZURE_AFTER=1.0.0 MOCK_AZURE_AFTER=invalid; do
+        azure_failed=$(export "$setting"; azure_update_case "$platform" az "$test_dir/brew/bin/az")
+        assert "$platform Azure error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$azure_failed"
+    done
+done
+
+brew_setup_case() (
+    local available=0
+    command() {
+        if [[ "$*" == '-v brew' ]]; then (( available )); else builtin command "$@"; fi
+    }
+    brew() { printf 'brew-call: %s\n' "$*"; return "${MOCK_BREW_VERSION_FAILURE:-0}"; }
+    run_remote_installer() {
+        printf 'installer: %s %s\n' "$1" "$2"
+        [[ "${MOCK_BREW_INSTALL_FAILURE:-0}" == 0 ]] || return 1
+        available=1
+    }
+    confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
+    if ensure_homebrew; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+brew_setup=$(brew_setup_case)
+assert 'missing Homebrew has distinct consent' grep -q 'approval: Homebrew:' <<< "$brew_setup"
+assert 'Homebrew official installer selected' grep -q 'installer: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh user' <<< "$brew_setup"
+assert 'Homebrew runtime verified' grep -q 'brew-call: --version' <<< "$brew_setup"
+brew_setup_declined=$(MOCK_APPROVED=0 brew_setup_case)
+assert 'Homebrew decline prevents installer' test "${brew_setup_declined#*installer:}" = "$brew_setup_declined"
+for setting in MOCK_BREW_INSTALL_FAILURE=1 MOCK_BREW_VERSION_FAILURE=1; do
+    brew_setup_failed=$(export "$setting"; brew_setup_case)
+    assert "Homebrew error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$brew_setup_failed"
+done
+mac_missing_brew_case() (
+    local available=0
+    SDKMAN_DIR="$test_dir/no-sdkman"
+    command() {
+        if [[ "$*" == '-v brew' ]]; then (( available )); else builtin command "$@"; fi
+    }
+    tool_path() { [[ "$1" == az ]] || printf '/fixture/%s\n' "$1"; }
+    update_node_with_nvm() { :; }
+    update_azure_tool() { :; }
+    brew() { printf 'brew-call: %s\n' "$*"; }
+    run_remote_installer() { printf 'installer: %s\n' "$1"; available=1; }
+    confirm_install() {
+        printf 'approval: %s\n' "$1"
+        [[ "$1" != SDKMAN:* && "${MOCK_APPROVED:-1}" == 1 ]]
+    }
+    if install_missing_tools Darwin "$1"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+mac_default=$(mac_missing_brew_case 0)
+assert 'default does not install Homebrew' test "${mac_default#*installer:}" = "$mac_default"
+assert 'default does not offer Homebrew' test "${mac_default#*approval: Homebrew:}" = "$mac_default"
+mac_update=$(mac_missing_brew_case 1)
+assert 'update offers missing Homebrew separately' grep -q 'approval: Homebrew:' <<< "$mac_update"
+assert 'update offers Azure CLI separately after Homebrew' grep -q 'approval: az:' <<< "$mac_update"
+assert 'update installs only requested Homebrew package' grep -q 'brew-call: install azure-cli' <<< "$mac_update"
+mac_decline=$(MOCK_APPROVED=0 mac_missing_brew_case 1)
+assert 'declined missing Homebrew causes no installs' test "${mac_decline#*installer:}" = "$mac_decline"
+assert 'declined missing Homebrew prevents package install' test "${mac_decline#*brew-call: install}" = "$mac_decline"
 printf 'PASS: %s installation Bash assertions\n' "$PASSED"

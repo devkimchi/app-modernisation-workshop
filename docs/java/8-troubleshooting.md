@@ -31,6 +31,17 @@
 
 점검과 설치 도우미의 조치를 거부했거나 실패한 경우에만 아래에서 필요한 항목을 수행합니다. 선택한 WSL2/macOS Bash에서 실행합니다. 조치 후 같은 환경에서 사전 점검을 다시 실행하세요.
 
+### 기존 도구 업데이트와 설치 출처
+
+기본 설치 도우미는 기존 도구를 업데이트하지 않습니다. `bash scripts/install-prerequisites.sh --track java --update`는 대화형 터미널에서만 도구별 동의를 받아 업데이트합니다. 거부한 항목은 변경하지 않으며, 필요한 도구가 여전히 부족하면 최종 사전 점검은 실패할 수 있습니다.
+
+- **Node.js**: `command -v node`, `node --version`과 `nvm which current`를 비교합니다. nvm 설치가 있어도 선택된 Node.js가 다른 관리자 소유라면 자동으로 변경하지 않습니다. 더 높은 major를 22로 낮추지 않습니다. 새 22.x를 추가해도 기본 alias와 기존 설치는 보존하므로 필요하면 출력된 `nvm use <새-버전>`을 현재 Bash에서 실행하세요.
+- **JDK**: `sdk list java` 조회 실패, 정식 Temurin 미제공, 실제 java/javac 버전 불일치는 자동 설치 성공으로 처리하지 않습니다. 최신 JDK가 이미 있으면 재설치하지 않습니다. 기존 경로를 삭제하지 말고 아래 SDKMAN 복구 절차로 확인하세요. 기존 기본 JDK는 유지됩니다.
+- **Azure CLI/azd**: `command -v az`, `command -v azd`와 실제 버전을 확인합니다. macOS는 해당 formula의 `brew --prefix <formula>`와 선택된 실행 파일의 실제 경로가 일치해야 합니다. WSL은 `dpkg-query -S <실행-파일-경로>`의 소유 패키지 및 `apt-cache policy azure-cli` 또는 `apt-cache policy azd`의 Microsoft HTTPS 저장소 후보를 확인합니다. 알 수 없는 경로, pip/독립 바이너리/공식 스크립트 설치 등은 경로만으로 출처를 보장할 수 없어 `MANUAL`로 남깁니다. [Azure CLI](https://learn.microsoft.com/cli/azure/update-azure-cli) 또는 [azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)의 공식 안내에서 **원래 설치 방식**의 업데이트 절차를 선택하세요. 다른 관리자로 덮어쓰지 않습니다.
+- **Homebrew**: 누락 시 `--update`에서만 별도로 설치를 제안합니다. 거부하거나 설치 후 `brew --version`이 실패하면 자동 설치를 계속하지 않습니다. [공식 안내](https://brew.sh)에 따라 복구한 뒤 새 터미널에서 다시 점검하세요.
+
+`--update`도 CI/비대화형 환경에서는 거부되며 Windows PowerShell 도우미의 `-Update` 옵션은 없습니다. Windows PATH와 설치 관리자를 먼저 확인하고 수동 업데이트하세요. Windows PowerShell 7/WSL2 부트스트랩의 기존 설치 동의와 재부팅 정책은 바뀌지 않습니다. 회귀 테스트의 fixture 성공은 실제 macOS/WSL 도구 업데이트를 검증한 결과가 아닙니다.
+
 ### Azure 인증과 공급자 등록
 
 먼저 오류가 미로그인, 권한 부족, 네트워크 중 어느 문제인지 확인합니다. `az`와 `azd` 인증은 별개이며, 브라우저나 장치 코드 인증은 직접 완료해야 합니다. 필요한 명령만 실행하세요.

@@ -108,7 +108,7 @@ IIS Express에는 실행 파일뿐 아니라 `AppServer/applicationhost.config` 
 | IIS Express CLI가 종료되거나 주소 접근 실패 | 장기 실행 터미널, 실행 PID와 로그를 확인합니다. 기본 CLI는 `http://localhost:58801/`이며 IDE의 HTTPS 44300과 다릅니다. 포트 충돌은 `-Port`로 해결하고 관리자 실행/URL ACL/방화벽 전역 변경으로 우회하지 않습니다. HTTP 응답 확인은 DB 초기화를 유발할 수 있습니다. |
 | IIS 401 / 500.19 / 500.21 | 생성 구성의 Windows 인증(활성), 익명 인증(비활성), CLR4 Integrated 풀과 IIS Express ASP.NET 모듈을 확인합니다. Windows 통합 인증을 지원하는 로컬 브라우저를 사용하고 로그의 모듈/설정 오류를 구분합니다. 전역 인증을 풀거나 무조건 관리자 실행하지 않습니다. |
 | MSMQ 오류 | Windows 기능, Running 서비스, 정확한 private queue 이름/권한/트랜잭션 설정을 확인합니다. Linux로 MSMQ를 가져가지 않습니다. |
-| .NET 10 SDK 검사 실패 | `dotnet --list-sdks`를 봅니다. 런타임만 설치했거나 preview만 있는 경우는 통과하지 않습니다. 설치 도우미에서 SDK 설치를 승인하거나 [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0)를 따릅니다. 기존 SDK는 보존하며 정식 10.x SDK가 있으면 `-Update`에서도 설치를 건너뜁니다. `global.json`도 확인합니다. |
+| .NET 10 SDK 검사 실패 | `dotnet --list-sdks`를 봅니다. 런타임만 설치했거나 preview만 있는 경우는 통과하지 않습니다. 설치 도우미에서 SDK 설치를 승인하거나 [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0)를 따릅니다. `-Update`는 winget의 최신 정식 10.x보다 낮을 때 별도 동의를 받아 업데이트하고 요청한 버전을 다시 확인합니다. 다른 메이저 SDK와 `global.json`은 변경하지 않지만 같은 기능 밴드의 이전 패치는 설치 관리자에 의해 교체될 수 있습니다. `global.json`의 버전 요구도 확인합니다. |
 | LocalDB/IIS Express 없음 | Visual Studio Installer 개별 구성요소를 확인합니다. 일반 SQL Server를 다른 DB에 연결해 대신 쓰지 않습니다. |
 | HTTPS 인증서 경고 | 개발 인증서와 발급/신뢰 상태를 참가자가 확인해 해결합니다. 보안 경고 우회나 TLS 검증 비활성화를 기본으로 하지 않습니다. |
 

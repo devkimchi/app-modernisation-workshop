@@ -104,6 +104,7 @@ try {
             if ($script:Activate -and $code -eq 0) { $script:HasNode = $true; $script:Current = $script:InstalledVersion; $script:NodeProbeCode = 0 }
         }
         elseif ($Name -eq 'fixture-wsl') { $code = $script:WslCode; $script:WslVersion = $script:WslAfter }
+        elseif ($Name -eq 'winget' -and $Arguments -contains 'Microsoft.DotNet.SDK.10') { $text = '10.0.100' }
         elseif ($Name -eq 'winget') { $text = $script:Show; $code = $script:ShowCode }
         return [pscustomobject]@{ Code=$code; Text=$text }
     }

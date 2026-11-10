@@ -150,21 +150,47 @@ function Update-ProcessPath {
 . (Join-Path $PSScriptRoot 'windows-prerequisite-updates.ps1')
 
 function Install-WorkshopDotnetSdk {
+    param([switch]$Update)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
     $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
-    if ($sdks.Code -eq 0 -and $sdks.Text -match '(?m)^10\.\d+\.\d+\s+\[') {
-        Write-Host '[INFO] .NET 10 안정 SDK가 있습니다. 설치하거나 업데이트하지 않습니다.'
+    $installed = @()
+    if ($sdks.Code -eq 0) {
+        $installed = @([regex]::Matches($sdks.Text, '(?m)^(10\.\d+\.\d+)\s+\[') |
+            ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
+    }
+    if ($installed.Count -and -not $Update) {
+        Write-Host '[INFO] .NET 10 안정 SDK가 있습니다. -Update가 없으므로 업데이트하지 않습니다.'
         return $true
     }
-    Write-Host "[INFO] .NET 10 안정 SDK를 확인하지 못했습니다 (종료 코드 $($sdks.Code)): $($sdks.Text)"
+    if (-not $installed.Count) {
+        Write-Host "[INFO] .NET 10 안정 SDK를 확인하지 못했습니다 (종료 코드 $($sdks.Code)): $($sdks.Text)"
+    }
     if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
         Write-Host '[WARN] .NET 10 SDK 자동 설치에는 winget이 필요합니다. 공식 설치 안내: https://dotnet.microsoft.com/download/dotnet/10.0'
         return $true
     }
-    if (-not (Confirm-ToolInstall '.NET 10 SDK: Windows 호스트에 winget 패키지 Microsoft.DotNet.SDK.10을 설치합니다. 기존 SDK는 제거하지 않습니다. 네트워크와 관리자 승인이 필요할 수 있습니다. winget에서 표시하는 약관은 직접 확인하세요.')) {
+    $arguments = @('install', '--id', 'Microsoft.DotNet.SDK.10', '--exact', '--source', 'winget')
+    $target = $null
+    if ($Update) {
+        $show = Invoke-ToolProbe winget @('show', '--id', 'Microsoft.DotNet.SDK.10', '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
+        $versions = @([regex]::Matches($show.Text, '(?m)^\s*(10\.\d+\.\d+)\s*$') |
+            ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
+        if ($show.Code -ne 0 -or -not $versions.Count) {
+            Write-Host "[FAIL] winget .NET 10 정식 SDK 최신 버전 확인 실패 (종료 코드 $($show.Code)): $($show.Text)"
+            return $false
+        }
+        $target = $versions[0]
+        if ($installed.Count -and $installed[0] -ge $target) {
+            Write-Host "[PASS] .NET SDK $($installed[0]) 유지 (다운그레이드 없음)."
+            return $true
+        }
+        $arguments += @('--version', "$target")
+    }
+    if (-not (Confirm-ToolInstall ".NET 10 SDK $target`: Windows 호스트에 winget 패키지 Microsoft.DotNet.SDK.10을 설치하거나 업데이트합니다. 다른 메이저 SDK와 global.json은 변경하지 않습니다. 같은 기능 밴드의 이전 패치는 설치 관리자에 의해 교체될 수 있습니다. 네트워크와 관리자 승인이 필요할 수 있습니다. winget에서 표시하는 약관은 직접 확인하세요.")) {
+        Write-Host '[INFO] .NET 10 SDK 설치 또는 업데이트를 건너뜁니다.'
         return $true
     }
-    & winget install --id Microsoft.DotNet.SDK.10 --exact --source winget | Out-Host
+    & winget @arguments | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[FAIL] .NET 10 SDK 설치 실패 (종료 코드 $LASTEXITCODE)."
         return $false
@@ -173,6 +199,10 @@ function Install-WorkshopDotnetSdk {
     $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
     if ($sdks.Code -ne 0 -or $sdks.Text -notmatch '(?m)^10\.\d+\.\d+\s+\[') {
         Write-Host "[FAIL] 설치 후 .NET 10 안정 SDK를 확인하지 못했습니다 (종료 코드 $($sdks.Code)): $($sdks.Text). PATH와 설치 상태를 확인하세요."
+        return $false
+    }
+    if ($target -and "$($sdks.Text)`n" -notmatch "(?m)^$([regex]::Escape($target.ToString()))\s+\[") {
+        Write-Host "[FAIL] 요청한 .NET SDK $target 설치를 확인하지 못했습니다: $($sdks.Text)"
         return $false
     }
     Write-Host '[PASS] .NET 10 안정 SDK 설치를 확인했습니다.'
@@ -189,7 +219,7 @@ function Install-WindowsTools {
             @{ Command='az'; Package='Microsoft.AzureCLI'; Name='Azure CLI' },
             @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' }
         )
-    $sdkInstalled = Install-WorkshopDotnetSdk
+    $sdkInstalled = Install-WorkshopDotnetSdk -Update:$Update
     $failed = -not $nodeInstalled -or -not $sdkInstalled
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1

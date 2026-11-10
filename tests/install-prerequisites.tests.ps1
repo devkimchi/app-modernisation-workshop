@@ -26,7 +26,13 @@ if ($IsWindows) {
     $script:SdkText = '10.0.100 [C:\fixture\sdk]'
     $script:SdkCode = 0
     $script:HasWinget = $true
-    function Invoke-ToolProbe { param($Name, $Arguments); return [pscustomobject]@{ Code=$script:SdkCode; Text=$script:SdkText } }
+    $script:SdkVersions = "10.0.100`n11.0.100`n10.0.200-preview.1"
+    $script:SdkLookupCode = 0
+    function Invoke-ToolProbe {
+        param($Name, $Arguments)
+        if ($Name -eq 'winget') { return [pscustomobject]@{ Code=$script:SdkLookupCode; Text=$script:SdkVersions } }
+        return [pscustomobject]@{ Code=$script:SdkCode; Text=$script:SdkText }
+    }
     function Install-WorkshopNode { param([switch]$Update); $script:NodeUpdates.Add([bool]$Update); return $script:NodeSuccess }
     function Get-Command {
         [CmdletBinding()]param($Name, $CommandType)
@@ -91,8 +97,46 @@ if ($IsWindows) {
     Assert-True (Install-WorkshopDotnetSdk) 'missing winget leaves SDK installation manual'
     Assert-True ($script:InstallCalls.Count -eq $before) 'missing winget never launches installer'
     $script:HasWinget = $true
+    $script:SdkText = "8.0.100 [C:\fixture\sdk]`n10.0.100 [C:\fixture\sdk]"
+    $script:SdkVersions = "11.0.100`n10.0.200-preview.1`n10.0.200`n10.0.99"
+    $script:Approved = $false
+    Assert-True (Install-WorkshopDotnetSdk -Update) 'SDK update decline succeeds'
+    Assert-True ($script:InstallCalls.Count -eq $before) 'declined SDK update never installs'
+    $script:Approved = $true
+    function winget {
+        $script:InstallCalls.Add(($args -join ' '))
+        $script:SdkText += "`n10.0.200 [C:\fixture\sdk]"
+        $global:LASTEXITCODE = 0
+    }
+    Assert-True (Install-WorkshopDotnetSdk -Update) 'lower stable SDK updates'
+    Assert-True ($script:InstallCalls[-1] -eq 'install --id Microsoft.DotNet.SDK.10 --exact --source winget --version 10.0.200') 'update selects latest numeric stable 10.x only'
+    $before = $script:InstallCalls.Count
+    Assert-True (Install-WorkshopDotnetSdk -Update) 'current SDK skips update'
+    $script:SdkText = '10.0.300 [C:\fixture\sdk]'
+    Assert-True (Install-WorkshopDotnetSdk -Update) 'newer local SDK never downgraded'
+    Assert-True ($script:InstallCalls.Count -eq $before) 'current and newer SDK never installed'
+    $script:SdkLookupCode = 1
+    Assert-True (Install-WorkshopDotnetSdk) 'default existing SDK never queries release metadata'
+    Assert-True (-not (Install-WorkshopDotnetSdk -Update)) 'SDK lookup failure propagates'
+    $script:SdkLookupCode = 0
+    $script:SdkVersions = "11.0.100`n10.0.200-preview.1"
+    Assert-True (-not (Install-WorkshopDotnetSdk -Update)) 'missing stable 10.x metadata rejected'
+    $script:SdkVersions = '10.0.400'
+    $script:SdkText = ''
+    function winget {
+        $script:InstallCalls.Add(($args -join ' '))
+        $script:SdkText = '10.0.400 [C:\fixture\sdk]'
+        $global:LASTEXITCODE = 0
+    }
+    Assert-True (Install-WorkshopDotnetSdk -Update) 'missing SDK update pins latest stable release'
+    $before = $script:InstallCalls.Count
+    $script:SdkText = '10.0.300 [C:\fixture\sdk]'
+    function winget { $global:LASTEXITCODE = 1 }
+    Assert-True (-not (Install-WorkshopDotnetSdk -Update)) 'SDK update installation failure propagates'
+    function winget { $global:LASTEXITCODE = 0 }
+    Assert-True (-not (Install-WorkshopDotnetSdk -Update)) 'SDK update verifies exact requested version'
     function Test-WorkshopBootstrapInteractive { return $false }
-    Assert-True (-not (Install-WorkshopDotnetSdk)) 'noninteractive SDK installation rejected'
+    Assert-True (-not (Install-WorkshopDotnetSdk -Update)) 'noninteractive SDK installation rejected'
     Assert-True ($script:InstallCalls.Count -eq $before) 'noninteractive SDK never installed'
     function Test-WorkshopBootstrapInteractive { return $true }
     Remove-Item Function:\Invoke-ToolProbe

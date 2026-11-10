@@ -69,7 +69,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 | WSL2 플랫폼 | Linux 배포판 없이 설치하고 플랫폼을 업데이트합니다. |
 | Node.js 22 이상 | nvm-windows로 설치합니다. 업데이트 시 현재 메이저의 최신 정식 버전을 추가하며, 없거나 22 미만이면 22.x를 선택합니다. |
 | Azure CLI, azd | winget으로 누락된 도구만 설치합니다. 업데이트는 원래 설치 관리자로 직접 진행합니다. |
-| .NET 10 SDK | winget으로 정식 10.x SDK가 없을 때만 설치합니다. 기존 SDK는 보존하며, 설치된 정식 10.x SDK는 업데이트하지 않습니다. |
+| .NET 10 SDK | winget으로 설치합니다. `-Update`에서는 최신 정식 10.x보다 낮을 때 별도 동의를 받아 업데이트합니다. 다른 메이저 SDK와 `global.json`은 변경하지 않습니다. |
 
 > [!NOTE]
 >

@@ -15,10 +15,11 @@ Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사�
 
 - [Copilot app](https://github.com/copilot/app)
 - [WSL](https://learn.microsoft.com/windows/wsl/install)
+- [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
-1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택합니다. 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)을 클릭하세요.
+1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭하세요.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
 3. 저장소를 만든 뒤 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요.
 
@@ -27,7 +28,11 @@ git clone https://github.com/<본인-계정>/<저장소-이름>.git
 cd <저장소-이름>
 ```
 
-복제한 폴더가 **워크숍 루트**입니다. 이후 명령은 이 폴더에서 실행합니다. Windows에서는 WSL에서도 접근할 수 있는 위치를 사용하세요. 템플릿 저장소를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
+복제한 폴더가 **워크숍 루트**입니다. 이후 명령은 이 폴더에서 실행합니다. Windows에서는 WSL에서도 접근할 수 있는 위치를 사용하세요.
+
+> [!NOTE]
+>
+> 템플릿 저장소를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
 
 ## 2. 점검하고 부족한 항목 준비하기
 

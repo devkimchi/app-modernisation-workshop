@@ -21,20 +21,7 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 
 - Azure 구독. 없다면 [Azure 무료 구독](https://aka.ms/azure/free)을 직접 신청합니다. 무료 크레딧의 서비스, 리전, 쿼터 제한과 유료 전환 조건을 확인하세요.
 - GitHub 계정과 유효한 GitHub Copilot 라이선스. 조직 정책에 따라 플러그인 사용이 제한될 수 있습니다.
-- 선택한 트랙의 실행 환경. Java는 Windows + WSL2 또는 macOS, .NET은 Windows에서 진행합니다.
-
-**[Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md) 중 자신의 트랙 문서 하나를 선택해 시작하세요.** 준비부터 문제 해결까지 트랙별로 안내하므로 다른 트랙의 문서를 함께 읽을 필요는 없습니다.
-
-각 준비 문서는 다음 순서로 진행합니다.
-
-1. **Use this template > Create a new repository**로 본인 개인 계정에 저장소를 만들고 로컬에 복제합니다. 원본 템플릿을 직접 클론하거나 포크하지 않습니다.
-2. 사전 점검 스크립트를 실행하고, 설치 도우미와 동의 기반 조치로 부족한 항목을 보완합니다. 자동으로 처리되지 않는 항목만 수동으로 준비한 뒤 다시 점검합니다.
-3. Copilot app에 플러그인을 설치합니다.
-4. 샘플 앱을 다운로드하고 원본 로컬 실행 실습으로 넘어갑니다.
-
-[![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)
-
-실행 명령과 수동 준비 항목은 각 트랙의 준비 문서에 있습니다. .NET 원본은 Visual Studio IDE를 열지 않고 MSBuild와 IIS Express로 빌드하고 실행합니다. 선택형 개발 환경은 [Dev Container 안내](.devcontainer/README.md)를 참고하되, .NET Framework 원본 실습은 Windows에서 진행합니다.
+- 템플릿으로 저장소 만들기 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)
 
 ## 트랙 선택
 
@@ -60,8 +47,6 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 | 6 | [ACA 배포](docs/java/06-deploy-aca.md) | [ACA 배포](docs/dotnet/06-deploy-aca.md) |
 | 7 | [정리](docs/java/07-cleanup.md) | [정리](docs/dotnet/07-cleanup.md) |
 
-문제가 생기면 진행 단계와 관계없이 [Java 문제 해결](docs/java/8-troubleshooting.md) 또는 [.NET 문제 해결](docs/dotnet/8-troubleshooting.md)을 참고하세요.
-
 ## 원본과 검증 범위
 
 | 원본 | 다운로드 고정 커밋 | 추출 폴더 |
@@ -70,19 +55,6 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 | [.NET 샘플](https://github.com/Azure-Samples/dotnet-migration-copilot-samples/tree/7c1bf47b7e2627fe5a1c764716638815d35e0282/ContosoUniversity) | `7c1bf47b7e2627fe5a1c764716638815d35e0282` | `ContosoUniversity` 내용 |
 
 다운로드는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 남깁니다. 원본 루트의 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다.
-
-준비 스크립트 회귀 검사는 외부 패키지 없이 다음과 같이 실행합니다. 실제 계정이나 OS 기능을 바꾸지 않는 fixture/mock 검사이며, macOS/WSL2/Podman 실기기 및 전체 앱 현대화와 Azure 배포를 대신하지 않습니다.
-
-```powershell
-pwsh -File ./tests/scripts.tests.ps1
-pwsh -File ./tests/dotnet-original.tests.ps1
-```
-
-```bash
-bash tests/scripts.tests.sh
-```
-
-누락된 도구/잘못된 커밋을 재현하는 시나리오에서는 `FAIL`/`fatal` 출력이 나올 수 있습니다. 테스트 실행 자체의 성공 여부는 마지막 `PASS` 요약과 종료 코드 `0`으로 판단합니다.
 
 설치 링크는 [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)에 있습니다. 진행 중단 여부와 관계없이 마지막에는 [Java 정리](docs/java/07-cleanup.md) 또는 [.NET 정리](docs/dotnet/07-cleanup.md)를 확인하세요.
 

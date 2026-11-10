@@ -8,7 +8,7 @@ Keep changes focused on the workshop instructions, preparation scripts, and regr
 
 ## Local checks
 
-The current branch contains repository setup files only. When the workshop materials are present, run the relevant regression test before opening a pull request.
+Run the relevant regression tests before opening a pull request. These developer checks require no additional test packages and use fixtures and mocked command responses without changing real accounts or OS features. Workshop participants do not need to run them; use the prerequisite checks in the [Java setup](docs/java/0-setup.md) or [.NET setup](docs/dotnet/0-setup.md) instead.
 
 PowerShell:
 
@@ -24,6 +24,10 @@ Bash:
 ```bash
 bash tests/scripts.tests.sh
 ```
+
+Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
+
+These tests do not replace checks on real macOS/WSL2 environments or with Podman, nor do they verify the full application modernization and Azure deployment workflow.
 
 ## Branches and commits
 

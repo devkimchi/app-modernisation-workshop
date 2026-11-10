@@ -2,6 +2,7 @@
 param(
     [string]$Track,
     [string]$ContainerEngine,
+    [switch]$Update,
     [switch]$Help
 )
 
@@ -13,8 +14,9 @@ if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 function Confirm-ToolInstall {
     param([string]$Description)
+    if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
     Write-Host $Description
-    $answer = Read-Host '설치하시겠습니까? [y/N]'
+    $answer = Read-Host '이 작업을 실행하시겠습니까? [y/N]'
     return $answer -ceq 'y' -or $answer -ceq 'Y'
 }
 
@@ -28,20 +30,31 @@ function Update-ProcessPath {
         }
     }
     $env:PATH = $existing -join ';'
+    foreach ($name in @('NVM_HOME', 'NVM_SYMLINK')) {
+        if (-not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+            foreach ($scope in @('User', 'Machine')) {
+                $value = [Environment]::GetEnvironmentVariable($name, $scope)
+                if ($value) {
+                    [Environment]::SetEnvironmentVariable($name, [Environment]::ExpandEnvironmentVariables($value), 'Process')
+                    break
+                }
+            }
+        }
+    }
 }
+
+. (Join-Path $PSScriptRoot 'windows-prerequisite-updates.ps1')
 
 function Install-WindowsTools {
     param([string]$SelectedTrack)
-    $tools = if ($SelectedTrack -eq 'java') {
-        @(@{ Command='node'; Package='OpenJS.NodeJS.LTS'; Name='Node.js LTS' })
-    }
-    else {
+    if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
+    if ($SelectedTrack -eq 'java') { return (Install-WorkshopJavaNode -Update:$Update) }
+    $tools =
         @(
             @{ Command='node'; Package='OpenJS.NodeJS.LTS'; Name='Node.js LTS' },
             @{ Command='az'; Package='Microsoft.AzureCLI'; Name='Azure CLI' },
             @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' }
         )
-    }
     $failed = $false
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -67,7 +80,7 @@ function Install-WindowsTools {
 
 function Invoke-InstallPrerequisiteMain {
     if ($Help) {
-        Write-Host 'pwsh -File scripts\install-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman]'
+        Write-Host 'pwsh -File scripts\install-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman] [-Update]'
         return 0
     }
     if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] -Track java 또는 -Track dotnet을 지정하세요.'; return 2 }
@@ -78,8 +91,14 @@ function Invoke-InstallPrerequisiteMain {
         Write-Host '[FAIL] 설치는 대화형 터미널에서만 가능합니다. 비대화형 환경에서는 설치하지 않습니다.'
         return 1
     }
-    Write-Host '설치 대상: Windows 호스트. 이미 PATH에 있는 도구는 변경하지 않습니다.'
+    $hostResult = 0
+    if ($Update) {
+        $hostResult = Update-WorkshopWindowsHost
+        if ($hostResult -eq 3010) { return 1 }
+    }
+    Write-Host '설치 대상: Windows 호스트. -Update가 없으면 기존 도구는 업데이트하지 않습니다.'
     $installed = Install-WindowsTools $Track
+    if ($hostResult -ne 0) { $installed = $false }
     if ($Track -eq 'java') {
         $node = Invoke-ToolProbe node @('--version')
         if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) {

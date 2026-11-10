@@ -40,7 +40,13 @@
 - **Azure CLI/azd**: `command -v az`, `command -v azd`와 실제 버전을 확인합니다. macOS는 해당 formula의 `brew --prefix <formula>`와 선택된 실행 파일의 실제 경로가 일치해야 합니다. WSL은 `dpkg-query -S <실행-파일-경로>`의 소유 패키지 및 `apt-cache policy azure-cli` 또는 `apt-cache policy azd`의 Microsoft HTTPS 저장소 후보를 확인합니다. 알 수 없는 경로, pip/독립 바이너리/공식 스크립트 설치 등은 경로만으로 출처를 보장할 수 없어 `MANUAL`로 남깁니다. [Azure CLI](https://learn.microsoft.com/cli/azure/update-azure-cli) 또는 [azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)의 공식 안내에서 **원래 설치 방식**의 업데이트 절차를 선택하세요. 다른 관리자로 덮어쓰지 않습니다.
 - **Homebrew**: 누락 시 `--update`에서만 별도로 설치를 제안합니다. 거부하거나 설치 후 `brew --version`이 실패하면 자동 설치를 계속하지 않습니다. [공식 안내](https://brew.sh)에 따라 복구한 뒤 새 터미널에서 다시 점검하세요.
 
-`--update`도 CI/비대화형 환경에서는 거부되며 Windows PowerShell 도우미의 `-Update` 옵션은 없습니다. Windows PATH와 설치 관리자를 먼저 확인하고 수동 업데이트하세요. Windows PowerShell 7/WSL2 부트스트랩의 기존 설치 동의와 재부팅 정책은 바뀌지 않습니다. 회귀 테스트의 fixture 성공은 실제 macOS/WSL 도구 업데이트를 검증한 결과가 아닙니다.
+Windows는 `powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update`를 사용합니다.
+
+- **Node.js**: nvm-windows의 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 실행 경로가 일치해야 합니다. 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 추가합니다. 설치와 `nvm use` 활성화는 별도 동의를 받으며 기존 버전은 보존합니다. 독립 설치나 일반 디렉터리가 링크 경로를 차지하면 자동 전환하지 않습니다. 원래 관리자를 확인하고 [nvm-windows 안내](https://github.com/coreybutler/nvm-windows#installation--upgrades)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
+- **PowerShell 7**: 실행 경로·MSI 등록·winget 패키지가 일치하는 정식 7 버전만 업데이트합니다. Store/ZIP 등 확인할 수 없는 설치는 원래 관리자를 사용하세요. 업데이트 예약은 성공이 아니며 종료 코드 1로 멈춥니다. 현재 pwsh 종료 후 같은 콘솔의 작업 프로세스가 표시하는 `PASS`/`FAIL`을 확인하고 새 터미널에서 `pwsh --version`과 설치 도우미를 다시 실행하세요. 다른 pwsh가 열려 있으면 먼저 종료하세요.
+- **WSL**: `wsl.exe --version`을 확인할 수 있는 플랫폼만 별도 동의 후 `wsl.exe --update`합니다. 버전을 제공하지 않는 inbox WSL은 [공식 안내](https://learn.microsoft.com/windows/wsl/install)에 따라 직접 준비하세요. 배포판 업데이트·삭제·자동 재부팅은 하지 않습니다. 재부팅 필요/검증 실패 시 직접 재부팅한 뒤 점검하세요.
+
+두 업데이트 옵션 모두 CI/비대화형 환경에서는 거부됩니다. 회귀 테스트의 fixture 성공은 실제 설치나 OS 업데이트를 검증한 결과가 아닙니다.
 
 ### Azure 인증과 공급자 등록
 

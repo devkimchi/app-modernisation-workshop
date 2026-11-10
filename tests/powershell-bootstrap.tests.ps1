@@ -100,7 +100,7 @@ try {
         Assert-Bootstrap ($script:BootstrapInstalls.Count -eq 0) 'normal preflight never installs anything'
         $script:PowerShellPresent = $false
         $script:WslPresent = $false
-        $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java' } -AllowInstall
+        $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java'; Update = $true } -AllowInstall
         Assert-Bootstrap (($script:BootstrapInstalls -join ',') -eq 'PowerShell,WSL2') 'installer checks both missing prerequisites independently'
         Assert-Bootstrap ($result.Handled -and $result.Code -eq 1) 'WSL installation stops before main until manual restart/recheck'
         $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'dotnet' }
@@ -164,8 +164,8 @@ try {
     $worker = Join-Path $fixture 'worker 한글 & spaces.ps1'
     $report = Join-Path $fixture 'arguments.json'
     [IO.File]::WriteAllText($worker, @'
-param([string]$Name, [string[]]$Values, [switch]$Enabled, [switch]$Disabled, [string]$Report)
-@{ Name=$Name; Values=$Values; Enabled=[bool]$Enabled; Disabled=[bool]$Disabled; Remaining=@($args); Major=$PSVersionTable.PSVersion.Major } |
+param([string]$Name, [string[]]$Values, [switch]$Enabled, [switch]$Disabled, [switch]$Update, [string]$Report)
+@{ Name=$Name; Values=$Values; Enabled=[bool]$Enabled; Disabled=[bool]$Disabled; Update=[bool]$Update; Remaining=@($args); Major=$PSVersionTable.PSVersion.Major } |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $Report -Encoding UTF8
 exit 23
 '@, $encoding)
@@ -174,6 +174,7 @@ exit 23
         Values = @('first value', '한글 "second"')
         Enabled = [Management.Automation.SwitchParameter]::new($true)
         Disabled = [Management.Automation.SwitchParameter]::new($false)
+        Update = [Management.Automation.SwitchParameter]::new($true)
         Report = $report
     }
     $code = Invoke-WorkshopPowerShell -ScriptPath $worker -BoundParameters $parameters -RemainingArguments @('last value', '한글 "tail"')
@@ -183,6 +184,7 @@ exit 23
     Assert-Bootstrap ($result.Name -ceq $parameters.Name) 'spaces quotes Unicode backslashes preserved'
     Assert-Bootstrap (($result.Values -join '|') -ceq ($parameters.Values -join '|')) 'array values preserved'
     Assert-Bootstrap ($result.Enabled -and -not $result.Disabled) 'true and explicitly false switches preserved'
+    Assert-Bootstrap ($result.Update) 'Update switch forwarded to PS7 worker'
     Assert-Bootstrap (($result.Remaining -join '|') -ceq 'last value|한글 "tail"') 'remaining arguments preserved'
     $successfulWorker = Join-Path $fixture 'successful-worker.ps1'
     [IO.File]::WriteAllText($successfulWorker, 'if ($args.Count -ne 0) { throw "Unexpected arguments" }; $global:LASTEXITCODE=42; Write-Host "PASS: successful worker"', $encoding)
@@ -195,6 +197,7 @@ exit 23
         foreach ($key in $parameters.Keys) { $legacyParameters[$key] = $parameters[$key] }
         $legacyParameters.Enabled = $true
         $legacyParameters.Disabled = $false
+        $legacyParameters.Update = $true
         $serialized = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([Management.Automation.PSSerializer]::Serialize($legacyParameters)))
         $legacyCommand = ". '" + (Join-Path $root 'scripts\powershell-bootstrap.ps1').Replace("'", "''") + "'; " +
             '$parameters=[Management.Automation.PSSerializer]::Deserialize([Text.Encoding]::Unicode.GetString([Convert]::FromBase64String(' +
@@ -206,6 +209,7 @@ exit 23
         Assert-Bootstrap ($LASTEXITCODE -eq 23) 'real PS5.1 forwards worker exit code'
         $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
         Assert-Bootstrap ($result.Name -ceq $parameters.Name -and $result.Enabled -and -not $result.Disabled) 'real PS5.1 preserves Unicode quotes and false switches'
+        Assert-Bootstrap ($result.Update) 'real PS5.1 forwards Update without reentrant bootstrap update'
         Assert-Bootstrap (($result.Values -join '|') -ceq ($parameters.Values -join '|') -and ($result.Remaining -join '|') -ceq 'last value|한글 "tail"') 'real PS5.1 preserves array and remaining arguments'
         $files = @(Get-ChildItem (Join-Path $root 'scripts'),(Join-Path $root 'tests') -Filter '*.ps1')
         $paths = ($files.FullName | ForEach-Object { "'" + $_.Replace("'", "''") + "'" }) -join ','
@@ -241,6 +245,16 @@ exit 23
             $output = & $legacy -NoLogo -NoProfile -NonInteractive -File (Join-Path $fixture "scripts\$name.ps1") -Help 2>&1 | Out-String
             Assert-Bootstrap ($LASTEXITCODE -eq 0 -and $output.Contains("scripts\$name.ps1")) "PS5.1 delegates -Help without recursion: $name"
         }
+        $installerCopy = Join-Path $fixture 'scripts\install-prerequisites.ps1'
+        $installerText = [IO.File]::ReadAllText($installerCopy).Replace(
+            'function Invoke-InstallPrerequisiteMain {', 'function Invoke-OriginalInstallPrerequisiteMain {')
+        $installerText = $installerText.Replace("if (`$MyInvocation.InvocationName -ne '.') { exit (Invoke-InstallPrerequisiteMain) }", @'
+function Invoke-InstallPrerequisiteMain { Write-Host "UPDATE_MAIN:$Track`:$([bool]$Update)"; return 23 }
+if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-InstallPrerequisiteMain) }
+'@)
+        [IO.File]::WriteAllText($installerCopy, $installerText, $encoding)
+        $output = & $legacy -NoProfile -NonInteractive -File $installerCopy -Track java -Update 2>&1 | Out-String
+        Assert-Bootstrap ($LASTEXITCODE -eq 23 -and ([regex]::Matches($output, 'UPDATE_MAIN:java:True')).Count -eq 1) 'actual PS5.1 installer forwards Update and enters main exactly once'
         $dotCommand = 'try { . ''' + (Join-Path $fixture 'scripts\check-prerequisites.ps1').Replace("'", "''") + ''' -Help; exit 99 } catch { if ($_.Exception.Message -notlike ''*Dot-sourcing requires*'') { exit 98 } }; ''CALLER_ALIVE''; exit 0'
         $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($dotCommand))
         $output = & $legacy -NoProfile -NonInteractive -EncodedCommand $encoded 2>&1 | Out-String

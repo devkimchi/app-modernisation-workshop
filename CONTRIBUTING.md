@@ -16,6 +16,7 @@ PowerShell:
 pwsh -File ./tests/scripts.tests.ps1
 pwsh -File ./tests/dotnet-original.tests.ps1
 pwsh -File ./tests/install-prerequisites.tests.ps1
+pwsh -File ./tests/windows-prerequisite-updates.tests.ps1
 pwsh -File ./tests/azure-actions.tests.ps1
 pwsh -File ./tests/powershell-bootstrap.tests.ps1
 ```
@@ -23,6 +24,8 @@ pwsh -File ./tests/powershell-bootstrap.tests.ps1
 On Windows, all `.ps1` entrypoints also accept `powershell.exe -NoProfile -File .\path\to\script.ps1` from Windows PowerShell 5.1 and delegate to PowerShell 7. Both PowerShell 7 and the WSL2 platform are required before production script work on Windows, including the .NET track. A Linux distribution is a separate Java prerequisite. The installer alone may offer to install missing prerequisites, with separate consent for PowerShell 7 and WSL2; CI, redirected input/output and `-NonInteractive` sessions cannot install. WSL2 installation changes Windows features and may require administrator approval and a manual restart; it never installs a distro or restarts Windows automatically.
 
 Regression entrypoints mock the WSL2 host preflight so tests do not depend on host OS features or an installed distribution. The bootstrap suite additionally uses real Windows PowerShell 5.1 subprocesses against isolated script copies with mocked prerequisite discovery to verify parsing, early failure and delegation. No real installation, login or OS modification is performed. Repeat the commands above with `powershell.exe` to verify the 5.1 entry path on Windows.
+
+The Windows update suite mocks nvm-windows/winget, release discovery, process launching and WSL. It covers Java host Node installs and same-major updates (22 fallback only for missing/unsupported Node), separate activation consent, provenance/link collisions, failures and noninteractive denial. `-Update` also supports version-verified WSL platform updates and winget/MSI-managed stable PowerShell 7. A Windows PowerShell worker waits for the current pwsh to exit before upgrading, verifies the result and never reenters the installer; scheduling returns exit code 1, not success. Store/ZIP/unrecognized installs and inbox WSL without version output remain manual. Tests do not execute the real worker or update the OS. Existing .NET CLI installation behavior is unchanged.
 
 Keep `.ps1` files UTF-8 **with BOM** and LF (see `.editorconfig`): Windows PowerShell 5.1 otherwise decodes Korean text using the system ANSI code page before delegation. Do not add PowerShell 7-only syntax to these entrypoint files; the entire file must parse in 5.1. Dot-source helpers only inside PowerShell 7 when caller-scope functions/variables are needed; 5.1 dot-sourcing fails explicitly without exiting the caller because a child process cannot populate that scope. PowerShell 7 dot-sourcing retains definition-only behavior.
 
@@ -35,7 +38,7 @@ bash tests/scripts.tests.sh
 bash tests/install-prerequisites.tests.sh
 ```
 
-Run the installer suite in WSL2/macOS Bash; its SDKMAN fixtures require real symbolic links rather than Git Bash's link emulation. It covers opt-in Bash `--update`, per-tool consent, provenance checks, version selection and failures with isolated SDKMAN/nvm/Homebrew/APT fixtures. It never installs or updates real tools. Windows CLI updates are deliberately out of scope; the PowerShell installer retains missing-tool-only behavior.
+Run the installer suite in WSL2/macOS Bash; its SDKMAN fixtures require real symbolic links rather than Git Bash's link emulation. It covers opt-in Bash `--update`, per-tool consent, provenance checks, version selection and failures with isolated SDKMAN/nvm/Homebrew/APT fixtures. It never installs or updates real tools. Bash `--update` and Windows `-Update` are independent; Windows Java Node uses nvm-windows, not the Bash nvm installation.
 
 Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
 

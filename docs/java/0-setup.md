@@ -87,9 +87,11 @@ Windows 호스트의 선행 도구나 Node.js가 없다면 **대화형 PowerShel
 powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -ContainerEngine docker
 ```
 
-누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻고 `y`로 승인한 항목만 설치합니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 필요하면 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. CI와 입력·출력이 리디렉션된 비대화형 환경에서는 설치하지 않습니다. Linux 배포판과 WSL 안의 도구는 설치하지 않으므로 Java용 WSL2 배포판은 따로 준비합니다. 두 항목이 준비되면 PowerShell 7에서 누락된 Windows Node.js의 설치 동의를 받습니다.
+워크숍 루트의 대화형 Windows 터미널에서 실행합니다. 누락된 **PowerShell 7**은 winget, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`, **Node.js**는 **nvm-windows**로 설치합니다. nvm-windows가 없으면 기존 winget의 `CoreyButler.NVMforWindows` 설치부터 제안합니다. 설치·업데이트·Node.js 활성화는 각각 `y`로 승인해야 합니다.
 
-`--update`는 Java용 Bash 설치 도우미에만 있습니다. PowerShell 도우미는 `-Update`를 지원하지 않으며 기존 Windows CLI, PowerShell 7, WSL2를 업데이트하지 않습니다. winget의 설치 목록만으로 현재 PATH 실행 파일의 관리 출처를 보장할 수 없으므로 Windows 도구는 기존 설치 관리자를 확인한 뒤 수동 업데이트합니다.
+`-Update`를 추가하면 **PowerShell 7 정식 최신 버전**, **WSL 플랫폼**과 **현재 Node.js 메이저의 최신 버전**을 갱신합니다. Node.js가 없거나 22 미만이면 22.x를 선택하고, 22 이상이면 현재 메이저를 유지합니다. 기존 버전은 삭제하지 않습니다. 옵션을 생략하면 기존 도구는 업데이트하지 않습니다.
+
+관리 출처가 불명확한 PowerShell/Node.js나 기존 Node.js 경로 충돌은 `MANUAL`로 남기고 덮어쓰지 않습니다. PowerShell 업데이트는 현재 pwsh 종료 후 별도 프로세스에서 실행하므로 예약 안내가 나오면 결과를 확인하고 **새 터미널에서 다시 실행**하세요. WSL은 배포판을 설치·업데이트하지 않으며 자동 재부팅도 하지 않습니다. CI/비대화형 환경에서는 설치·업데이트하지 않습니다. 자세한 제한은 [문제 해결](8-troubleshooting.md#기존-도구-업데이트와-설치-출처)을 참고하세요.
 
 설치 후 같은 점검 명령을 다시 실행하세요. Bash 점검은 필요한 경우 `NVM_DIR`, `$XDG_CONFIG_HOME/nvm`, `~/.nvm` 중 설정에 맞는 경로에서 nvm을 불러와 기본 Node.js를 활성화합니다. 다른 도구도 비대화형 Bash에서 실행할 수 있어야 합니다.
 

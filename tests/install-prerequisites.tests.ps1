@@ -18,6 +18,7 @@ $null = [Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'scr
 Assert-True ($errors.Count -eq 0) 'PowerShell syntax'
 
 if ($IsWindows) {
+    function Test-WorkshopBootstrapInteractive { return $true }
     $script:InstallCalls = [Collections.Generic.List[string]]::new()
     $script:Approved = $false
     function Get-Command {
@@ -35,12 +36,10 @@ if ($IsWindows) {
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*OpenJS.NodeJS.LTS*' }).Count -eq 1) 'Node package selected'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 1) 'azd package selected'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.AzureCLI*' }).Count -eq 0) 'existing Azure CLI skipped'
-    $script:InstallCalls.Clear()
-    Assert-True (Install-WindowsTools java) 'Java host install succeeds'
-    Assert-True ($script:InstallCalls.Count -eq 1 -and $script:InstallCalls[0] -like '*OpenJS.NodeJS.LTS*') 'Java host only offers Node'
     function winget { $global:LASTEXITCODE=1 }
-    Assert-True (-not (Install-WindowsTools java)) 'installer failure propagates'
+    Assert-True (-not (Install-WindowsTools dotnet)) 'installer failure propagates'
     foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath')) { Remove-Item "Function:\$name" }
+    . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
 }
 
 $savedCI = $env:CI

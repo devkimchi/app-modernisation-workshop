@@ -4,12 +4,12 @@
 
 ## 목표와 시작 조건
 
-승인한 인프라를 만들고 .NET 10 Linux 이미지를 로컬에서 빌드한 뒤 ACA에 배포합니다. 실행 위치는 **앱 루트**, 셸은 **Windows PowerShell 7**입니다. Docker/Podman 서버, 구독, 권한과 DB 접근 경로를 확인합니다.
+승인한 인프라를 만들고 .NET 10 Linux 이미지를 로컬에서 빌드한 뒤 ACA에 배포합니다. 실행 위치는 **앱 루트**, 셸은 **Windows PowerShell 7**입니다. Docker 서버, 구독, 권한과 DB 접근 경로를 확인합니다. 대체 엔진이 필요하면 [문제 해결](8-troubleshooting.md#대체-엔진-설정)을 참고합니다.
 
 ## azd 환경
 
 ```powershell
-$env:AZD_CONTAINER_RUNTIME = 'docker' # Podman은 'podman'
+$env:AZD_CONTAINER_RUNTIME = 'docker'
 azd version
 azd auth login --check-status
 az account show --query "{name:name,id:id}" --output table

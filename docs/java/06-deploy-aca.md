@@ -9,7 +9,7 @@
 ## 환경 설정
 
 ```bash
-export AZD_CONTAINER_RUNTIME=docker # Podman 사용자는 podman
+export AZD_CONTAINER_RUNTIME=docker
 azd version
 azd auth login --check-status
 az account show --query "{name:name,id:id}" --output table
@@ -46,7 +46,7 @@ azd deploy
 azd show
 ```
 
-Docker가 멈췄다고 자동으로 Podman 또는 원격 빌드로 전환하지 않습니다.
+Docker가 멈췄다고 자동으로 다른 엔진이나 원격 빌드로 전환하지 않습니다. 대체 엔진이 필요하면 [문제 해결](8-troubleshooting.md#대체-엔진-설정)을 참고합니다.
 
 `azd up`은 provision/package/deploy를 묶는 명령이지만 이번 실습은 실패 위치와 승인 범위를 알 수 있도록 단계별 실행이 기본입니다.
 

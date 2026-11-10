@@ -39,16 +39,16 @@ cd <저장소-이름>
 WSL2 또는 macOS Bash에서 실행합니다.
 
 ```bash
-bash scripts/check-prerequisites.sh --track java
+bash scripts/check-prerequisites.sh --track java --container-engine docker
 ```
 
-Windows 호스트의 Git과 Node.js까지 함께 검사하려면 **Windows PowerShell 7**에서 다음 명령을 대신 실행합니다. `Ubuntu`는 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여러 개라면 이름을 반드시 지정하세요.
+Windows 호스트의 Git과 Node.js까지 함께 검사하려면 **Windows PowerShell 7**에서 다음 명령을 대신 실행합니다. 기본 배포판은 정확한 이름이 `Ubuntu`인 WSL2 배포판입니다. 해당 배포판이 없거나 WSL1이면 실패하며 다른 배포판으로 자동 전환하지 않습니다. 다른 이름을 사용한다면 [배포판 지정 방법](8-troubleshooting.md#wsl-배포판-지정)을 참고하세요.
 
 ```powershell
-pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu
+pwsh -File ./scripts/check-prerequisites.ps1 -Track java -ContainerEngine docker
 ```
 
-컨테이너 엔진 옵션을 생략하면 현재 셸의 `AZD_CONTAINER_RUNTIME` 값을 사용하고, 설정되어 있지 않으면 `docker`를 사용합니다. Podman을 사용한다면 Bash 명령에 `--container-engine podman`, PowerShell 명령에 `-ContainerEngine podman`을 지정하세요. 이후 명령에 `docker`가 명시되어 있다면 `podman`으로 바꿉니다.
+이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](8-troubleshooting.md#대체-엔진-설정)을 참고하세요.
 
 | 결과 | 할 일 |
 | --- | --- |
@@ -91,16 +91,16 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -ContainerE
 ### 직접 준비할 항목
 
 - **Azure 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위의 권한을 요청하고 구독 전체 Owner를 무조건 요청하지 마세요.
-- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/) 또는 [Podman](https://podman.io/docs/installation)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드와 선택한 WSL 배포판의 통합을 켭니다. Podman은 필요한 경우에만 machine을 생성하거나 시작합니다. Windows와 WSL의 CLI가 같은 엔진에 연결된다고 가정하지 마세요.
+- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드와 선택한 WSL 배포판의 통합을 켭니다. Windows와 WSL의 CLI가 같은 엔진에 연결된다고 가정하지 마세요.
 - **Copilot 사용 권한**: 앱 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
 
 azd가 같은 엔진을 사용하도록 **실습할 Bash마다** 설정합니다. 스크립트는 부모 셸을 변경하지 않습니다.
 
 ```bash
-export AZD_CONTAINER_RUNTIME=docker # Podman은 podman
+export AZD_CONTAINER_RUNTIME=docker
 ```
 
-컨테이너의 실제 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다. Podman에는 Docker Buildx가 필요하지 않습니다. Maven 3.9.9는 샘플의 Maven Wrapper가 내려받으며 Spring Boot는 프로젝트 의존성이므로 별도 설치하지 않습니다.
+컨테이너의 실제 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다. Maven 3.9.9는 샘플의 Maven Wrapper가 내려받으며 Spring Boot는 프로젝트 의존성이므로 별도 설치하지 않습니다.
 
 필수 `FAIL`을 해결하고, 이 단계에서 확인 가능한 수동 항목을 확인하세요. 설치 실패나 Temurin 미제공 환경은 [수동 복구](8-troubleshooting.md#사전-준비-수동-복구)를 참고합니다. 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 인자 오류입니다.
 
@@ -124,7 +124,7 @@ bash scripts/download-sample.sh --track java --container-engine docker
 Windows PowerShell에서 WSL에 위임하려면 위 명령 대신 다음을 사용합니다.
 
 ```powershell
-pwsh -File ./scripts/download-sample.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
+pwsh -File ./scripts/download-sample.ps1 -Track java -ContainerEngine docker
 ```
 
 다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 기본 대상은 워크숍 루트의 `java`입니다. 다른 경로가 필요하면 Bash에서 `--destination "$HOME/workshops/asset-app"`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다.

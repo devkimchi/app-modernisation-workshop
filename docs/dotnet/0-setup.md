@@ -31,7 +31,7 @@ cd <저장소-이름>
 pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```
 
-Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바꿉니다. Windows Git Bash를 사용하려면 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 시작할 수도 있습니다. 이 명령도 Windows PowerShell 7에 검사를 위임합니다.
+이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](8-troubleshooting.md#대체-엔진-설정)을 참고하세요. Windows Git Bash를 사용하려면 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 시작할 수도 있습니다. 이 명령도 Windows PowerShell 7에 검사를 위임합니다.
 
 | 결과 | 할 일 |
 | --- | --- |
@@ -75,16 +75,16 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Containe
 ### 직접 확인할 항목
 
 - **Azure 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위의 권한을 요청하고 구독 전체 Owner를 무조건 요청하지 마세요.
-- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/) 또는 [Podman](https://podman.io/docs/installation)을 설치하고 시작합니다. Docker는 Linux containers 모드를 사용합니다. Podman은 기존 machine과 연결을 확인하고 필요한 경우에만 생성하거나 시작합니다.
+- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Linux containers 모드를 사용합니다.
 - **Copilot 사용 권한**: [앱](https://github.com/copilot/app) 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
 
 azd가 같은 엔진을 사용하도록 **실습할 PowerShell마다** 설정합니다. 스크립트는 부모 셸을 변경하지 않습니다.
 
 ```powershell
-$env:AZD_CONTAINER_RUNTIME = 'docker' # Podman은 'podman'
+$env:AZD_CONTAINER_RUNTIME = 'docker'
 ```
 
-컨테이너의 실제 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다. Podman에는 Docker Buildx가 필요하지 않습니다.
+컨테이너의 실제 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다.
 
 준비 후 점검 명령을 다시 실행해 필수 `FAIL`을 해결하고, 이 단계에서 확인 가능한 수동 항목을 확인하세요. 조치를 거부했거나 실패했다면 [수동 복구](8-troubleshooting.md#사전-준비-수동-복구)를 참고합니다. 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 인자 오류이며 `$LASTEXITCODE`로 확인합니다.
 

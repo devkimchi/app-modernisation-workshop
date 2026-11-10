@@ -48,7 +48,7 @@ web/worker의 책임, DB/큐/파일 의존성, 화면과 API, 환경 설정과 �
   RabbitMQ -> Service Bus, dev의 로컬 파일 및 dev 외 AWS S3 -> private Blob으로 이전한다.
 - 관리 ID, 최소 권한, TLS를 기본으로 하고 비밀을 코드/Git에 저장하지 않는다.
 - 최종 실행 대상은 Linux Azure Container Apps다. AKS/App Service가 아니다.
-- 배포는 azd와 Bicep, 이미지 빌드는 선택한 로컬 Docker/Podman 엔진을 사용한다.
+- 배포는 azd와 Bicep, 이미지 빌드는 로컬 Docker 엔진을 사용한다.
   ACR Tasks나 az acr build를 사용하지 않는다.
 - 단계는 기준 동작 테스트, JDK 21, JDK 25, Azure 서비스 코드, azd 산출물,
   리소스 생성과 배포, 기능 검증, 정리로 나눈다.

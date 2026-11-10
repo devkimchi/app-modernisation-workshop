@@ -90,7 +90,28 @@ IIS Express에는 실행 파일뿐 아니라 `AppServer/applicationhost.config` 
 
 ## 엔진, azd와 Azure
 
+### 대체 엔진 설정
+
+본문은 Docker 기준입니다. Podman이 필요한 경우 [공식 설치 안내](https://podman.io/docs/installation)에 따라 설치하고 Linux 서버에 연결합니다. 기존 machine과 연결을 먼저 확인하고 필요한 경우에만 직접 생성하거나 시작합니다. 설치 도우미는 컨테이너 엔진을 자동 설치하지 않습니다. .NET Framework 원본의 MSBuild, IIS Express, LocalDB와 MSMQ 실행은 계속 Windows에서 진행합니다.
+
 엔진 선택은 명시 인자, `AZD_CONTAINER_RUNTIME`, 기본값 `docker` 순서입니다. 인자와 환경 변수가 다르면 오류가 발생하고, 선택한 엔진이 멈춰도 다른 엔진으로 전환하지 않습니다. Podman machine 목록만으로 현재 연결된 엔진을 판단하지 말고 `podman info`와 연결 설정을 함께 확인하세요. Docker 호환 대체 제품은 Linux 실행, `linux/amd64` 빌드, 포트 접근과 ACR 게시까지 직접 확인한 경우에만 조건부로 사용합니다.
+
+**Windows PowerShell 7의 워크숍 루트**에서 다음과 같이 설정합니다. 환경 변수는 실습할 PowerShell마다 필요하며 스크립트가 부모 셸을 변경하지 않습니다.
+
+```powershell
+$env:AZD_CONTAINER_RUNTIME = 'podman'
+pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine podman
+pwsh -File ./scripts/install-prerequisites.ps1 -Track dotnet -ContainerEngine podman
+pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine podman
+```
+
+설치 도우미는 누락된 도구가 있을 때만 필요한 항목을 직접 승인해 실행합니다. 다운로드는 점검을 통과한 뒤 한 번만 수행합니다. Windows Git Bash 진입점을 사용한다면 그 셸에서도 `export AZD_CONTAINER_RUNTIME=podman`을 설정하고 각 Bash 명령의 `--container-engine docker`를 `--container-engine podman`으로 바꿉니다.
+
+앱 루트에서 인프라를 준비하거나 배포할 때도 프롬프트의 Docker 엔진 요구를 Podman으로 바꾸고 `$env:AZD_CONTAINER_RUNTIME = 'podman'`을 유지합니다. 문서의 컨테이너 명령은 `docker` 대신 `podman`으로 실행하되 Dockerfile, `remoteBuild: false`와 로컬 빌드 원칙은 유지합니다. Docker의 `docker buildx`와 Podman의 내장 `podman build`는 구분해야 하며, Podman에는 Docker Buildx가 필요하지 않습니다. `azd`는 1.37.3 이상을 사용합니다.
+
+정리는 실습에 사용한 동일 엔진에서 컨테이너/이미지의 이름, 생성 시점과 소유 프로젝트를 확인한 뒤 개별 수행합니다. 다른 프로젝트의 자원, 전체 `system prune`, 모든 볼륨과 Podman machine 삭제는 금지합니다. Windows 앱 프로세스는 [정리](07-cleanup.md)처럼 확인한 정확한 PID만 종료합니다.
+
+### 엔진과 배포 오류
 
 | 증상 | 확인과 조치 |
 | --- | --- |

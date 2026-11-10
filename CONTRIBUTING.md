@@ -36,7 +36,7 @@ bash tests/scripts.tests.sh
 
 Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
 
-These tests do not replace checks on real macOS/WSL2 environments or with Podman, nor do they verify the full application modernization and Azure deployment workflow.
+These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/8-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/8-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
 
 ## Branches and commits
 

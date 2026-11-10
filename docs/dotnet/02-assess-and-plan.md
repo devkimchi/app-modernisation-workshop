@@ -38,7 +38,7 @@ ASP.NET MVC 5/System.Web, EF Core/LocalDB, MSMQ, 파일 저장과 큐 처리,
 - 관리 ID, 최소 권한과 TLS를 사용하고 비밀은 코드/Git에 넣지 않는다.
 - DB 초기화의 데이터 삭제/재생성을 제거하고 명시적인 migration으로 바꾼다.
 - Data Protection 키를 revision/인스턴스 간 보존한다.
-- 배포는 azd와 Bicep, 선택한 로컬 Docker/Podman 엔진을 사용한다.
+- 배포는 azd와 Bicep, 로컬 Docker 엔진을 사용한다.
   원격 이미지 빌드, ACR Tasks, az acr build를 사용하지 않는다.
 - 기준 테스트, .NET 10 업그레이드, Azure 코드, Linux 컨테이너,
   인프라 준비, 배포, 실제 기능 검증과 정리로 작업을 나눈다.

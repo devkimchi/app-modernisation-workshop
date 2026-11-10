@@ -14,7 +14,7 @@ Azure 서비스 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`
 
 - azure.yaml과 infra/의 Bicep을 만들고 서비스 이름은 web, worker로 정해 줘.
 - 두 서비스는 language: docker, host: containerapp이다.
-- 선택 엔진은 <docker 또는 podman>, AZD_CONTAINER_RUNTIME을 존중한다.
+- 로컬 Docker 엔진을 사용하고 AZD_CONTAINER_RUNTIME=docker로 맞춘다.
 - docker.remoteBuild는 false, docker.platform은 linux/amd64로 명시한다.
 - web/worker 각각 Dockerfile을 만들되 루트 Maven reactor를 빌드 컨텍스트로 쓴다.
 - 빌드와 런타임 모두 JDK 25 기반이며 공식 이미지의 실제 tag/manifest를 확인한다.

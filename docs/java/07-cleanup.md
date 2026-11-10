@@ -66,28 +66,27 @@ az group exists --name "$rg"
 
 ## 로컬 정리
 
-Podman 경로처럼 터미널 전경에서 실행한 web/worker는 해당 터미널에서 `Ctrl+C`로 종료합니다. 원본 Docker 스크립트의 백그라운드 프로세스는 로그/PID 파일 및 `ps`로 앱 경로와 PID를 대조한 뒤 **그 PID만** 종료합니다. 모든 Java 프로세스를 이름으로 종료하지 않습니다. `stopapp.sh`도 실행 전에 내용을 읽고 영향 범위를 확인합니다.
+터미널 전경에서 실행한 web/worker는 해당 터미널에서 `Ctrl+C`로 종료합니다. 원본 Docker 스크립트의 백그라운드 프로세스는 로그/PID 파일 및 `ps`로 앱 경로와 PID를 대조한 뒤 **그 PID만** 종료합니다. 모든 Java 프로세스를 이름으로 종료하지 않습니다. `stopapp.sh`도 실행 전에 내용을 읽고 영향 범위를 확인합니다.
 
-선택한 엔진이 원본을 실행한 엔진과 같은지 확인하고 컨테이너를 조회합니다.
+Docker가 원본을 실행한 엔진과 같은지 확인하고 컨테이너를 조회합니다. 다른 엔진을 사용했다면 [문제 해결의 정리 안내](8-troubleshooting.md#대체-엔진-설정)를 따릅니다.
 
 ```bash
-engine="${AZD_CONTAINER_RUNTIME:-docker}"
-"$engine" inspect assets-postgres assets-rabbitmq
+docker inspect assets-postgres assets-rabbitmq
 ```
 
 조회가 실패하거나 **이 실습에서 생성한 컨테이너인지 확인하지 못했다면** 중단합니다. 확인한 컨테이너만 정지합니다. 다음 단계에서 DB/큐의 실습 데이터가 삭제됩니다.
 
 ```bash
-"$engine" stop assets-postgres assets-rabbitmq
+docker stop assets-postgres assets-rabbitmq
 ```
 
 정지가 성공했는지 확인한 뒤 해당 컨테이너를 삭제합니다.
 
 ```bash
-"$engine" rm assets-postgres assets-rabbitmq
+docker rm assets-postgres assets-rabbitmq
 ```
 
-전체 엔진의 `system prune`, 모든 볼륨 삭제, Podman machine 삭제는 하지 않습니다. 내려받은 앱 폴더와 Git 기준선은 남겨도 되며, 스크립트가 이를 자동 삭제하지 않습니다.
+전체 엔진의 `system prune`, 모든 볼륨 삭제, 엔진 가상 머신 삭제는 하지 않습니다. 내려받은 앱 폴더와 Git 기준선은 남겨도 되며, 스크립트가 이를 자동 삭제하지 않습니다.
 
 ## 완료 기준과 문제 해결
 

@@ -1,6 +1,6 @@
 # .NET 3. Upgrade 에이전트로 .NET 10 전환하기
 
-[목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -53,4 +53,4 @@ dotnet run --project <실제-웹-프로젝트-경로>
 
 .NET 10 빌드와 실행, 기존 사용자 기능의 회귀 결과가 있고, 임시 Windows 의존성이 무엇인지 분명해야 합니다. 이 단계의 Windows 실행 성공은 **Linux 지원 완료가 아닙니다**. 미완료 기능을 보고하고 다음 Azure 이전 계획에서 반드시 처리합니다.
 
-diff를 검토하고 업그레이드 커밋을 남깁니다. 원본 DB를 파괴하는 초기화 동작을 새 Azure DB에 가져가지 않습니다. 지원되지 않는 API나 업그레이드 중단은 [문제 해결](../troubleshooting.md)을 참고합니다.
+diff를 검토하고 업그레이드 커밋을 남깁니다. 원본 DB를 파괴하는 초기화 동작을 새 Azure DB에 가져가지 않습니다. 지원되지 않는 API나 업그레이드 중단은 [문제 해결](08-troubleshooting.md)을 참고합니다.

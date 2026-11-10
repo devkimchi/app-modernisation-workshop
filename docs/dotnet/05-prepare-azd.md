@@ -1,10 +1,10 @@
 # .NET 5. Linux 컨테이너와 azd 배포 산출물 준비하기
 
-[목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
-Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`**에서 Dockerfile, `azure.yaml`, Bicep을 준비합니다. Docker Desktop은 Linux containers 모드이거나 Podman Linux 서버에 연결되어 있어야 합니다. 이 단계에서는 리소스를 만들지 않습니다.
+Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`**에서 Dockerfile, `azure.yaml`, Bicep을 준비합니다. Docker Desktop은 Linux containers 모드여야 합니다. 이 단계에서는 리소스를 만들지 않습니다.
 
 ## 배포 산출물 프롬프트
 
@@ -14,7 +14,7 @@ Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`
 기존 기능을 유지하고 배포/리소스 생성은 아직 실행하지 마.
 
 - 웹 서비스 이름은 web, language: docker, host: containerapp으로 설정한다.
-- 선택 엔진은 <docker 또는 podman>, AZD_CONTAINER_RUNTIME을 존중한다.
+- 로컬 Docker 엔진을 사용하고 AZD_CONTAINER_RUNTIME=docker로 맞춘다.
 - docker.remoteBuild: false, docker.platform: linux/amd64를 명시한다.
 - 공식 .NET 10 SDK/ASP.NET Core Linux 이미지로 multi-stage 빌드를 구성한다.
   mcr.microsoft.com/dotnet/sdk:10.0, aspnet:10.0의 실제 manifest를 확인한다.
@@ -73,4 +73,4 @@ SQL 방화벽의 "Azure 서비스 허용"은 본인 구독만 허용하는 기�
 
 ## 완료 기준과 문제 해결
 
-Dockerfile/`azure.yaml`/Bicep, 포트/비루트 사용자, Data Protection, SQL 초기화, 네트워크, 비용과 정리 범위를 검토하고 참가자가 생성 범위를 승인해야 합니다. 실제 로컬 이미지 빌드는 실습 6의 `azd package`로 확인합니다. 문제는 [문제 해결](../troubleshooting.md)을 참고합니다.
+Dockerfile/`azure.yaml`/Bicep, 포트/비루트 사용자, Data Protection, SQL 초기화, 네트워크, 비용과 정리 범위를 검토하고 참가자가 생성 범위를 승인해야 합니다. 실제 로컬 이미지 빌드는 실습 6의 `azd package`로 확인합니다. 문제는 [문제 해결](08-troubleshooting.md)을 참고합니다.

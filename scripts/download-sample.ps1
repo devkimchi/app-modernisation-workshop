@@ -1,11 +1,15 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Track,
     [string]$Destination,
     [string]$ContainerEngine,
-    [string]$WslDistribution,
+    [string]$WslDistribution = 'Ubuntu',
     [switch]$Help
 )
+
+. (Join-Path $PSScriptRoot 'powershell-bootstrap.ps1')
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
+if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 $script:DownloadScripts = $PSScriptRoot
 

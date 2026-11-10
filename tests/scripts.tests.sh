@@ -16,6 +16,32 @@ assert() {
 
 bash -n "$ROOT/scripts/check-prerequisites.sh"
 bash -n "$ROOT/scripts/download-sample.sh"
+nvm_fixture="$TEMPORARY/nvm"
+mkdir -p "$nvm_fixture"
+printf '%s\n' 'nvm() { [[ "$*" == "use --silent default" ]] || return 1; node() { printf "v24.18.0\n"; }; }' > "$nvm_fixture/nvm.sh"
+nvm_output=$(
+    NVM_DIR="$nvm_fixture"
+    tool_path() { printf ''; }
+    initialize_node_environment
+    node --version
+)
+assert 'noninteractive nvm activates default Node' test "$nvm_output" = v24.18.0
+existing_node_output=$(
+    NVM_DIR="$nvm_fixture"
+    tool_path() { printf '/usr/bin/node\n'; }
+    node() { printf 'v22.1.0\n'; }
+    initialize_node_environment
+    node --version
+)
+assert 'existing native Node preserved' test "$existing_node_output" = v22.1.0
+wsl_node_output=$(
+    CHECK_CONTEXT='WSL Ubuntu Bash'
+    NVM_DIR="$nvm_fixture"
+    tool_path() { printf '/mnt/c/node.exe\n'; }
+    initialize_node_environment
+    node --version
+)
+assert 'WSL nvm replaces Windows Node for check' test "$wsl_node_output" = v24.18.0
 unset AZD_CONTAINER_RUNTIME
 assert 'default engine' test "$(resolve_engine '')" = docker
 assert 'explicit engine' test "$(resolve_engine podman)" = podman
@@ -53,6 +79,16 @@ wsl_output=$(
     prerequisite_main --track java --container-engine docker
 )
 assert 'WSL still prompts for Windows host' grep -q 'MANUAL.*windows-host' <<< "$wsl_output"
+delegated_wsl_output=$(
+    unset WORKSHOP_DEVCONTAINER
+    uname() { printf '%s\n' Linux; }
+    grep() { return 0; }
+    check_common() { check_result PASS fixture-common 'common checks reached'; }
+    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
+    prerequisite_main --track java --container-engine docker --windows-host-checked
+)
+assert 'delegated WSL reaches checks' grep -q 'fixture-common' <<< "$delegated_wsl_output"
+if [[ "$delegated_wsl_output" == *windows-host* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
 if [[ -n "$previous_devcontainer" ]]; then export WORKSHOP_DEVCONTAINER="$previous_devcontainer"; else unset WORKSHOP_DEVCONTAINER; fi
 
 CALLS="$TEMPORARY/calls"
@@ -78,6 +114,135 @@ check_container docker
 assert 'stopped docker fails' test "$CHECK_FAILURES" -gt 0
 if grep -q '^podman ' "$CALLS"; then exit 1; else PASSED=$((PASSED + 1)); fi
 source "$ROOT/scripts/check-prerequisites.sh"
+
+container_output=$(
+    CHECK_CONTEXT='WSL Ubuntu Bash'
+    tool_path() { printf '%s\n' '/usr/bin/docker'; }
+    probe() {
+        PROBE_CODE=0; PROBE_TEXT=''
+        case "$2" in
+            --version) PROBE_TEXT='Docker version 29.0.0' ;;
+            info) PROBE_TEXT=linux ;;
+            build) PROBE_TEXT=--platform ;;
+            buildx) PROBE_TEXT='v0.20.0' ;;
+        esac
+    }
+    CHECK_FAILURES=0
+    check_container docker
+)
+assert 'container CLI path shown' grep -q 'PASS.*container-cli.*CLI 실행.*경로: /usr/bin/docker' <<< "$container_output"
+assert 'server location not inferred' grep -q 'PASS.*container-engine.*설치 위치는 이 검사로 확인하지 않습니다' <<< "$container_output"
+assert 'buildx is only version lookup' grep -q 'PASS.*builder:.*버전 조회.*실제 빌드는 아직 확인하지 않았습니다' <<< "$container_output"
+assert 'workload manual verification' grep -q 'MANUAL.*container-workload.*실제 워크로드 성공을 보장하지 않습니다' <<< "$container_output"
+
+common_output=$(
+    CHECK_CONTEXT='WSL Ubuntu Bash'
+    tool_path() { if [[ "$1" == az ]]; then printf '%s\n' '/mnt/c/Azure CLI/az'; else printf '/usr/bin/%s\n' "$1"; fi; }
+    probe() {
+        PROBE_CODE=0; PROBE_TEXT=''
+        case "$1 $2" in
+            'git --version') PROBE_TEXT='git version 2.50.0' ;;
+            'node --version') PROBE_TEXT='v22.1.0' ;;
+            'az version') PROBE_TEXT='{}' ;;
+            'az extension') PROBE_TEXT='1.3.0' ;;
+            'az account')
+                if [[ "$*" == *'--query state'* ]]; then PROBE_TEXT=Enabled
+                elif [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT='11111111-2222-3333-4444-555555555555'
+                elif [[ "$*" == *'--query [[id,name]]'* ]]; then PROBE_TEXT=$'subscription-id\tSubscription name'
+                else PROBE_CODE=1; fi ;;
+            'az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
+            'az rest') PROBE_TEXT='Example tenant' ;;
+            'az provider') PROBE_TEXT=Registered ;;
+            'azd version') PROBE_TEXT='azd version 1.37.3' ;;
+        esac
+    }
+    check_container() { :; }
+    CHECK_FAILURES=0
+    check_common docker
+)
+assert 'Azure identity shown for manual confirmation' grep -q 'MANUAL.*azure-subscription.*subscription-id' <<< "$common_output"
+assert 'Azure subscription format' grep -Fxq '[MANUAL] [WSL Ubuntu Bash] azure-subscription: 구독 이름: Subscription name / 구독 ID: subscription-id' <<< "$common_output"
+assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [WSL Ubuntu Bash] azure-tenant: 테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
+if grep 'azure-subscription' <<< "$common_output" | grep -q '11111111-2222-3333-4444-555555555555'; then exit 1; else PASSED=$((PASSED + 1)); fi
+assert 'Windows Azure CLI path identified' grep -q 'PASS.*WSL Ubuntu Bash.*az.*Azure CLI/az' <<< "$common_output"
+assert 'Windows Azure CLI origin warns' grep -q 'WARN.*WSL Ubuntu Bash.*az-origin' <<< "$common_output"
+assert 'Windows Azure CLI warning explains path check' grep -q 'WARN.*az-origin.*command -v az' <<< "$common_output"
+assert 'Java PostgreSQL provider checked' grep -q 'PASS.*Microsoft.DBforPostgreSQL' <<< "$common_output"
+assert 'Copilot app manual check is on Windows' grep -Fq '[MANUAL] [Windows 호스트 (수동 확인)] copilot-app:' <<< "$common_output"
+assert 'Azure permissions manual check scoped to Azure' grep -Fq '[MANUAL] [Azure (수동 확인)] azure-access:' <<< "$common_output"
+
+missing_output=$(
+    CHECK_CONTEXT='WSL Ubuntu Bash'
+    probe() {
+        PROBE_TEXT=''; PROBE_CODE=0
+        case "$1 $2" in
+            'node --version'|'azd version') PROBE_CODE=127 ;;
+            'az version') PROBE_CODE=127 ;;
+        esac
+    }
+    check_container() { :; }
+    CHECK_FAILURES=0
+    check_common docker
+)
+assert 'missing WSL Node is scoped' grep -q 'FAIL.*WSL Ubuntu Bash.*node.*이 Bash 환경의 PATH' <<< "$missing_output"
+assert 'missing WSL azd is scoped' grep -q 'FAIL.*WSL Ubuntu Bash.*azd.*이 Bash 환경의 PATH' <<< "$missing_output"
+
+tenant_failure_output=$(
+    probe() {
+        PROBE_CODE=0; PROBE_TEXT=''
+        case "$1 $2" in
+            'az account')
+                if [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT='11111111-2222-3333-4444-555555555555'
+                else PROBE_TEXT=$'subscription-id\tSubscription name'; fi ;;
+            'az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
+            'az rest') PROBE_CODE=1; PROBE_TEXT='access denied' ;;
+        esac
+    }
+    CHECK_FAILURES=0
+    check_azure_identity
+    test "$CHECK_FAILURES" = 0
+)
+assert 'tenant name access failure warns' grep -q 'WARN.*azure-tenant' <<< "$tenant_failure_output"
+assert 'tenant ID retained on name lookup failure' grep -q 'WARN.*azure-tenant.*11111111-2222-3333-4444-555555555555' <<< "$tenant_failure_output"
+assert 'subscription still shown on tenant lookup failure' grep -q 'MANUAL.*azure-subscription.*Subscription name' <<< "$tenant_failure_output"
+
+invalid_tenant_output=$(
+    probe() {
+        PROBE_CODE=0; PROBE_TEXT=''
+        case "$1 $2" in
+            'az account')
+                if [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT="invalid' query"
+                else PROBE_TEXT=$'subscription-id\tSubscription name'; fi ;;
+            *) printf 'unexpected Azure call\n' >&2; return 1 ;;
+        esac
+    }
+    CHECK_FAILURES=0
+    check_azure_identity
+)
+assert 'invalid tenant ID cannot be used in a query' grep -q 'WARN.*azure-tenant' <<< "$invalid_tenant_output"
+invalid_subscription_output=$(
+    probe() { PROBE_CODE=0; PROBE_TEXT='malformed subscription'; }
+    CHECK_FAILURES=0
+    check_azure_identity
+)
+assert 'invalid subscription output warns' grep -q 'WARN.*azure-subscription' <<< "$invalid_subscription_output"
+
+machine_output=$(
+    uname() { printf '%s\n' Darwin; }
+    probe() {
+        PROBE_CODE=0; PROBE_TEXT=''
+        case "$2" in
+            --version) PROBE_TEXT='podman version 5.4.0' ;;
+            info) PROBE_TEXT=linux ;;
+            machine) PROBE_CODE=1 ;;
+            build) PROBE_TEXT=--platform ;;
+        esac
+    }
+    CHECK_FAILURES=0
+    check_container podman
+    test "$CHECK_FAILURES" = 0
+)
+assert 'machine lookup failure warns' grep -q 'WARN.*podman-machine' <<< "$machine_output"
 
 export SDKMAN_DIR="$TEMPORARY/sdkman"
 mkdir -p "$SDKMAN_DIR/bin"

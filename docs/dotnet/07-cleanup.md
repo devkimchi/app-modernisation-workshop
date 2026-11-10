@@ -1,6 +1,6 @@
 # .NET 7. 리소스와 로컬 실행 정리하기
 
-[목차](README.md) | [이전: ACA 배포](06-deploy-aca.md) | [다음: 전체 목차](../../README.md) | [정리: 현재 문서](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -66,12 +66,21 @@ az group exists --name $rg
 
 ## 로컬 정리
 
-Visual Studio의 디버깅/실행을 중지하고 `dotnet run` 터미널에서 `Ctrl+C`로 앱을 종료합니다. 모든 `dotnet`/IIS Express 프로세스를 이름으로 일괄 종료하지 않습니다. 필요하면 프로세스 경로와 PID를 확인하고 해당 PID만 종료합니다.
+원본은 `run-dotnet-original.ps1 -Run`을 실행한 IIS Express 터미널에서 `Q` 또는 `Ctrl+C`로 종료합니다. Copilot app이 시작했다면 해당 장기 실행 터미널과 기록한 PID를 확인해 종료하도록 요청합니다. 선택적으로 IDE를 사용했다면 IDE 디버깅/실행을 중지합니다. 현대화 이후 `dotnet run`은 해당 터미널의 `Ctrl+C`로 종료합니다.
+
+모든 `dotnet`/IIS Express 프로세스를 이름으로 일괄 종료하지 않습니다. 터미널이 없으면 먼저 프로세스 경로와 명령줄의 이번 앱 `.vs/workshop/applicationhost-<고유값>.config` 경로를 대조하고, 확인된 해당 PID에만 `Stop-Process -Id <PID>`를 사용합니다.
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='iisexpress.exe'" |
+    Select-Object ProcessId, ExecutablePath, CommandLine
+```
+
+관련 프로세스가 종료된 뒤 필요하면 이번 앱의 `.vs/workshop` 구성 파일만 지웁니다. 도우미는 실행마다 새 구성을 만들어 기존 IIS Express/IDE 설정을 덮어쓰지 않습니다. 생성 구성에는 로컬 절대 경로가 들어가므로 커밋하지 않습니다.
 
 LocalDB 인스턴스, MSMQ 서비스, 개발 인증서는 다른 프로젝트가 사용할 수 있습니다. **서비스/기능 전체를 제거하지 않습니다.** 이 실습에서 만든 DB/큐와 데이터인지 원본 설정과 대조하고, 삭제가 필요한 경우 해당 DB/큐만 관리 도구에서 선택해 직접 삭제합니다.
 
-실습에 사용한 Docker/Podman 이미지/컨테이너가 있으면 이름과 생성 시점을 확인해 개별 정리합니다. 전체 엔진 `system prune`, 모든 볼륨 또는 Podman machine 삭제는 하지 않습니다. 앱 폴더와 Git 기준선은 남겨도 됩니다.
+실습에 사용한 Docker 이미지/컨테이너가 있으면 이름과 생성 시점을 확인해 개별 정리합니다. 다른 엔진을 사용했다면 [문제 해결의 정리 안내](08-troubleshooting.md#대체-엔진-설정)를 따릅니다. 전체 엔진 `system prune`, 모든 볼륨 또는 엔진 가상 머신 삭제는 하지 않습니다. 앱 폴더와 Git 기준선은 남겨도 됩니다.
 
 ## 완료 기준과 문제 해결
 
-Azure 유료 리소스가 삭제되었거나 보존 대상/비용 책임자가 명확하고 실습 프로세스가 정지되어야 합니다. `.azure`, 로그와 로컬 사용자 비밀의 보관 범위를 확인하세요. 삭제 권한/잠금 문제는 [문제 해결](../troubleshooting.md)을 참고합니다.
+Azure 유료 리소스가 삭제되었거나 보존 대상/비용 책임자가 명확하고 실습 프로세스가 정지되어야 합니다. `.azure`, 로그와 로컬 사용자 비밀의 보관 범위를 확인하세요. 삭제 권한/잠금 문제는 [문제 해결](08-troubleshooting.md)을 참고합니다.

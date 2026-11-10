@@ -52,8 +52,6 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet
 
 누락된 도구를 설치하고, 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `-Update`를 생략하세요.
 
-**대화형 Windows PowerShell**에서 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다.
-
 ```powershell
 powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ```

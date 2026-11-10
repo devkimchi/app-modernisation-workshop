@@ -75,7 +75,7 @@ bash scripts/install-prerequisites.sh --track java --update
 | --- | --- |
 | Node.js 22 이상 | nvm으로 설치합니다. 업데이트 시 현재 메이저의 최신 정식 버전을 추가하며, 없거나 22 미만이면 22.x를 선택합니다. |
 | JDK 8, 21, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 메이저의 최신 버전을 추가합니다. |
-| Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치합니다. 업데이트는 확인된 APT/Homebrew 패키지와 WSL azd 공식 스크립트 설치본을 지원합니다. azd의 기존 설치 기록이 없으면 관리 방식 인계를 별도 승인합니다. |
+| Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치하고 업데이트합니다. |
 
 설치한 Node.js를 현재 터미널에서도 사용하려면 스크립트가 출력한 초기화 명령과 `nvm use` 명령을 실행하세요.
 

@@ -38,7 +38,7 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 
 | 순서 | Java 트랙 | .NET 트랙 |
 | --- | --- | --- |
-| 0 | [준비](docs/java/0-setup.md) | [준비](docs/dotnet/0-setup.md) |
+| 0 | [준비](docs/java/00-setup.md) | [준비](docs/dotnet/00-setup.md) |
 | 1 | [원본 로컬 실행](docs/java/01-run-locally.md) | [원본 로컬 실행](docs/dotnet/01-run-locally.md) |
 | 2 | [평가와 계획](docs/java/02-assess-and-plan.md) | [평가와 계획](docs/dotnet/02-assess-and-plan.md) |
 | 3 | [JDK 25 업그레이드](docs/java/03-upgrade.md) | [.NET 10 업그레이드](docs/dotnet/03-upgrade.md) |

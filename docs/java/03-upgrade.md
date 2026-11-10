@@ -1,6 +1,6 @@
 # Java 3. JDK 21을 거쳐 JDK 25로 업그레이드하기
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -62,4 +62,4 @@ git commit -m "Upgrade sample to JDK 25"
 
 ## 완료 기준과 문제 해결
 
-최종 Maven/컴파일/실행 JVM이 모두 25이고, 루트 빌드와 기존 기능이 통과해야 합니다. Boot 버전만 바뀌었거나 테스트를 제외한 패키징만 성공한 것은 완료가 아닙니다. 실패한 단계에서 멈춰 [문제 해결](8-troubleshooting.md)을 확인하고, 검토하지 않은 변경을 삭제하는 `reset --hard`로 복구하지 않습니다.
+최종 Maven/컴파일/실행 JVM이 모두 25이고, 루트 빌드와 기존 기능이 통과해야 합니다. Boot 버전만 바뀌었거나 테스트를 제외한 패키징만 성공한 것은 완료가 아닙니다. 실패한 단계에서 멈춰 [문제 해결](08-troubleshooting.md)을 확인하고, 검토하지 않은 변경을 삭제하는 `reset --hard`로 복구하지 않습니다.

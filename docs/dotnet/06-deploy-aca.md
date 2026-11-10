@@ -1,10 +1,10 @@
 # .NET 6. azd로 ACA에 배포하기
 
-[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
-승인한 인프라를 만들고 .NET 10 Linux 이미지를 로컬에서 빌드한 뒤 ACA에 배포합니다. 실행 위치는 **앱 루트**, 셸은 **Windows PowerShell 7**입니다. Docker 서버, 구독, 권한과 DB 접근 경로를 확인합니다. 대체 엔진이 필요하면 [문제 해결](8-troubleshooting.md#대체-엔진-설정)을 참고합니다.
+승인한 인프라를 만들고 .NET 10 Linux 이미지를 로컬에서 빌드한 뒤 ACA에 배포합니다. 실행 위치는 **앱 루트**, 셸은 **Windows PowerShell 7**입니다. Docker 서버, 구독, 권한과 DB 접근 경로를 확인합니다. 대체 엔진이 필요하면 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 참고합니다.
 
 ## azd 환경
 
@@ -83,4 +83,4 @@ private Blob 업로드/조회와 Data Protection 키 보존을 검증해 줘.
 
 ## 완료 기준과 문제 해결
 
-정상 revision과 실제 데이터/메시지/파일 동작이 확인되면 이미지 식별자와 검증 결과를 기록합니다. Windows 실행 성공만으로 Linux 성공을 주장하지 않습니다. 인증, 포트, DB 또는 키 저장 오류는 [문제 해결](8-troubleshooting.md)을 참고하고, 실패한 배포도 [정리](07-cleanup.md)를 수행합니다.
+정상 revision과 실제 데이터/메시지/파일 동작이 확인되면 이미지 식별자와 검증 결과를 기록합니다. Windows 실행 성공만으로 Linux 성공을 주장하지 않습니다. 인증, 포트, DB 또는 키 저장 오류는 [문제 해결](08-troubleshooting.md)을 참고하고, 실패한 배포도 [정리](07-cleanup.md)를 수행합니다.

@@ -1,6 +1,6 @@
 # Java 1. 원본 앱을 로컬에서 실행하기
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](0-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](00-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -30,7 +30,7 @@ bash ./mvnw clean verify
 
 ## 로컬 서비스와 앱 실행
 
-실습에 사용할 개인 정보가 없는 실제 PNG 이미지 파일을 준비합니다. 확장자만 바꾼 텍스트나 손상된 파일은 썸네일 처리에 실패할 수 있습니다. 개인 자료나 업무 파일은 업로드하지 않습니다. 아래는 Docker 실행 경로입니다. 대체 엔진은 [문제 해결](8-troubleshooting.md#대체-엔진-설정)을 참고합니다.
+실습에 사용할 개인 정보가 없는 실제 PNG 이미지 파일을 준비합니다. 확장자만 바꾼 텍스트나 손상된 파일은 썸네일 처리에 실패할 수 있습니다. 개인 자료나 업무 파일은 업로드하지 않습니다. 아래는 Docker 실행 경로입니다. 대체 엔진은 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 참고합니다.
 
 ### Docker
 
@@ -42,7 +42,7 @@ docker ps -a --filter name=assets-postgres --filter name=assets-rabbitmq
 
 원본 스크립트는 Docker를 하드코딩하고 `postgres:latest`, `rabbitmq:management`를 사용합니다. 이 태그의 실제 이미지 ID를 기록하세요. 시작 메시지와 고정 10초 대기만으로 서비스 준비를 판단하지 않습니다.
 
-원본 스크립트의 DB/큐 포트는 모든 인터페이스에 바인딩될 수 있습니다. 신뢰할 수 있는 개인 실습 환경에서만 실행하고 로컬 방화벽을 확인합니다. 공유 장비라면 아래 스크립트를 실행하지 말고 [문제 해결의 루프백 수동 실행](8-troubleshooting.md#루프백-수동-실행)에서 Docker 경로를 사용합니다.
+원본 스크립트의 DB/큐 포트는 모든 인터페이스에 바인딩될 수 있습니다. 신뢰할 수 있는 개인 실습 환경에서만 실행하고 로컬 방화벽을 확인합니다. 공유 장비라면 아래 스크립트를 실행하지 말고 [문제 해결의 루프백 수동 실행](08-troubleshooting.md#루프백-수동-실행)에서 Docker 경로를 사용합니다.
 
 ```bash
 bash scripts/startapp.sh
@@ -94,4 +94,4 @@ git commit -m "Baseline: verified Java 8 sample"
 
 ## 완료 기준과 문제 해결
 
-Java 8 빌드, 웹/worker와 DB/큐의 연결, 업로드의 실제 결과를 확인했고 기준선 커밋이 있어야 합니다. 포트나 컨테이너 이름 충돌은 [문제 해결](8-troubleshooting.md)을 참고합니다. 업그레이드 전 실행 프로세스를 정지하는 방법은 [정리](07-cleanup.md)의 로컬 항목을 따릅니다. DB/큐는 다음 실습에 필요하므로 아직 삭제하지 않아도 됩니다.
+Java 8 빌드, 웹/worker와 DB/큐의 연결, 업로드의 실제 결과를 확인했고 기준선 커밋이 있어야 합니다. 포트나 컨테이너 이름 충돌은 [문제 해결](08-troubleshooting.md)을 참고합니다. 업그레이드 전 실행 프로세스를 정지하는 방법은 [정리](07-cleanup.md)의 로컬 항목을 따릅니다. DB/큐는 다음 실습에 필요하므로 아직 삭제하지 않아도 됩니다.

@@ -1,6 +1,6 @@
 # .NET 준비: 저장소 생성부터 샘플 다운로드까지
 
-[전체 목차](../../README.md) | [.NET 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](08-troubleshooting.md)
 
 ## 실행 환경
 
@@ -31,7 +31,7 @@ cd <저장소-이름>
 pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```
 
-이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](8-troubleshooting.md#대체-엔진-설정)을 참고하세요. Windows Git Bash를 사용하려면 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 시작할 수도 있습니다. 이 명령도 Windows PowerShell 7에 검사를 위임합니다.
+이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](08-troubleshooting.md#대체-엔진-설정)을 참고하세요. Windows Git Bash를 사용하려면 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 시작할 수도 있습니다. 이 명령도 Windows PowerShell 7에 검사를 위임합니다.
 
 | 결과 | 할 일 |
 | --- | --- |
@@ -57,7 +57,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Containe
 
 기존 PATH의 도구는 오래됐더라도 자동 업데이트하지 않습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다. Node.js는 안정 버전 22 이상, azd는 1.37.3 이상이 필요합니다.
 
-`powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update`는 **PowerShell 7, WSL 플랫폼과 Node.js**를 항목별 동의를 받아 업데이트합니다. Node.js는 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 선택합니다. 기존 버전은 삭제하지 않고 설치와 활성화는 별도 승인을 받습니다. 활성화는 Windows 공용 선택(shim/link)을 변경하므로 이후 터미널의 선택도 바뀌지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 기존 독립 설치나 경로 충돌은 덮어쓰지 않으며 [문제 해결](8-troubleshooting.md#nodejs-설치와-업데이트)을 참고하세요.
+`powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update`는 **PowerShell 7, WSL 플랫폼과 Node.js**를 항목별 동의를 받아 업데이트합니다. Node.js는 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 선택합니다. 기존 버전은 삭제하지 않고 설치와 활성화는 별도 승인을 받습니다. 활성화는 Windows 공용 선택(shim/link)을 변경하므로 이후 터미널의 선택도 바뀌지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 기존 독립 설치나 경로 충돌은 덮어쓰지 않으며 [문제 해결](08-troubleshooting.md#nodejs-설치와-업데이트)을 참고하세요.
 
 실행 경로·MSI·winget 출처가 확인되는 PowerShell만 업데이트하며, 업데이트 예약 후 종료하면 작업 결과를 확인하고 새 터미널에서 다시 실행하세요. 버전 확인이 불가능한 inbox WSL은 수동 안내로 남깁니다. 배포판·OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Azure CLI/azd는 계속 누락된 도구만 설치하며 업데이트는 원래 관리자로 직접 진행합니다.
 
@@ -90,7 +90,7 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 
 컨테이너의 실제 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다.
 
-준비 후 점검 명령을 다시 실행해 필수 `FAIL`을 해결하고, 이 단계에서 확인 가능한 수동 항목을 확인하세요. 조치를 거부했거나 실패했다면 [수동 복구](8-troubleshooting.md#사전-준비-수동-복구)를 참고합니다. 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 인자 오류이며 `$LASTEXITCODE`로 확인합니다.
+준비 후 점검 명령을 다시 실행해 필수 `FAIL`을 해결하고, 이 단계에서 확인 가능한 수동 항목을 확인하세요. 조치를 거부했거나 실패했다면 [수동 복구](08-troubleshooting.md#사전-준비-수동-복구)를 참고합니다. 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 인자 오류이며 `$LASTEXITCODE`로 확인합니다.
 
 ## 3. Copilot app에 플러그인 설치하기
 
@@ -101,7 +101,7 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 
 업그레이드는 **Upgrade**, Azure 이전은 **modernize**를 사용합니다. 내부 coordinator/worker는 직접 선택하지 않습니다. 외부 안내가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다.
 
-목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](8-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
+목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
 
 ## 4. 샘플 다운로드하기
 

@@ -1,6 +1,6 @@
 # Java 6. azd로 ACA에 배포하기
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -46,7 +46,7 @@ azd deploy
 azd show
 ```
 
-Docker가 멈췄다고 자동으로 다른 엔진이나 원격 빌드로 전환하지 않습니다. 대체 엔진이 필요하면 [문제 해결](8-troubleshooting.md#대체-엔진-설정)을 참고합니다.
+Docker가 멈췄다고 자동으로 다른 엔진이나 원격 빌드로 전환하지 않습니다. 대체 엔진이 필요하면 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 참고합니다.
 
 `azd up`은 provision/package/deploy를 묶는 명령이지만 이번 실습은 실패 위치와 승인 범위를 알 수 있도록 단계별 실행이 기본입니다.
 
@@ -82,4 +82,4 @@ DB TLS/관리 ID와 실제 권한, Service Bus 메시지 처리, Blob 비공개 
 
 ## 완료 기준과 문제 해결
 
-web/worker의 정상 revision과 실제 사용자 기능이 확인되면 이번 배포의 이미지 식별자와 결과를 기록합니다. 권한 전파, DB 연결, 이미지 pull, worker 오류는 [문제 해결](8-troubleshooting.md)을 따릅니다. 실패한 배포도 리소스가 남을 수 있으므로 곧바로 [정리](07-cleanup.md) 범위를 확인합니다.
+web/worker의 정상 revision과 실제 사용자 기능이 확인되면 이번 배포의 이미지 식별자와 결과를 기록합니다. 권한 전파, DB 연결, 이미지 pull, worker 오류는 [문제 해결](08-troubleshooting.md)을 따릅니다. 실패한 배포도 리소스가 남을 수 있으므로 곧바로 [정리](07-cleanup.md) 범위를 확인합니다.

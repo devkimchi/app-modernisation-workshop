@@ -1,6 +1,6 @@
 # Java 7. 리소스와 로컬 실행 정리하기
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: ACA 배포](06-deploy-aca.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -68,7 +68,7 @@ az group exists --name "$rg"
 
 터미널 전경에서 실행한 web/worker는 해당 터미널에서 `Ctrl+C`로 종료합니다. 원본 Docker 스크립트의 백그라운드 프로세스는 로그/PID 파일 및 `ps`로 앱 경로와 PID를 대조한 뒤 **그 PID만** 종료합니다. 모든 Java 프로세스를 이름으로 종료하지 않습니다. `stopapp.sh`도 실행 전에 내용을 읽고 영향 범위를 확인합니다.
 
-Docker가 원본을 실행한 엔진과 같은지 확인하고 컨테이너를 조회합니다. 다른 엔진을 사용했다면 [문제 해결의 정리 안내](8-troubleshooting.md#대체-엔진-설정)를 따릅니다.
+Docker가 원본을 실행한 엔진과 같은지 확인하고 컨테이너를 조회합니다. 다른 엔진을 사용했다면 [문제 해결의 정리 안내](08-troubleshooting.md#대체-엔진-설정)를 따릅니다.
 
 ```bash
 docker inspect assets-postgres assets-rabbitmq
@@ -90,4 +90,4 @@ docker rm assets-postgres assets-rabbitmq
 
 ## 완료 기준과 문제 해결
 
-Azure 유료 리소스가 삭제되었거나 보존 대상/비용 책임자가 명확하고, 실습 프로세스/컨테이너가 정지되어야 합니다. 로컬 설정과 로그에 민감한 값이 남지 않았는지 확인하세요. 삭제 권한이나 잠금 때문에 실패하면 [문제 해결](8-troubleshooting.md)을 참고합니다.
+Azure 유료 리소스가 삭제되었거나 보존 대상/비용 책임자가 명확하고, 실습 프로세스/컨테이너가 정지되어야 합니다. 로컬 설정과 로그에 민감한 값이 남지 않았는지 확인하세요. 삭제 권한이나 잠금 때문에 실패하면 [문제 해결](08-troubleshooting.md)을 참고합니다.

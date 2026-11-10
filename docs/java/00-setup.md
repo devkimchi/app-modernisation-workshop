@@ -1,6 +1,6 @@
 # Java 준비: 저장소 생성부터 샘플 다운로드까지
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](08-troubleshooting.md)
 
 ## 실행 환경
 
@@ -103,7 +103,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update
 3. 출처를 검토하고 허용한 뒤 `github-copilot-modernization` 플러그인을 설치합니다.
 4. Agent picker에 `modernize` 또는 `github-copilot-modernization:modernize`가 보이는지 확인합니다. 내부 coordinator/worker를 직접 선택하지 않습니다.
 
-목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](8-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
+목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
 
 ## 4. 샘플 다운로드하기
 

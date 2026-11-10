@@ -1,6 +1,6 @@
 # Java 5. azd 배포 산출물 준비하기
 
-[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](8-troubleshooting.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -81,4 +81,4 @@ PostgreSQL, Service Bus, ACR, 로그 및 네트워크 리소스는 ACA가 scale-
 
 ## 완료 기준과 문제 해결
 
-Dockerfile/`azure.yaml`/Bicep, 역할/DB 초기화, 네트워크, 비용, 정리 범위를 검토했고 **참가자가 실제 구독과 생성 범위를 승인**해야 합니다. 아직 `azd package`를 실행하지 않았으므로 이미지 빌드 성공을 주장하지 않습니다. `azd` 연결 문제는 [문제 해결](8-troubleshooting.md)을 참고합니다.
+Dockerfile/`azure.yaml`/Bicep, 역할/DB 초기화, 네트워크, 비용, 정리 범위를 검토했고 **참가자가 실제 구독과 생성 범위를 승인**해야 합니다. 아직 `azd package`를 실행하지 않았으므로 이미지 빌드 성공을 주장하지 않습니다. `azd` 연결 문제는 [문제 해결](08-troubleshooting.md)을 참고합니다.

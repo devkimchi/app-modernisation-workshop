@@ -425,8 +425,8 @@ try {
         $expected = @('전체 목차')
         if ($document.Name -ne 'README.md') { $expected += "$trackLabel 목차" }
         if ($document.Name -match '^0[1-7]-') { $expected += '이전:' }
-        if ($document.Name -notin @('07-cleanup.md', '8-troubleshooting.md')) { $expected += '다음:' }
-        if ($document.Name -ne '8-troubleshooting.md') { $expected += '문제 해결' }
+        if ($document.Name -notin @('07-cleanup.md', '08-troubleshooting.md')) { $expected += '다음:' }
+        if ($document.Name -ne '08-troubleshooting.md') { $expected += '문제 해결' }
         $links = @([regex]::Matches($navigation, '\[([^\]]+)\]\(([^)]+)\)'))
         Assert-True ($links.Count -eq $expected.Count) "navigation count: $track/$($document.Name)"
         for ($i = 0; $i -lt $expected.Count; $i++) {

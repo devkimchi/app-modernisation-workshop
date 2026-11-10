@@ -10,7 +10,7 @@ The sample download scripts record the source and pinned commit SHA in `upstream
 
 ## Local checks
 
-Run the relevant regression tests before opening a pull request. These developer checks require no additional test packages and use fixtures and mocked command responses without changing real accounts or OS features. Workshop participants do not need to run them; use the prerequisite checks in the [Java setup](docs/java/0-setup.md) or [.NET setup](docs/dotnet/0-setup.md) instead.
+Run the relevant regression tests before opening a pull request. These developer checks require no additional test packages and use fixtures and mocked command responses without changing real accounts or OS features. Workshop participants do not need to run them; use the prerequisite checks in the [Java setup](docs/java/00-setup.md) or [.NET setup](docs/dotnet/00-setup.md) instead.
 
 PowerShell:
 
@@ -50,7 +50,7 @@ Linux azd script-install fixtures cover fresh installs, explicit adoption of exi
 
 The `azure-actions` suites verify that login, subscription selection, extension installation and provider registration require installer consent, and that prerequisite checks only query state even in interactive sessions. Run `bash tests/azure-actions.tests.sh` alongside the Bash suites; the PowerShell command is listed above. Download prechecks use the same query-only checks.
 
-These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/8-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/8-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
+These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/08-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/08-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
 
 ## Branches and commits
 

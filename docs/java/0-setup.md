@@ -17,13 +17,11 @@ Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사�
 - **Windows 사용자**: [WSL](https://learn.microsoft.com/windows/wsl/install)
 - **Windows 사용자**: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 
-모든 `.ps1` 진입점은 Windows PowerShell 5.1에서도 시작할 수 있으며 실제 작업은 설치된 PowerShell 7에 위임합니다. Windows에서는 PowerShell 7과 WSL2 플랫폼을 함께 확인하고 하나라도 없으면 두 항목의 상태와 설치 안내를 출력한 뒤 작업 전에 종료합니다. WSL2 플랫폼 설치 여부와 Java 실습에 사용할 VERSION 2 배포판의 준비 여부는 별도 검사입니다.
-
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
 1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭하세요.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
-3. 저장소를 만든 뒤 Copilot app에서 제공하는 GitHub CLI(`gh`)를 사용할 수 있는 터미널에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요.
+3. 저장소를 만든 뒤 GitHub CLI(`gh`)를 사용할 수 있는 터미널에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요. (예: `octocat/app-modernisation-workshop`)
 
 ```text
 gh repo clone <본인-계정>/<저장소-이름>

@@ -56,11 +56,12 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 
 다운로드는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 남깁니다. 원본 루트의 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다.
 
-설치 링크는 [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)에 있습니다. 진행 중단 여부와 관계없이 마지막에는 [Java 정리](docs/java/07-cleanup.md) 또는 [.NET 정리](docs/dotnet/07-cleanup.md)를 확인하세요.
+## 참고자료
 
-## 기여와 보안
-
-기여 절차는 [CONTRIBUTING.md](CONTRIBUTING.md), 행동 강령은 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), 보안 문제 제보는 [SECURITY.md](SECURITY.md)를 참고하세요. 변경 이력은 [CHANGELOG.md](CHANGELOG.md)에 기록합니다.
+- [Java 앱 현대화: GitHub Copilot modernization](https://learn.microsoft.com/azure/developer/java/migration/migrate-github-copilot-app-modernization-for-java)
+- [.NET 앱 현대화: GitHub Copilot modernization](https://learn.microsoft.com/dotnet/core/porting/github-copilot-app-modernization/overview)
+- [GitHub Copilot app 다운로드](https://gh.io/app)
+- [GitHub Copilot modernization 플러그인](https://github.com/microsoft/github-copilot-modernization)
 
 ## 라이선스
 

@@ -73,7 +73,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 
 | 구성요소 | 수동 준비 |
 | --- | --- |
-| Framework 웹 빌드 도구 | [Visual Studio 2022/2026 IDE 또는 Build Tools](https://visualstudio.microsoft.com/downloads/). IDE는 **ASP.NET 및 웹 개발**, Build Tools는 **Web development build tools** 워크로드 |
+| Framework 웹 빌드 도구 | [Visual Studio 2026 IDE 또는 Build Tools](https://visualstudio.microsoft.com/downloads/). IDE는 **ASP.NET 및 웹 개발**, Build Tools는 **Web development build tools** 워크로드 |
 | .NET Framework | **4.8 이상 런타임과 4.8 Targeting Pack** 모두 필요. 런타임이나 .NET 10 SDK만으로 대체할 수 없음 |
 | IIS Express | Visual Studio Installer 개별 구성요소 또는 [IIS Express 10](https://www.microsoft.com/download/details.aspx?id=48264) |
 | SQL Server Express LocalDB | Visual Studio Installer 개별 구성요소 또는 [SQL Server Express](https://www.microsoft.com/sql-server/sql-server-downloads)의 LocalDB 설치 옵션. 실습 전용 DB 사용 |

@@ -84,6 +84,7 @@ try {
         $script:Calls.Add($operation)
         $code = 0; $text = ''
         if ($Name -eq 'node') { $text = "v$script:Current"; $code = $script:NodeProbeCode }
+        elseif ($Name -eq 'dotnet') { $text = '10.0.100 [C:\fixture\sdk]' }
         elseif ($Name -like '*\v*\node.exe') { $text = "v$script:InstalledVersion" }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'version') { $text = $script:NvmVersion }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'config') {

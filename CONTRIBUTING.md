@@ -35,6 +35,8 @@ Keep `.ps1` files UTF-8 **with BOM** and LF (see `.editorconfig`): Windows Power
 
 The .NET original-app tests use isolated fixtures and mocked native invocations; they never start IIS Express or access LocalDB/MSMQ. A real Windows sample restore/build and browser workflow remain separate rehearsal checks.
 
+The PowerShell installer suite mocks .NET SDK discovery and winget installation. It covers consent, missing winget, installation and verification failures, runtime-only and preview-only installations, and coexistence with older SDKs. The .NET track installs a stable 10.x SDK only when missing; `-Update` does not update an existing stable 10.x SDK. No real SDK is installed by these tests.
+
 Bash:
 
 ```bash

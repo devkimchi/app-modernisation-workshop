@@ -149,6 +149,36 @@ function Update-ProcessPath {
 
 . (Join-Path $PSScriptRoot 'windows-prerequisite-updates.ps1')
 
+function Install-WorkshopDotnetSdk {
+    if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
+    $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
+    if ($sdks.Code -eq 0 -and $sdks.Text -match '(?m)^10\.\d+\.\d+\s+\[') {
+        Write-Host '[INFO] .NET 10 안정 SDK가 있습니다. 설치하거나 업데이트하지 않습니다.'
+        return $true
+    }
+    Write-Host "[INFO] .NET 10 안정 SDK를 확인하지 못했습니다 (종료 코드 $($sdks.Code)): $($sdks.Text)"
+    if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Host '[WARN] .NET 10 SDK 자동 설치에는 winget이 필요합니다. 공식 설치 안내: https://dotnet.microsoft.com/download/dotnet/10.0'
+        return $true
+    }
+    if (-not (Confirm-ToolInstall '.NET 10 SDK: Windows 호스트에 winget 패키지 Microsoft.DotNet.SDK.10을 설치합니다. 기존 SDK는 제거하지 않습니다. 네트워크와 관리자 승인이 필요할 수 있습니다. winget에서 표시하는 약관은 직접 확인하세요.')) {
+        return $true
+    }
+    & winget install --id Microsoft.DotNet.SDK.10 --exact --source winget | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[FAIL] .NET 10 SDK 설치 실패 (종료 코드 $LASTEXITCODE)."
+        return $false
+    }
+    Update-ProcessPath
+    $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
+    if ($sdks.Code -ne 0 -or $sdks.Text -notmatch '(?m)^10\.\d+\.\d+\s+\[') {
+        Write-Host "[FAIL] 설치 후 .NET 10 안정 SDK를 확인하지 못했습니다 (종료 코드 $($sdks.Code)): $($sdks.Text). PATH와 설치 상태를 확인하세요."
+        return $false
+    }
+    Write-Host '[PASS] .NET 10 안정 SDK 설치를 확인했습니다.'
+    return $true
+}
+
 function Install-WindowsTools {
     param([string]$SelectedTrack)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
@@ -159,7 +189,8 @@ function Install-WindowsTools {
             @{ Command='az'; Package='Microsoft.AzureCLI'; Name='Azure CLI' },
             @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' }
         )
-    $failed = -not $nodeInstalled
+    $sdkInstalled = Install-WorkshopDotnetSdk
+    $failed = -not $nodeInstalled -or -not $sdkInstalled
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($existing) {

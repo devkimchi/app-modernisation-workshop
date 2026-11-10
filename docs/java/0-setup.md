@@ -140,6 +140,4 @@ pwsh -File ./scripts/download-sample.ps1 -Track java -ContainerEngine docker
 
 다운로드할 `java` 폴더는 없거나 비어 있어야 합니다.
 
-출처와 고정 SHA는 `upstream-source.json`에 기록하고, 원본 라이선스와 고지는 `UPSTREAM-*` 이름으로 보존합니다. 원본 코드와 대상 프레임워크를 바꾸지 않으며 앱 안에 별도 `.git`을 만들지 않습니다. 다운로드만으로 커밋하거나 push하지 않습니다.
-
 `java/pom.xml`이 있는지 확인한 뒤 [실습 1: 원본 실행](01-run-locally.md)으로 이동합니다. 기본 경로의 앱 파일은 워크숍 저장소에서 관리하며, 실습 1에서 생성 파일과 비밀이 없는지 검토한 뒤 기준선 커밋을 만듭니다. 저장소 밖에 다운로드했다면 해당 앱은 이 저장소에서 추적되지 않습니다.

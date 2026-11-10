@@ -6,6 +6,8 @@ Thank you for helping improve this workshop. By participating, you agree to foll
 
 Keep changes focused on the workshop instructions, preparation scripts, and regression tests. Explain learner-facing changes in the relevant documentation and preserve upstream source licenses and notices when working with downloaded samples. Do not commit credentials, local configuration, downloaded applications, or generated test output.
 
+The sample download scripts record the source and pinned commit SHA in `upstream-source.json` and preserve upstream licenses and notices as `UPSTREAM-*` files. They do not modify the original code or target framework, create a separate `.git` inside the sample, or commit or push the download. Preserve this behavior when maintaining the scripts.
+
 ## Local checks
 
 Run the relevant regression tests before opening a pull request. These developer checks require no additional test packages and use fixtures and mocked command responses without changing real accounts or OS features. Workshop participants do not need to run them; use the prerequisite checks in the [Java setup](docs/java/0-setup.md) or [.NET setup](docs/dotnet/0-setup.md) instead.

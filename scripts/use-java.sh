@@ -69,7 +69,7 @@ _workshop_use_java() {
     printf '[PASS] SDKMAN JDK %s 선택: %s\n' "$major" "$identifier"
 }
 
-_workshop_run_baseline() {
+_workshop_show_versions() {
     local status
     printf '[INFO] java -version\n'
     if java -version; then
@@ -87,29 +87,13 @@ _workshop_run_baseline() {
         printf '[FAIL] javac -version에 실패했습니다.\n' >&2
         return "$status"
     fi
-    printf '[INFO] bash ./mvnw -version\n'
-    if bash ./mvnw -version; then
-        :
-    else
-        status=$?
-        printf '[FAIL] Maven Wrapper 버전 확인에 실패했습니다.\n' >&2
-        return "$status"
-    fi
-    printf '[INFO] bash ./mvnw clean verify\n'
-    if bash ./mvnw clean verify; then
-        :
-    else
-        status=$?
-        printf '[FAIL] Maven clean verify에 실패했습니다.\n' >&2
-        return "$status"
-    fi
 }
 
-if _workshop_use_java "$@" && _workshop_run_baseline; then
+if _workshop_use_java "$@" && _workshop_show_versions; then
     _workshop_use_java_status=0
 else
     _workshop_use_java_status=$?
 fi
 unset -f _workshop_use_java
-unset -f _workshop_run_baseline
+unset -f _workshop_show_versions
 return "$_workshop_use_java_status"

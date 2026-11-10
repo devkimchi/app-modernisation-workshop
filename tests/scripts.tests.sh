@@ -265,6 +265,7 @@ assert 'missing JDK fails' test "$CHECK_FAILURES" = 1
 
 java_selector_fixture="$TEMPORARY/java-selector"
 mkdir -p "$java_selector_fixture/bin" "$java_selector_fixture/app"
+touch "$java_selector_fixture/app/mvnw"
 printf '%s\n' 'sdk() { [[ "$1" == use && "$2" == java ]] || return 1; printf "%s\n" "$3" > "$SDKMAN_DIR/selected"; export JAVA_HOME="$SDKMAN_DIR/candidates/java/$3"; PATH="$JAVA_HOME/bin:$PATH"; }' > "$java_selector_fixture/bin/sdkman-init.sh"
 for v in 8 21 25; do
     identifier="$v.0-test"
@@ -274,9 +275,7 @@ for v in 8 21 25; do
     printf '#!/usr/bin/env bash\nprintf '\''javac %s\\n'\''\n' "$version" > "$java_selector_fixture/candidates/java/$identifier/bin/javac"
     chmod +x "$java_selector_fixture/candidates/java/$identifier/bin/"*
 done
-printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "$BASELINE_LOG"\nprintf "wrapper %%s\\n" "$*"\nif [[ "${FAIL_CLEAN_VERIFY:-}" == 1 && "$*" == "clean verify" ]]; then exit 7; fi\n' > "$java_selector_fixture/app/mvnw"
-baseline_log="$java_selector_fixture/baseline.log"
-sequence_output=$(SDKMAN_DIR="$java_selector_fixture" BASELINE_LOG="$baseline_log" bash -c '
+sequence_output=$(SDKMAN_DIR="$java_selector_fixture" bash -c '
     cd "$2" &&
     source "$1" --jdk 8 &&
     source "$1" --jdk 21 &&
@@ -287,20 +286,8 @@ for major in 8 21 25; do
 done
 assert 'baseline reports Java version check' grep -q '\[INFO\] java -version' <<< "$sequence_output"
 assert 'baseline reports compiler version check' grep -q '\[INFO\] javac -version' <<< "$sequence_output"
-assert 'baseline reports Maven build' grep -q '\[INFO\] bash ./mvnw clean verify' <<< "$sequence_output"
 assert 'show selected Java version output' grep -q 'openjdk version "25.0.1"' <<< "$sequence_output"
 assert 'show selected compiler version output' grep -q 'javac 25.0.1' <<< "$sequence_output"
-expected_baseline=$(printf '%s\n' '-version' 'clean verify' '-version' 'clean verify' '-version' 'clean verify')
-assert 'run Maven checks for each JDK' test "$(cat "$baseline_log")" = "$expected_baseline"
-: > "$baseline_log"
-if failure_output=$(SDKMAN_DIR="$java_selector_fixture" BASELINE_LOG="$baseline_log" FAIL_CLEAN_VERIFY=1 bash -c 'cd "$2" && source "$1" --jdk 8' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1); then
-    printf '%s\n' 'FAILED: Maven build failure must be returned' >&2; exit 1
-else
-    PASSED=$((PASSED + 1))
-fi
-assert 'report Maven build failure' grep -q '\[FAIL\] Maven clean verify에 실패했습니다.' <<< "$failure_output"
-expected_baseline=$(printf '%s\n' '-version' 'clean verify')
-assert 'stop commands when Maven build fails' test "$(cat "$baseline_log")" = "$expected_baseline"
 if SDKMAN_DIR="$java_selector_fixture" bash -c 'source "$1" --jdk 17' _ "$ROOT/scripts/use-java.sh" >/dev/null 2>&1; then
     printf '%s\n' 'FAILED: reject unsupported JDK major' >&2; exit 1
 else

@@ -136,7 +136,7 @@ Windows PowerShell에서 WSL에 위임하려면 위 명령 대신 다음을 사�
 pwsh -File ./scripts/download-sample.ps1 -Track java -ContainerEngine docker
 ```
 
-다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 기본 대상은 워크숍 루트의 `java`입니다. 다른 경로가 필요하면 Bash에서 `--destination "$HOME/workshops/asset-app"`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다.
+샘플은 워크숍 루트의 `java` 폴더에 다운로드됩니다.
 
 대상은 없거나 빈 폴더여야 합니다. 기존 파일을 덮어쓰지 않으며 홈, 파일시스템 루트, 워크숍 루트, `docs`/`scripts`/`tests`, 심볼릭 링크를 경유하는 경로는 거부합니다. 실패 시 대상 상태를 확인하고 빈 경로로 다시 시도하세요. 복사 도중 실패하면 미완료 파일이 남을 수 있습니다.
 

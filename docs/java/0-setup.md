@@ -13,9 +13,9 @@ Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사�
 
 ### 사전 설치 항목
 
-- [Copilot app](https://github.com/copilot/app)
-- [WSL](https://learn.microsoft.com/windows/wsl/install)
-- [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
+- [GitHub Copilot app](https://gh.io/app)
+- **Windows 사용자**: [WSL](https://learn.microsoft.com/windows/wsl/install)
+- **Windows 사용자**: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 
 ## 1. 템플릿으로 저장소 만들고 클론하기
 

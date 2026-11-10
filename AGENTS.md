@@ -1,4 +1,4 @@
-# 에이전트 유지보수 지침
+# AGENTS.md
 
 ## 1. 목적과 적용 범위
 
@@ -6,15 +6,19 @@
 
 ## 2. 저장소 구조와 기준 문서
 
-| 경로 | 역할 |
-| --- | --- |
-| [README.md](README.md) | 참가자용 워크숍 개요와 전체 목차 |
-| [docs/java](docs/java/README.md) | Java 트랙의 준비, 실습과 문제 해결 |
-| [docs/dotnet](docs/dotnet/README.md) | .NET 트랙의 준비, 실습과 문제 해결 |
-| `scripts` | 사전 점검, 설치, 샘플 다운로드와 원본 실행 도우미 |
-| `tests` | 격리된 입력과 가짜 명령 응답을 사용하는 회귀 테스트 |
-| [.github/workflows/ci.yml](.github/workflows/ci.yml) | CI에서 실행하는 검증 |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | 기여 절차와 로컬 테스트 안내 |
+```text
+.
+├── README.md              # 참가자용 워크숍 개요와 전체 목차
+├── CONTRIBUTING.md        # 기여 절차와 로컬 테스트 안내
+├── docs
+│   ├── java               # Java 트랙의 준비, 실습과 문제 해결
+│   └── dotnet             # .NET 트랙의 준비, 실습과 문제 해결
+├── scripts                # 사전 점검, 설치, 샘플 다운로드와 원본 실행 도우미
+├── tests                  # 격리된 입력과 가짜 명령 응답을 사용하는 회귀 테스트
+└── .github
+    └── workflows
+        └── ci.yml         # CI에서 실행하는 검증
+```
 
 도구 버전과 참가자 준비 절차는 [Java 준비](docs/java/0-setup.md)와 [.NET 준비](docs/dotnet/0-setup.md)를 기준으로 확인하세요. 이 파일에 버전이나 테스트 명령 전체 목록을 복제하지 마세요.
 

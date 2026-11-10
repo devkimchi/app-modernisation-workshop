@@ -87,8 +87,6 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 | .NET 10 SDK | [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0). 현대화 이후 빌드용 |
 | MSMQ Server | [Windows 기능 활성화](https://learn.microsoft.com/dotnet/framework/wcf/samples/installing-message-queuing-msmq) 후 필요한 재부팅 완료. MSMQ 서비스가 Running인지 확인 |
 
-원본은 `System.Web` 기반의 비 SDK 형식 프로젝트이므로 `dotnet build`/`dotnet run`이 아닌 전체 Framework MSBuild와 IIS Express를 사용합니다. 실제 절차는 [실습 1](01-run-locally.md)에서 진행합니다.
-
 ### 직접 준비할 항목
 
 - **Azure 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위의 권한을 요청하고 구독 전체 Owner를 무조건 요청하지 마세요.

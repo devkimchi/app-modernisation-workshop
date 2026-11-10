@@ -36,8 +36,6 @@ cd <저장소-이름>
 
 ### 도구 설치 여부 점검
 
-**Windows PowerShell**에서 실행합니다. Windows PowerShell 5.1에서 시작해도 실제 작업은 PowerShell 7에서 수행합니다.
-
 ```powershell
 powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```

@@ -89,7 +89,7 @@ sdk list java
 sdk install java <목록에서-선택한-식별자>
 ```
 
-필요한 버전마다 설치를 반복합니다. JRE와 EA 버전은 제외하고, 식별자의 `+빌드번호`도 그대로 사용하세요. 수동 설치 중 기본 JDK 변경 질문은 직접 결정합니다. 실습 1에서는 `sdk use java <설치한-8-식별자>`로 현재 셸만 전환합니다. 점검은 SDKMAN 후보의 `java`와 `javac`를 실제 실행해 버전을 확인합니다.
+필요한 버전마다 설치를 반복합니다. JRE와 EA 버전은 제외하고, 식별자의 `+빌드번호`도 그대로 사용하세요. 수동 설치 중 기본 JDK 변경 질문은 직접 결정합니다. 앱 루트에서 `source ../scripts/use-java.sh 8`, `source ../scripts/use-java.sh 21` 또는 `source ../scripts/use-java.sh 25`를 실행하면 설치된 SDKMAN JDK를 현재 셸에서 전환합니다.
 
 ### WSL 배포판 지정
 

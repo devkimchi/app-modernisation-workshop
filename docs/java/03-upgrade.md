@@ -42,10 +42,9 @@ web/worker를 로컬 PostgreSQL/RabbitMQ와 실행하고 기준 동작을 다시
 참가자 Bash에서도 직접 확인합니다.
 
 ```bash
-source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
-sdk use java <설치한-JDK-25-식별자>
+source ../scripts/use-java.sh 25
 java -version
-javac -version
+javac --version
 bash ./mvnw -version
 bash ./mvnw clean verify
 ```

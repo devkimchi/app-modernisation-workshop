@@ -17,26 +17,14 @@ cd java
 ## JDK 8과 빌드 확인
 
 ```bash
-source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
-jdk8=''
-for candidate in "${SDKMAN_DIR:-$HOME/.sdkman}"/candidates/java/8.*; do
-    if [[ -x "$candidate/bin/java" && -x "$candidate/bin/javac" ]]; then
-        jdk8="${candidate##*/}"
-        break
-    fi
-done
-if [[ -n "$jdk8" ]]; then
-    sdk use java "$jdk8"
-    java -version
-    javac -version
-    bash ./mvnw -version
-    bash ./mvnw clean verify
-else
-    printf '%s\n' '[FAIL] 설치된 SDKMAN JDK 8을 찾지 못했습니다. 준비 단계에서 설치를 확인하세요.' >&2
-fi
+source ../scripts/use-java.sh 8 &&
+java -version &&
+javac -version &&
+bash ./mvnw -version &&
+bash ./mvnw clean verify
 ```
 
-설치된 SDKMAN 후보 중 Java 8과 컴파일러가 모두 있는 버전을 자동으로 선택합니다. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
+이 스크립트는 현재 셸에서 Java 8, 21 또는 25를 선택합니다. 사용자 지정 경로에 샘플을 다운로드했다면 `../scripts/use-java.sh`를 워크숍 저장소의 스크립트 경로로 바꾸세요. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
 
 ## 로컬 서비스와 앱 실행
 

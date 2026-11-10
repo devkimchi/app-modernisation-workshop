@@ -3,7 +3,7 @@ param(
     [string]$Track,
     [string]$Destination,
     [string]$ContainerEngine,
-    [string]$WslDistribution,
+    [string]$WslDistribution = 'Ubuntu',
     [switch]$Help
 )
 

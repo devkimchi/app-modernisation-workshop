@@ -44,6 +44,28 @@ try {
     Assert-True (-not (Test-MinimumVersion '1.37.2' '1.37.3')) 'old azd'
     Assert-True (-not (Test-MinimumVersion '22.0.0-rc.1' '22.0.0')) 'preview rejected'
 
+    if ($IsWindows) {
+        & {
+            $script:FixtureDistributions = "Ubuntu`nUbuntu-24.04"
+            $script:FixtureWslVersion = 2
+            function Invoke-ToolProbe {
+                param([string]$Name, [string[]]$Arguments)
+                $text = if ($Arguments -contains '--quiet') { $script:FixtureDistributions }
+                    else { "  Ubuntu Running $script:FixtureWslVersion`n  Ubuntu-24.04 Stopped 2" }
+                return [pscustomobject]@{ Code = 0; Text = $text }
+            }
+            Assert-True ((Get-JavaBashTarget '').Distribution -eq 'Ubuntu') 'Ubuntu default with multiple distributions'
+            Assert-True ((Get-JavaBashTarget 'Ubuntu-24.04').Distribution -eq 'Ubuntu-24.04') 'explicit distribution overrides Ubuntu'
+            $script:FixtureDistributions = 'Ubuntu-24.04'
+            Assert-Throws { Get-JavaBashTarget '' } 'missing Ubuntu does not fall back to sole distribution'
+            $script:FixtureDistributions = ''
+            Assert-Throws { Get-JavaBashTarget '' } 'no distribution fails'
+            $script:FixtureDistributions = 'Ubuntu'
+            $script:FixtureWslVersion = 1
+            Assert-Throws { Get-JavaBashTarget '' } 'WSL1 Ubuntu rejected'
+        }
+    }
+
     $script:Calls = [Collections.Generic.List[string]]::new()
     $script:Stopped = $false
     $script:MachineFails = $false

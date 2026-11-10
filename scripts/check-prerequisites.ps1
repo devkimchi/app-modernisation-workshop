@@ -2,7 +2,7 @@
 param(
     [string]$Track,
     [string]$ContainerEngine,
-    [string]$WslDistribution,
+    [string]$WslDistribution = 'Ubuntu',
     [switch]$Help
 )
 
@@ -305,13 +305,12 @@ function Get-JavaBashTarget {
     if ($list.Code -ne 0) { throw 'WSL 배포판을 조회하지 못했습니다. WSL2 설치 상태를 확인하세요.' }
     $names = @(($list.Text -replace "`0", '') -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     if (-not $Distribution) {
-        if ($names.Count -ne 1) { throw 'WSL 배포판을 명시하세요: -WslDistribution Ubuntu. 여러 배포판 중 하나를 임의로 선택하지 않습니다.' }
-        $Distribution = $names[0]
+        $Distribution = 'Ubuntu'
     }
-    if ($Distribution -cnotin $names) { throw "지정한 WSL 배포판이 없습니다: $Distribution" }
+    if ($Distribution -cnotin $names) { throw "WSL 배포판이 없습니다: $Distribution. 기본값은 Ubuntu입니다. wsl --list --verbose로 이름을 확인하고 -WslDistribution <이름>을 지정하세요." }
     $details = Invoke-ToolProbe wsl @('--list', '--verbose')
     $pattern = '(?m)^\s*\*?\s*' + [regex]::Escape($Distribution) + '\s+.+?\s+2\s*$'
-    if ($details.Code -ne 0 -or ($details.Text -replace "`0", '') -notmatch $pattern) { throw '지정한 배포판이 WSL2인지 확인하지 못했습니다.' }
+    if ($details.Code -ne 0 -or ($details.Text -replace "`0", '') -notmatch $pattern) { throw "배포판 $Distribution 이 WSL2인지 확인하지 못했습니다. wsl --list --verbose로 VERSION 2인지 확인하세요." }
     return [pscustomobject]@{ Command = 'wsl'; Prefix = @('--distribution', $Distribution, '--exec'); Distribution = $Distribution }
 }
 

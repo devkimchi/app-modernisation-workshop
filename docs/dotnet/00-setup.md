@@ -37,10 +37,8 @@ cd <저장소-이름>
 ### 도구 설치 여부 점검
 
 ```powershell
-powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
+powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet
 ```
-
-이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](08-troubleshooting.md#대체-엔진-설정)을 참고하세요.
 
 | 결과 | 할 일 |
 | --- | --- |
@@ -57,7 +55,7 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerE
 **대화형 Windows PowerShell**에서 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다.
 
 ```powershell
-powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -ContainerEngine docker -Update
+powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ```
 
 점검은 상태만 조회합니다. 설치 도우미는 도구 설치 후 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치와 공급자 등록을 항목별 동의를 받아 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요.
@@ -116,7 +114,7 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 점검과 플러그인 설치를 마친 뒤 **Windows PowerShell의 워크숍 루트**에서 실행합니다.
 
 ```powershell
-powershell.exe -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
+powershell.exe -File ./scripts/download-sample.ps1 -Track dotnet
 ```
 
 샘플은 워크숍 루트의 `dotnet` 폴더에 다운로드됩니다. 다운로드할 `dotnet` 폴더는 없거나 비어 있어야 합니다.

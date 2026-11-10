@@ -46,7 +46,7 @@ Windows는 `powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java
 - **Node.js**: nvm-windows 2.x는 `nvm config get root mode --json`의 설치 루트와 shim/link 경로를, 기존 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`를 확인합니다. 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 추가합니다. 설치와 `nvm use` 활성화는 별도 동의를 받으며 기존 버전은 보존합니다. 활성화는 Windows 공용 선택(shim/link)을 변경하므로 이후 터미널의 선택도 바뀌지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. Bash의 셸별 활성화 및 default alias와는 다릅니다. 독립 설치나 일반 디렉터리가 실행 경로를 차지하면 자동 전환하지 않습니다. 원래 관리자를 확인하고 [nvm-windows 안내](https://github.com/nvm-windows/nvm)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
 
 nvm-windows 2.x의 `auto_install=true`는 Node.js 검사만으로도 다른 버전을 설치할 수 있어 자동 처리를 중단합니다. `nvm config get auto_install --json`으로 확인하고 설정 변경은 직접 결정하세요. 프로젝트의 `.nvmrc`, `.node-version`, `package.json`이 버전을 고정했다면 공용 선택과 실제 실행 버전이 다를 수 있습니다. 도우미는 해당 파일이나 자동 감지 설정을 변경하지 않으며 활성화 후 실제 버전이 다르면 실패로 알립니다.
-- **PowerShell 7**: 실행 경로·MSI 등록·winget 패키지가 일치하는 정식 7 버전만 업데이트합니다. Store/ZIP 등 확인할 수 없는 설치는 원래 관리자를 사용하세요. 업데이트 예약은 성공이 아니며 종료 코드 1로 멈춥니다. 현재 pwsh 종료 후 같은 콘솔의 작업 프로세스가 표시하는 `PASS`/`FAIL`을 확인하고 새 터미널에서 `pwsh --version`과 설치 도우미를 다시 실행하세요. 다른 pwsh가 열려 있으면 먼저 종료하세요.
+- **PowerShell 7**: 실행 경로·MSI 등록·winget 패키지가 일치하는 정식 7 버전만 업데이트합니다. Store/ZIP 등 출처를 확인할 수 없으면 자동 업데이트만 건너뛰고 필수 도구 확인은 계속합니다. 업데이트는 원래 관리자를 사용하세요. 업데이트 예약은 성공이 아니며 종료 코드 1로 멈춥니다. 현재 pwsh 종료 후 같은 콘솔의 작업 프로세스가 표시하는 `PASS`/`FAIL`을 확인하고 새 터미널에서 `pwsh --version`과 설치 도우미를 다시 실행하세요. 다른 pwsh가 열려 있으면 먼저 종료하세요.
 - **WSL**: `wsl.exe --version`을 확인할 수 있는 플랫폼만 별도 동의 후 `wsl.exe --update`합니다. 버전을 제공하지 않는 inbox WSL은 [공식 안내](https://learn.microsoft.com/windows/wsl/install)에 따라 직접 준비하세요. 배포판 업데이트·삭제·자동 재부팅은 하지 않습니다. 재부팅 필요/검증 실패 시 직접 재부팅한 뒤 점검하세요.
 
 두 업데이트 옵션 모두 CI/비대화형 환경에서는 거부됩니다. 회귀 테스트의 fixture 성공은 실제 설치나 OS 업데이트를 검증한 결과가 아닙니다.

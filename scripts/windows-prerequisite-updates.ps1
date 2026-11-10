@@ -274,8 +274,9 @@ function Update-WorkshopWindowsHost {
     }
     $managed = Get-WorkshopManagedPowerShell
     if (-not $managed) {
-        Write-Host '[MANUAL] 실행 중인 PowerShell 7의 winget/MSI 관리 출처를 확인하지 못했습니다. 원래 설치 관리자로 업데이트하세요.'
-        return 1
+        Write-Host '[MANUAL] 실행 중인 PowerShell 7의 winget/MSI 관리 출처를 확인하지 못해 자동 업데이트를 건너뜁니다. 원래 설치 관리자로 업데이트하세요. 필수 도구 확인은 계속합니다.'
+        if ($failed) { return 1 }
+        return 0
     }
     $show = Invoke-ToolProbe winget @('show', '--id', 'Microsoft.PowerShell', '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
     # Version-only rows avoid parsing localized winget field labels.

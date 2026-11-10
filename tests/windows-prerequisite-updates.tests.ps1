@@ -192,9 +192,12 @@ try {
     Reset-Fixture; $script:Approvals.Enqueue($false); $script:Approvals.Enqueue($false)
     Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'declined host updates continue'
     Assert-True (@($script:Calls | Where-Object { $_ -match 'worker|--update' }).Count -eq 0) 'declined host unchanged'
-    Reset-Fixture; $script:Managed = $null
-    Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'unmanaged PowerShell manual'
+    Reset-Fixture; $script:Managed = $null; $script:Approvals.Enqueue($false)
+    Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'declined WSL and unmanaged PowerShell skip optional updates without failure'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'worker *' }).Count -eq 0) 'unknown provenance never schedules replacement'
+    Assert-True ($script:Calls -notcontains 'fixture-wsl --update') 'manual PowerShell and declined WSL never mutate host'
+    Reset-Fixture; $script:Managed = $null; $script:WslCode = 1
+    Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'manual PowerShell does not mask failed approved WSL update'
     Reset-Fixture; $script:WslVersion = $null; $script:Show = '7.5.0'
     Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'inbox WSL manual'
     Assert-True ($script:Calls -notcontains 'fixture-wsl --update') 'no unversioned WSL mutation'
@@ -252,6 +255,7 @@ try {
     }
     function Update-WorkshopWindowsHost { $script:HostRuns++; return $script:HostCode }
     function Install-WindowsTools { param($SelectedTrack); $script:ToolRuns++; return $script:ToolSuccess }
+    function Initialize-AzureEnvironment { return $true }
     function Invoke-PrerequisiteMain { $script:PrerequisiteRuns++; return 0 }
     Reset-Fixture; $script:HostRuns = 0; $script:ToolRuns = 0; $script:HostCode = 0
     $script:ToolSuccess = $true; $script:PrerequisiteRuns = 0

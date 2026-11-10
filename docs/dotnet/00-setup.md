@@ -19,7 +19,7 @@ WSL2 플랫폼은 공통 스크립트의 Windows 호스트 필수 항목입니�
 
 1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)을 클릭합니다.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
-3. 저장소를 만든 뒤 GitHub CLI(`gh`)를 사용할 수 있는 Windows PowerShell에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요. (예: `octocat/app-modernisation-workshop`)
+3. 저장소를 만든 뒤 GitHub CLI(`gh`)를 사용할 수 있는 PowerShell 터미널에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요. (예: `octocat/app-modernisation-workshop`)
 
 ```powershell
 gh repo clone <본인-계정>/<저장소-이름>

@@ -20,8 +20,6 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드�
 | 7 | [정리](07-cleanup.md) | Azure 리소스와 로컬 실습 프로세스 정리 |
 | 8 | [문제 해결](8-troubleshooting.md) | 진행 중 발생한 오류의 원인과 조치 확인 |
 
-사용자가 선택하는 에이전트는 Modernization 플러그인의 **`modernize`** 입니다. 플러그인이 내부 작업자를 선택하게 하고, 참가자가 내부 에이전트를 임의로 직접 실행하지 않습니다.
-
 ## 진행 원칙
 
 Windows에서는 SDKMAN과 Java 도구가 WSL2 안에 있습니다. Copilot app이 Windows 셸에서 작업한다면 프롬프트에 실제 WSL 배포판과 앱 경로를 전달하고 **Java 명령을 WSL2에 명시적으로 위임**하도록 합니다. macOS에서는 같은 앱 루트에서 Bash를 사용합니다. 앱의 세션 작업 경로가 바뀌면 WSL 경로도 다시 확인하세요.

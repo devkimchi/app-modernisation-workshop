@@ -261,6 +261,135 @@ microsoft_apt_candidate() {
         END { if(found) print candidate; else exit 1 }'
 }
 
+linux_azd_target() {
+    case "$(uname -m)" in
+        x86_64) printf '/opt/microsoft/azd/azd-linux-amd64\n' ;;
+        aarch64|arm64) printf '/opt/microsoft/azd/azd-linux-arm64\n' ;;
+        *) printf '%s\n' '[FAIL] azd: 지원하지 않는 CPU 아키텍처입니다.' >&2; return 1 ;;
+    esac
+}
+
+linux_azd_link() { printf '/usr/local/bin/azd\n'; }
+
+azd_file_hash() {
+    local result
+    result=$(sha256sum -- "$1") || return 1
+    [[ "$result" =~ ^([a-f0-9]{64})[[:space:]] ]] || return 1
+    printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+azd_package_owned() {
+    local path status
+    for path in "$@"; do
+        if command -v dpkg-query >/dev/null 2>&1; then
+            dpkg-query -S "$path" >/dev/null 2>&1 && return 0
+            status=$?
+            (( status == 1 )) || return 2
+        fi
+        if command -v rpm >/dev/null 2>&1; then
+            rpm -qf "$path" >/dev/null 2>&1 && return 0
+            status=$?
+            (( status == 1 )) || return 2
+        fi
+    done
+    return 1
+}
+
+install_linux_azd() (
+    local path="${1:-}" target link before='' digest='' after live
+    local state="${XDG_STATE_HOME:-$HOME/.local/state}/app-modernisation-workshop"
+    local record temporary owner_status ancestor
+    local -a saved=()
+    if ! command -v sha256sum >/dev/null 2>&1; then
+        printf '%s\n' '[FAIL] azd: 설치 기록 검증에 sha256sum이 필요합니다.' >&2; return 1
+    fi
+    record="$state/azd-script-install"
+    target=$(linux_azd_target) || return 1
+    link=$(linux_azd_link) || return 1
+    for ancestor in "${target%/*}" "${link%/*}" "$state"; do
+        while [[ ! -e "$ancestor" && ! -L "$ancestor" && "$ancestor" != / ]]; do ancestor=$(dirname -- "$ancestor"); done
+        if [[ "$ancestor" != /* || ! -d "$ancestor" ]] ||
+            { [[ "$ancestor" != / ]] && [[ "$(canonical_tool_path "$ancestor")" != "$ancestor" ]]; }; then
+            printf '[FAIL] azd: 설치/기록 경로가 일반 절대 경로가 아닙니다: %s\n' "$ancestor" >&2; return 1
+        fi
+    done
+    if [[ -L "$state" || -L "$record" || ( -e "$state" && ! -d "$state" ) ]]; then
+        printf '%s\n' '[FAIL] azd: 관리 기록 경로가 일반 디렉터리/파일이 아닙니다.' >&2; return 1
+    fi
+    if azd_package_owned "$link" "$target" "${path:-$link}"; then
+        printf '%s\n' '[MANUAL] azd: 패키지 관리자가 소유한 설치는 공식 스크립트로 덮어쓰지 않습니다.'
+        return 0
+    else
+        owner_status=$?
+        if (( owner_status != 1 )); then
+            printf '%s\n' '[FAIL] azd: 패키지 소유권 조회에 실패했습니다.' >&2; return 1
+        fi
+    fi
+    if [[ -n "$path" ]]; then
+        if [[ "$path" != "$link" || ! -L "$link" || ! -f "$target" || ! -x "$target" || -L "$target" ||
+            "$(canonical_tool_path "$target")" != "$target" ||
+            "$(canonical_tool_path "$link")" != "$target" ]]; then
+            printf '[MANUAL] azd: 공식 스크립트 기본 경로와 다른 설치는 덮어쓰지 않습니다: %s\n' "$path"
+            return 0
+        fi
+        before=$(azure_tool_version azd) && digest=$(azd_file_hash "$target") || {
+            printf '%s\n' '[FAIL] azd: 기존 버전/해시 확인에 실패했습니다.' >&2; return 1;
+        }
+        if [[ -e "$record" ]]; then
+            [[ -f "$record" ]] && mapfile -t saved < "$record" || {
+                printf '%s\n' '[FAIL] azd: 관리 기록을 읽지 못했습니다.' >&2; return 1;
+            }
+            if [[ "${#saved[@]}" != 4 || "${saved[0]}" != official-script ||
+                "${saved[1]}" != "$target" || "${saved[2]}" != "$before" || "${saved[3]}" != "$digest" ]]; then
+                printf '%s\n' '[FAIL] azd: 설치 파일이 관리 기록과 다릅니다. 자동으로 변경하지 않습니다.' >&2; return 1
+            fi
+        else
+            if ! confirm_install "azd $before ($path -> $target): 설치 출처는 미확인입니다. 이 설치를 Microsoft 공식 스크립트 방식으로 인계하고 업데이트하도록 승인하시겠습니까?"; then return 0; fi
+        fi
+    elif [[ -e "$link" || -L "$link" || -e "${target%/*}" || -L "${target%/*}" || -e "$record" ]]; then
+        printf '%s\n' '[MANUAL] azd: 기존 설치 경로 또는 관리 기록이 남아 있습니다. 덮어쓰지 않습니다.'
+        return 0
+    fi
+    if ! confirm_install "azd ${before:-미설치}: Microsoft 공식 스크립트로 설치/업데이트합니다. 네트워크와 sudo가 필요할 수 있습니다. 출처: https://aka.ms/install-azd.sh"; then return 0; fi
+    live=$(tool_path azd)
+    if [[ -z "$path" && -n "${WSL_DISTRO_NAME:-}" && "$live" =~ ^/mnt/[a-zA-Z]/ ]]; then live=''; fi
+    if [[ "$live" != "$path" ]] || { [[ -n "$path" ]] &&
+        { [[ "$(canonical_tool_path "$link")" != "$target" ]] ||
+          [[ "$(azd_file_hash "$target")" != "$digest" ]]; }; }; then
+        printf '%s\n' '[FAIL] azd: 승인 중 실행 경로/파일이 변경되었습니다.' >&2; return 1
+    fi
+    if [[ -z "$path" && ( -e "$link" || -L "$link" || -e "${target%/*}" || -L "${target%/*}" || -e "$record" ) ]]; then
+        printf '%s\n' '[FAIL] azd: 승인 중 설치 경로/관리 기록이 생성되었습니다.' >&2; return 1
+    fi
+    if azd_package_owned "$link" "$target"; then
+        printf '%s\n' '[FAIL] azd: 승인 중 패키지 소유권이 변경되었습니다.' >&2; return 1
+    else
+        owner_status=$?
+        if (( owner_status != 1 )); then
+            printf '%s\n' '[FAIL] azd: 패키지 소유권 재조회에 실패했습니다.' >&2; return 1
+        fi
+    fi
+    if ! (umask 077; mkdir -p -- "$state") || ! temporary=$(mktemp "$state/.azd-script-install.XXXXXXXX"); then
+        printf '%s\n' '[FAIL] azd: 관리 기록을 준비하지 못했습니다.' >&2; return 1
+    fi
+    trap 'rm -f -- "$temporary"' EXIT
+    if ! run_remote_installer 'https://aka.ms/install-azd.sh' user; then
+        printf '%s\n' '[FAIL] azd 공식 스크립트 설치/업데이트에 실패했습니다.' >&2; return 1
+    fi
+    hash -r
+    if [[ "$(tool_path azd)" != "$link" || ! -L "$link" || ! -f "$target" || ! -x "$target" || -L "$target" ||
+        "$(canonical_tool_path "$link")" != "$target" ]] ||
+        ! after=$(azure_tool_version azd) || { [[ -n "$before" ]] && ! version_not_older "$after" "$before"; } ||
+        ! digest=$(azd_file_hash "$target"); then
+        printf '%s\n' '[FAIL] azd: 설치 후 경로/버전/해시 검증에 실패했습니다. 관리 기록을 갱신하지 않습니다.' >&2; return 1
+    fi
+    if ! printf 'official-script\n%s\n%s\n%s\n' "$target" "$after" "$digest" > "$temporary" ||
+        ! mv -f -- "$temporary" "$record"; then
+        printf '%s\n' '[FAIL] azd: 관리 기록 저장에 실패했습니다.' >&2; return 1
+    fi
+    printf '[PASS] azd: 공식 스크립트 설치/업데이트 확인 (%s -> %s).\n' "${before:-미설치}" "$after"
+)
+
 update_azure_tool() {
     local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed
     case "$tool" in az) package=azure-cli ;; azd) package=azd ;; esac
@@ -288,6 +417,10 @@ update_azure_tool() {
                 esac
             fi
         fi
+    fi
+    if [[ -z "$managed" && "$os" == Linux && "$tool" == azd ]]; then
+        install_linux_azd "$path"
+        return $?
     fi
     if [[ -z "$managed" ]]; then
         printf '[MANUAL] %s: 실행 파일의 Homebrew/APT(Microsoft 저장소) 출처를 확인하지 못했습니다. 덮어쓰지 않습니다. docs/java/8-troubleshooting.md를 참고하세요.\n' "$tool"
@@ -474,9 +607,7 @@ install_missing_tools() {
                     if ! run_remote_installer 'https://aka.ms/InstallAzureCLIDeb' sudo; then printf '%s\n' '[FAIL] Azure CLI 설치에 실패했습니다.' >&2; failed=1; fi
                 fi ;;
             Linux:azd)
-                if confirm_install 'Azure Developer CLI: 현재 Linux 환경에 Microsoft 공식 설치 스크립트를 실행합니다. 네트워크와 sudo가 필요할 수 있습니다. 출처: https://aka.ms/install-azd.sh'; then
-                    if ! run_remote_installer 'https://aka.ms/install-azd.sh' user; then printf '%s\n' '[FAIL] azd 설치에 실패했습니다.' >&2; failed=1; fi
-                fi ;;
+                install_linux_azd || failed=1 ;;
             Darwin:az|Darwin:azd)
                 if ! command -v brew >/dev/null 2>&1; then
                     if (( update )); then

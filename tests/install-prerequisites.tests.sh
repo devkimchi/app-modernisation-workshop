@@ -543,6 +543,122 @@ for platform in Darwin Linux; do
     done
 done
 
+for owner_status in 0 1 2; do
+    owner_result=$(
+        dpkg-query() { return "$owner_status"; }
+        rpm() { return 1; }
+        if azd_package_owned /fixture/azd; then printf '0'; else printf '%s' "$?"; fi
+    )
+    assert "azd package ownership status $owner_status preserved" test "$owner_result" = "$owner_status"
+done
+
+azd_script_case() (
+    local scenario="$1" dir="$test_dir/azd-$1" approvals=0 changed=0
+    mkdir -p "$dir/bin"
+    export XDG_STATE_HOME="$dir/state"
+    linux_azd_link() { printf '%s/bin/azd\n' "$dir"; }
+    linux_azd_target() { printf '%s/install/azd-linux-amd64\n' "$dir"; }
+    tool_path() { [[ -L "$dir/bin/azd" ]] && printf '%s/bin/azd\n' "$dir"; return 0; }
+    azd_package_owned() { case "$scenario" in owned) return 0 ;; owner-failure) return 2 ;; *) return 1 ;; esac; }
+    dpkg-query() { return 1; }
+    mv() { [[ "$scenario" != save-failure ]] && command mv "$@"; }
+    azure_tool_version() {
+        if (( changed )); then
+            case "$scenario" in downgrade) printf '1.0.0\n' ;; invalid) return 1 ;; *) printf '2.2.0\n' ;; esac
+        else printf '2.1.0\n'; fi
+    }
+    confirm_install() {
+        approvals=$((approvals + 1))
+        printf 'approval: %s\n' "$1"
+        case "$scenario:$approvals" in decline-adoption:1|decline-update:2|tracked-decline:1) return 1 ;; esac
+        if [[ "$scenario" == concurrent ]]; then printf 'changed\n' >> "$dir/install/azd-linux-amd64"; fi
+        return 0
+    }
+    run_remote_installer() {
+        printf 'official-installer: %s\n' "$1"
+        [[ "$scenario" != failure ]] || return 1
+        changed=1
+        [[ "$scenario" != missing ]] || return 0
+        mkdir -p "$dir/install"
+        printf 'new azd\n' > "$dir/install/azd-linux-amd64"
+        chmod +x "$dir/install/azd-linux-amd64"
+        ln -sf "$dir/install/azd-linux-amd64" "$dir/bin/azd"
+        [[ "$scenario" != wrong-path ]] || rm "$dir/bin/azd"
+    }
+    case "$scenario" in
+        fresh|missing) ;;
+        *)
+            mkdir -p "$dir/install"
+            printf 'old azd\n' > "$dir/install/azd-linux-amd64"
+            chmod +x "$dir/install/azd-linux-amd64"
+            ln -s "$dir/install/azd-linux-amd64" "$dir/bin/azd"
+            ;;
+    esac
+    case "$scenario" in
+        foreign) ln -sf "$dir/bin" "$dir/install/azd-linux-amd64" ;;
+        state-link)
+            mkdir -p "$dir/other"
+            ln -s "$dir/other" "$dir/state" ;;
+        record-dir) mkdir -p "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install" ;;
+    esac
+    case "$scenario" in
+        tracked|tracked-decline|tampered|malformed)
+            mkdir -p "$XDG_STATE_HOME/app-modernisation-workshop"
+            printf 'official-script\n%s\n2.1.0\n%s\n' "$(linux_azd_target)" "$(azd_file_hash "$(linux_azd_target)")" > "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
+            [[ "$scenario" != tampered ]] || printf 'changed\n' >> "$(linux_azd_target)"
+            [[ "$scenario" != malformed ]] || printf 'invalid\n' > "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
+            ;;
+    esac
+    if [[ "$scenario" == route ]]; then
+        if update_azure_tool Linux azd "$(tool_path azd)"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    else
+        if install_linux_azd "$(tool_path azd)"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    fi
+    if [[ -f "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install" ]]; then
+        printf 'record:\n'
+        cat "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
+        if [[ "$(tail -n 1 "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install")" == "$(azd_file_hash "$(linux_azd_target)")" ]]; then
+            printf 'record hash matches binary\n'
+        fi
+    fi
+)
+for scenario in fresh adoption tracked route; do
+    azd_output=$(azd_script_case "$scenario")
+    assert "azd $scenario installs officially" grep -q 'official-installer: https://aka.ms/install-azd.sh' <<< "$azd_output"
+    assert "azd $scenario verifies runtime" grep -q '\[PASS\]' <<< "$azd_output"
+    assert "azd $scenario persists version" grep -q '^2.2.0$' <<< "$azd_output"
+    assert "azd $scenario records actual file hash" grep -q '^record hash matches binary$' <<< "$azd_output"
+    if [[ "$scenario" == adoption || "$scenario" == route ]]; then
+        assert 'azd existing unknown install needs two approvals' test "$(grep -c '^approval:' <<< "$azd_output")" = 2
+    else
+        assert "azd $scenario needs one approval" test "$(grep -c '^approval:' <<< "$azd_output")" = 1
+    fi
+done
+for scenario in decline-adoption decline-update tracked-decline owned foreign; do
+    azd_output=$(azd_script_case "$scenario")
+    assert "azd $scenario does not install" test "${azd_output#*official-installer:}" = "$azd_output"
+    assert "azd $scenario skips without failure" grep -q '^SUCCESS$' <<< "$azd_output"
+done
+for scenario in tampered malformed concurrent owner-failure failure missing downgrade invalid wrong-path state-link record-dir save-failure; do
+    azd_output=$(azd_script_case "$scenario" 2>&1)
+    assert "azd $scenario fails explicitly" grep -q 'EXPECTED FAILURE' <<< "$azd_output"
+    assert "azd $scenario never records new version" test "${azd_output#*$'\n2.2.0\n'}" = "$azd_output"
+    case "$scenario" in
+        tampered|malformed|concurrent|owner-failure)
+            assert "azd $scenario never invokes installer" test "${azd_output#*official-installer:}" = "$azd_output" ;;
+    esac
+done
+
+azd_dispatch=$(
+    SDKMAN_DIR='/nonexistent-workshop-sdkman-test'
+    tool_path() { [[ "$1" != azd ]] && printf '/usr/bin/%s\n' "$1"; return 0; }
+    confirm_install() { return 1; }
+    install_linux_azd() { printf 'azd-script-dispatched\n'; return 1; }
+    if install_missing_tools Linux; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+assert 'fresh Linux azd uses verified script helper' grep -q '^azd-script-dispatched$' <<< "$azd_dispatch"
+assert 'fresh Linux azd failure propagates' grep -q 'EXPECTED FAILURE' <<< "$azd_dispatch"
+
 brew_setup_case() (
     local available=0
     command() {

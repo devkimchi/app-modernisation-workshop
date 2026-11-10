@@ -44,6 +44,8 @@ Run the installer suite in WSL2/macOS Bash; its SDKMAN fixtures require real sym
 
 Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
 
+Linux azd script-install fixtures cover fresh installs, explicit adoption of existing default-layout installs, separate update consent, package-ownership refusal, local path/version/SHA-256 records, changed files, and installer/runtime failures. Official-script installs and updates use the same installer; APT-owned installs retain the verified Microsoft APT route. Fixtures never run the real installer or change system paths.
+
 These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/8-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/8-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
 
 ## Branches and commits

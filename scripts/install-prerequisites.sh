@@ -3,6 +3,113 @@
 INSTALL_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$INSTALL_SCRIPTS/check-prerequisites.sh"
 
+can_prompt_azure() {
+    [[ -t 0 && -t 1 && -z "${CI:-}" ]]
+}
+
+confirm_azure_action() {
+    local answer
+    can_prompt_azure || return 1
+    read -r -p "$1 [y/N] " answer || return 1
+    [[ "$answer" == y || "$answer" == Y ]]
+}
+
+run_azure_action() {
+    if ! "$@"; then
+        check_result FAIL azure-action "명령 실행에 실패했습니다: $*. 위 오류를 확인하세요."
+        return 1
+    fi
+}
+
+prepare_azure_account() {
+    local subscriptions selected id name valid=0
+    can_prompt_azure || return 0
+    probe az account show --query state --output tsv
+    if (( PROBE_CODE != 0 )) || [[ "$PROBE_TEXT" != Enabled ]]; then
+        check_result WARN az-login "활성 구독 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 미로그인 외에 권한 또는 네트워크 문제일 수도 있습니다."
+        if confirm_azure_action '이 셸의 Azure CLI에서 az login을 실행하시겠습니까?'; then
+            run_azure_action az login || return 0
+        fi
+    fi
+    if confirm_azure_action '구독 목록을 조회하고 실습 구독을 직접 선택하시겠습니까?'; then
+        probe az account list --query '[].[id,name]' --output tsv
+        if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
+            check_result WARN azure-subscription "구독 목록 조회 실패: ${PROBE_TEXT:-출력 없음}"
+            return 0
+        fi
+        subscriptions="$PROBE_TEXT"
+        printf '구독 ID / 이름:\n%s\n' "$subscriptions"
+        read -r -p '변경할 구독 ID (Enter: 유지): ' selected || return 0
+        [[ -n "$selected" ]] || return 0
+        while IFS=$'\t' read -r id name; do
+            [[ "$selected" == "$id" ]] && valid=1
+        done <<< "$subscriptions"
+        if (( valid )); then run_azure_action az account set --subscription "$selected" || return 0
+        else check_result WARN azure-subscription '목록에 없는 구독 ID입니다. 구독을 변경하지 않았습니다.'; fi
+    fi
+}
+
+prepare_containerapp_extension() {
+    can_prompt_azure || return 0
+    probe az extension show --name containerapp --query version --output tsv
+    if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
+        check_result WARN az-containerapp "확장 조회 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+        if confirm_azure_action 'containerapp 확장을 설치하거나 업데이트하시겠습니까? 로컬 Azure CLI 확장 파일이 변경됩니다.'; then
+            run_azure_action az extension add --name containerapp --upgrade || return 0
+        fi
+    fi
+}
+
+prepare_azd_login() {
+    can_prompt_azure || return 0
+    probe azd auth login --check-status
+    if (( PROBE_CODE != 0 )); then
+        check_result WARN azd-login "인증 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+        if confirm_azure_action '이 셸에서 azd auth login을 실행하시겠습니까? Azure CLI 로그인과 별개입니다.'; then
+            run_azure_action azd auth login || return 0
+        fi
+    fi
+}
+
+prepare_azure_provider() {
+    local provider="$1"
+    can_prompt_azure || return 0
+    probe az provider show --namespace "$provider" --query registrationState --output tsv
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then
+        check_result PASS "$provider" Registered
+        return
+    fi
+    check_result WARN "$provider" "등록 상태 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == NotRegistered || "$PROBE_TEXT" == Unregistered || "$PROBE_TEXT" == Registering ]]; then
+        if confirm_azure_action "현재 Azure CLI 구독에 $provider 공급자를 등록하고 완료를 기다리시겠습니까? 구독 설정이 변경되며 등록 권한이 필요합니다."; then
+            run_azure_action az provider register --namespace "$provider" --wait || true
+            probe az provider show --namespace "$provider" --query registrationState --output tsv
+        fi
+    fi
+    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then check_result PASS "$provider" Registered
+    else check_result FAIL "$provider" "등록을 확인하지 못했습니다 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 대상 구독과 등록 권한을 확인하세요."; fi
+}
+
+prepare_azure_environment() (
+    local provider
+    export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
+    CHECK_FAILURES=0
+    CHECK_CONTEXT="${WSL_DISTRO_NAME:+WSL $WSL_DISTRO_NAME }Bash"
+    if command -v az >/dev/null 2>&1; then
+        prepare_azure_account
+        prepare_containerapp_extension
+        probe az account show --query state --output tsv
+        if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Enabled ]]; then
+            check_azure_identity
+            for provider in Microsoft.App Microsoft.OperationalInsights Microsoft.Storage Microsoft.ContainerRegistry Microsoft.ServiceBus Microsoft.DBforPostgreSQL; do
+                prepare_azure_provider "$provider"
+            done
+        fi
+    fi
+    if command -v azd >/dev/null 2>&1; then prepare_azd_login; fi
+    (( CHECK_FAILURES == 0 ))
+)
+
 confirm_install() {
     local answer
     printf '%s\n' "$1"
@@ -675,8 +782,13 @@ install_prerequisite_main() {
         printf '설치 대상: %s%s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os" "${WSL_DISTRO_NAME:+ / WSL $WSL_DISTRO_NAME}"
     fi
     install_missing_tools "$os" "$update" || result=1
+    if (( result != 0 )); then
+        printf '%s\n' '[FAIL] 도구 설치/업데이트 실패로 Azure 준비와 후속 점검을 건너뜁니다.'
+        return 1
+    fi
     hash -r
-    printf '%s\n' '설치 후 사전 점검을 다시 실행합니다. 로그인, 확장과 수동 항목은 직접 확인하세요.'
+    prepare_azure_environment || result=1
+    printf '%s\n' '설치와 Azure 준비 후 조회 전용 사전 점검을 실행합니다. 수동 항목은 직접 확인하세요.'
     prerequisite_main --track java --container-engine "$engine" || result=1
     return "$result"
 }

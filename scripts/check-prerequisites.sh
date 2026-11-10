@@ -49,90 +49,11 @@ initialize_node_environment() {
     fi
 }
 
-can_prompt_azure() {
-    [[ -t 0 && -t 1 && -z "${CI:-}" ]]
-}
-
-confirm_azure_action() {
-    local answer
-    can_prompt_azure || return 1
-    read -r -p "$1 [y/N] " answer || return 1
-    [[ "$answer" == y || "$answer" == Y ]]
-}
-
-run_azure_action() {
-    if ! "$@"; then
-        check_result WARN azure-action "명령 실행에 실패했습니다: $*. 위 오류를 확인하세요."
-        return 1
-    fi
-}
-
-prepare_azure_account() {
-    local subscriptions selected id name valid=0
-    can_prompt_azure || return 0
-    probe az account show --query state --output tsv
-    if (( PROBE_CODE != 0 )) || [[ "$PROBE_TEXT" != Enabled ]]; then
-        check_result WARN az-login "활성 구독 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 미로그인 외에 권한 또는 네트워크 문제일 수도 있습니다."
-        if confirm_azure_action '이 셸의 Azure CLI에서 az login을 실행하시겠습니까?'; then
-            run_azure_action az login || return 0
-        fi
-    fi
-    if confirm_azure_action '구독 목록을 조회하고 실습 구독을 직접 선택하시겠습니까?'; then
-        probe az account list --query '[].[id,name]' --output tsv
-        if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
-            check_result WARN azure-subscription "구독 목록 조회 실패: ${PROBE_TEXT:-출력 없음}"
-            return 0
-        fi
-        subscriptions="$PROBE_TEXT"
-        printf '구독 ID / 이름:\n%s\n' "$subscriptions"
-        read -r -p '변경할 구독 ID (Enter: 유지): ' selected || return 0
-        [[ -n "$selected" ]] || return 0
-        while IFS=$'\t' read -r id name; do
-            [[ "$selected" == "$id" ]] && valid=1
-        done <<< "$subscriptions"
-        if (( valid )); then run_azure_action az account set --subscription "$selected" || return 0
-        else check_result WARN azure-subscription '목록에 없는 구독 ID입니다. 구독을 변경하지 않았습니다.'; fi
-    fi
-}
-
-prepare_containerapp_extension() {
-    can_prompt_azure || return 0
-    probe az extension show --name containerapp --query version --output tsv
-    if (( PROBE_CODE != 0 )) || [[ -z "$PROBE_TEXT" ]]; then
-        check_result WARN az-containerapp "확장 조회 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
-        if confirm_azure_action 'containerapp 확장을 설치하거나 업데이트하시겠습니까? 로컬 Azure CLI 확장 파일이 변경됩니다.'; then
-            run_azure_action az extension add --name containerapp --upgrade || return 0
-        fi
-    fi
-}
-
-prepare_azd_login() {
-    can_prompt_azure || return 0
-    probe azd auth login --check-status
-    if (( PROBE_CODE != 0 )); then
-        check_result WARN azd-login "인증 확인 실패 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
-        if confirm_azure_action '이 셸에서 azd auth login을 실행하시겠습니까? Azure CLI 로그인과 별개입니다.'; then
-            run_azure_action azd auth login || return 0
-        fi
-    fi
-}
-
 check_azure_provider() {
     local provider="$1"
     probe az provider show --namespace "$provider" --query registrationState --output tsv
-    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then
-        check_result PASS "$provider" Registered
-        return
-    fi
-    check_result WARN "$provider" "등록 상태 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}"
-    if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == NotRegistered || "$PROBE_TEXT" == Unregistered || "$PROBE_TEXT" == Registering ]]; then
-        if confirm_azure_action "현재 Azure CLI 구독에 $provider 공급자를 등록하고 완료를 기다리시겠습니까? 구독 설정이 변경되며 등록 권한이 필요합니다."; then
-            run_azure_action az provider register --namespace "$provider" --wait || true
-            probe az provider show --namespace "$provider" --query registrationState --output tsv
-        fi
-    fi
     if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Registered ]]; then check_result PASS "$provider" Registered
-    else check_result FAIL "$provider" "등록을 확인하지 못했습니다 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 대상 구독과 등록 권한을 확인하세요."; fi
+    else check_result FAIL "$provider" "등록을 확인하지 못했습니다 (종료 코드 $PROBE_CODE): ${PROBE_TEXT:-출력 없음}. 설치 도우미에서 등록하거나 조회 오류를 해결하세요."; fi
 }
 
 check_azure_identity() {
@@ -269,11 +190,9 @@ check_common() {
         if [[ "${CHECK_CONTEXT:-}" == WSL* && "$path" =~ ^/mnt/[a-zA-Z]/ ]]; then
             check_result WARN az-origin 'WSL에서 Windows 드라이브의 Azure CLI를 사용하고 있습니다. 표시된 로그인과 구독은 이 CLI의 설정입니다. WSL에 설치된 CLI를 사용하려면 command -v az로 선택된 경로를 확인하고, 해당 CLI의 로그인과 구독을 다시 확인하세요.'
         fi
-        prepare_azure_account
-        prepare_containerapp_extension
         probe az extension show --name containerapp --query version --output tsv
         if (( PROBE_CODE == 0 )) && [[ -n "$PROBE_TEXT" ]]; then check_result PASS az-containerapp "확장 버전: $PROBE_TEXT"
-        else check_result FAIL az-containerapp '확장 설치 여부와 조회 오류를 확인하세요.'; fi
+        else check_result FAIL az-containerapp '설치 도우미에서 containerapp 확장을 설치하거나 조회 오류를 해결하세요.'; fi
         probe az account show --query state --output tsv
         if (( PROBE_CODE == 0 )) && [[ "$PROBE_TEXT" == Enabled ]]; then
             check_result PASS az-login '활성 구독이 있습니다.'
@@ -286,7 +205,6 @@ check_common() {
     probe azd version
     if (( PROBE_CODE == 0 )) && minimum_version "$PROBE_TEXT" 1.37.3; then
         check_result PASS azd "$PROBE_TEXT (실행 파일: $(tool_path azd))"
-        prepare_azd_login
         probe azd auth login --check-status
         if (( PROBE_CODE == 0 )); then check_result PASS azd-login 'azd 로그인 상태를 확인했습니다.'
         else check_result FAIL azd-login 'azd auth login을 직접 실행하거나 인증 오류를 해결하세요.'; fi

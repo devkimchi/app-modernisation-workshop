@@ -48,84 +48,11 @@ function Add-Check {
     Write-Host "[$Status] [$context] ${Id}: $Message"
 }
 
-function Test-AzurePrompt {
-    return (Test-WorkshopBootstrapInteractive) -and $Host.Name -eq 'ConsoleHost'
-}
-
-function Confirm-AzureAction {
-    param([string]$Message)
-    if (-not (Test-AzurePrompt)) { return $false }
-    return (Read-Host "$Message [y/N]") -cmatch '^[yY]$'
-}
-
-function Invoke-AzureAction {
-    param([string]$Name, [string[]]$Arguments)
-    $command = Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $command) { Add-Check WARN 'azure-action' "$Name 실행 파일을 찾지 못했습니다."; return $false }
-    & $command.Source @Arguments | Out-Host
-    if ($LASTEXITCODE -ne 0) { Add-Check WARN 'azure-action' "$Name 실행 실패 (종료 코드 $LASTEXITCODE). 위 오류를 확인하세요."; return $false }
-    return $true
-}
-
-function Initialize-AzureAccount {
-    if (-not (Test-AzurePrompt)) { return }
-    $account = Invoke-ToolProbe az @('account', 'show', '--query', 'state', '--output', 'tsv')
-    if ($account.Code -ne 0 -or $account.Text -ne 'Enabled') {
-        Add-Check WARN 'az-login' "활성 구독 확인 실패 (종료 코드 $($account.Code)): $($account.Text). 미로그인 외에 권한 또는 네트워크 문제일 수도 있습니다."
-        if (Confirm-AzureAction '이 셸의 Azure CLI에서 az login을 실행하시겠습니까?') {
-            if (-not (Invoke-AzureAction az @('login'))) { return }
-        }
-    }
-    if (Confirm-AzureAction '구독 목록을 조회하고 실습 구독을 직접 선택하시겠습니까?') {
-        $subscriptions = Invoke-ToolProbe az @('account', 'list', '--query', '[].[id,name]', '--output', 'tsv')
-        if ($subscriptions.Code -ne 0 -or -not $subscriptions.Text) {
-            Add-Check WARN 'azure-subscription' "구독 목록 조회 실패: $($subscriptions.Text)"
-            return
-        }
-        Write-Host "구독 ID / 이름:`n$($subscriptions.Text)"
-        $selected = Read-Host '변경할 구독 ID (Enter: 유지)'
-        if (-not $selected) { return }
-        $ids = @($subscriptions.Text -split '\r?\n' | ForEach-Object { ($_ -split "`t", 2)[0] })
-        if ($selected -in $ids) { $null = Invoke-AzureAction az @('account', 'set', '--subscription', $selected) }
-        else { Add-Check WARN 'azure-subscription' '목록에 없는 구독 ID입니다. 구독을 변경하지 않았습니다.' }
-    }
-}
-
-function Initialize-ContainerappExtension {
-    if (-not (Test-AzurePrompt)) { return }
-    $extension = Invoke-ToolProbe az @('extension', 'show', '--name', 'containerapp', '--query', 'version', '--output', 'tsv')
-    if ($extension.Code -ne 0 -or -not $extension.Text) {
-        Add-Check WARN 'az-containerapp' "확장 조회 실패 (종료 코드 $($extension.Code)): $($extension.Text)"
-        if (Confirm-AzureAction 'containerapp 확장을 설치하거나 업데이트하시겠습니까? 로컬 Azure CLI 확장 파일이 변경됩니다.') {
-            $null = Invoke-AzureAction az @('extension', 'add', '--name', 'containerapp', '--upgrade')
-        }
-    }
-}
-
-function Initialize-AzdLogin {
-    if (-not (Test-AzurePrompt)) { return }
-    $login = Invoke-ToolProbe azd @('auth', 'login', '--check-status')
-    if ($login.Code -ne 0) {
-        Add-Check WARN 'azd-login' "인증 확인 실패 (종료 코드 $($login.Code)): $($login.Text)"
-        if (Confirm-AzureAction '이 셸에서 azd auth login을 실행하시겠습니까? Azure CLI 로그인과 별개입니다.') {
-            $null = Invoke-AzureAction azd @('auth', 'login')
-        }
-    }
-}
-
 function Test-AzureProvider {
     param([string]$Provider)
     $state = Invoke-ToolProbe az @('provider', 'show', '--namespace', $Provider, '--query', 'registrationState', '--output', 'tsv')
-    if ($state.Code -eq 0 -and $state.Text -eq 'Registered') { Add-Check PASS $Provider 'Registered'; return }
-    Add-Check WARN $Provider "등록 상태 (종료 코드 $($state.Code)): $($state.Text)"
-    if ($state.Code -eq 0 -and $state.Text -in @('NotRegistered', 'Unregistered', 'Registering')) {
-        if (Confirm-AzureAction "현재 Azure CLI 구독에 $Provider 공급자를 등록하고 완료를 기다리시겠습니까? 구독 설정이 변경되며 등록 권한이 필요합니다.") {
-            $null = Invoke-AzureAction az @('provider', 'register', '--namespace', $Provider, '--wait')
-            $state = Invoke-ToolProbe az @('provider', 'show', '--namespace', $Provider, '--query', 'registrationState', '--output', 'tsv')
-        }
-    }
     if ($state.Code -eq 0 -and $state.Text -eq 'Registered') { Add-Check PASS $Provider 'Registered' }
-    else { Add-Check FAIL $Provider "등록을 확인하지 못했습니다 (종료 코드 $($state.Code)): $($state.Text). 대상 구독과 등록 권한을 확인하세요." }
+    else { Add-Check FAIL $Provider "등록을 확인하지 못했습니다 (종료 코드 $($state.Code)): $($state.Text). 설치 도우미에서 등록하거나 조회 오류를 해결하세요." }
 }
 
 function Show-AzureIdentity {
@@ -216,11 +143,9 @@ function Test-CommonTools {
     $az = Invoke-ToolProbe az @('version', '--output', 'json')
     if ($az.Code -eq 0) {
         Add-Check PASS az 'Azure CLI를 실행할 수 있습니다.'
-        Initialize-AzureAccount
-        Initialize-ContainerappExtension
         $extension = Invoke-ToolProbe az @('extension', 'show', '--name', 'containerapp', '--query', 'version', '--output', 'tsv')
         if ($extension.Code -eq 0 -and $extension.Text) { Add-Check PASS 'az-containerapp' "확장 버전: $($extension.Text)" }
-        else { Add-Check FAIL 'az-containerapp' 'containerapp 확장을 수동으로 설치하거나 조회 오류를 해결하세요.' }
+        else { Add-Check FAIL 'az-containerapp' '설치 도우미에서 containerapp 확장을 설치하거나 조회 오류를 해결하세요.' }
         $account = Invoke-ToolProbe az @('account', 'show', '--query', 'state', '--output', 'tsv')
         if ($account.Code -eq 0 -and $account.Text -eq 'Enabled') {
             Add-Check PASS 'az-login' '선택된 활성 구독이 있습니다.'
@@ -237,7 +162,6 @@ function Test-CommonTools {
     $azd = Invoke-ToolProbe azd @('version')
     if ($azd.Code -eq 0 -and (Test-MinimumVersion $azd.Text '1.37.3')) {
         Add-Check PASS azd $azd.Text
-        Initialize-AzdLogin
         $login = Invoke-ToolProbe azd @('auth', 'login', '--check-status')
         if ($login.Code -eq 0) { Add-Check PASS 'azd-login' 'azd 로그인 상태를 확인했습니다.' }
         else { Add-Check FAIL 'azd-login' 'azd auth login을 직접 실행하거나 인증 오류를 해결하세요. az 로그인과는 별개입니다.' }

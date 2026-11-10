@@ -41,7 +41,7 @@ pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine dock
 | `MANUAL` | 직접 확인. Copilot 플러그인은 3단계에서 설치 |
 | `INFO` | 참고 정보 |
 
-대화형 점검에서는 별도 동의를 받아 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치 및 공급자 등록을 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요. CI와 비대화형 환경에서는 검사만 합니다.
+점검은 상태만 조회합니다. 설치 도우미에서는 별도 동의를 받아 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치 및 공급자 등록을 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요.
 
 ### 누락된 CLI 설치
 

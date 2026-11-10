@@ -5,7 +5,7 @@ $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParamete
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot '..\scripts\check-prerequisites.ps1')
+. (Join-Path $PSScriptRoot '..\scripts\install-prerequisites.ps1')
 $script:CheckResults = [Collections.Generic.List[object]]::new()
 $script:Calls = [Collections.Generic.List[string]]::new()
 $script:Approved = $false
@@ -60,9 +60,10 @@ function Test-AzurePrompt { return $false }
 Initialize-AzureAccount
 Initialize-ContainerappExtension
 Initialize-AzdLogin
+Initialize-AzureProvider Microsoft.App
 Assert-Action ($script:Calls.Count -eq 0)
 Remove-Item Function:\Read-Host
-. (Join-Path $PSScriptRoot '..\scripts\check-prerequisites.ps1')
+. (Join-Path $PSScriptRoot '..\scripts\install-prerequisites.ps1')
 function Test-AzurePrompt { return $true }
 function Confirm-AzureAction { return $script:Approved }
 $script:Registered = $false
@@ -81,25 +82,79 @@ function Invoke-AzureAction {
     $script:Registered = $true
     return $true
 }
-Test-AzureProvider Microsoft.App
+Initialize-AzureProvider Microsoft.App
 Assert-Action (($script:Calls -join ';') -eq 'az provider register --namespace Microsoft.App --wait')
 $script:Calls.Clear()
-Test-AzureProvider Microsoft.App
+Initialize-AzureProvider Microsoft.App
 Assert-Action ($script:Calls.Count -eq 0)
 $script:Registered = $false
 $script:QueryFails = $true
-Test-AzureProvider Microsoft.App
+Initialize-AzureProvider Microsoft.App
 Assert-Action ($script:Calls.Count -eq 0)
 Assert-Action ($script:CheckResults[-1].Status -eq 'FAIL')
 $script:QueryFails = $false
 $script:Approved = $false
-Test-AzureProvider Microsoft.App
+Initialize-AzureProvider Microsoft.App
 Assert-Action ($script:Calls.Count -eq 0)
-. (Join-Path $PSScriptRoot '..\scripts\check-prerequisites.ps1')
+. (Join-Path $PSScriptRoot '..\scripts\install-prerequisites.ps1')
 $savedCI = $env:CI
 try {
     $env:CI = '1'
     Assert-Action (-not (Confirm-AzureAction 'must not prompt'))
 }
 finally { $env:CI = $savedCI }
+$script:Calls.Clear()
+function Initialize-AzureAccount { $script:Calls.Add('account') }
+function Initialize-ContainerappExtension { $script:Calls.Add('extension') }
+function Initialize-AzdLogin { $script:Calls.Add('azd') }
+function Show-AzureIdentity { $script:Calls.Add('identity') }
+function Initialize-AzureProvider { param($Provider); $script:Calls.Add($Provider) }
+function Invoke-ToolProbe {
+    Assert-Action ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -eq 'no')
+    return [pscustomobject]@{ Code = 0; Text = 'Enabled' }
+}
+$savedDynamic = $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL
+try {
+    $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = 'yes_prompt'
+    Assert-Action (Initialize-AzureEnvironment)
+    Assert-Action ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -eq 'yes_prompt')
+    Assert-Action (($script:Calls -join ';') -eq 'account;extension;identity;Microsoft.App;Microsoft.OperationalInsights;Microsoft.Storage;Microsoft.ContainerRegistry;Microsoft.ServiceBus;Microsoft.Sql;azd')
+    $script:Calls.Clear()
+    function Invoke-ToolProbe { return [pscustomobject]@{ Code = 1; Text = 'auth error' } }
+    Assert-Action (Initialize-AzureEnvironment)
+    Assert-Action ($script:Calls.Count -eq 0)
+    function Invoke-ToolProbe { return [pscustomobject]@{ Code = 0; Text = 'Enabled' } }
+    function Initialize-AzureAccount { Add-Check FAIL 'azure-action' 'fixture failure' }
+    Assert-Action (-not (Initialize-AzureEnvironment))
+}
+finally { $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = $savedDynamic }
+function Confirm-AzureAction { throw 'Read-only checks must not prompt' }
+function Initialize-AzureAccount { throw 'Read-only checks must not prepare accounts' }
+function Initialize-ContainerappExtension { throw 'Read-only checks must not install extensions' }
+function Initialize-AzdLogin { throw 'Read-only checks must not log in' }
+function Invoke-AzureAction { throw 'Read-only checks must not mutate Azure' }
+function Test-ContainerRuntime { }
+function Show-AzureIdentity { }
+function Invoke-ToolProbe {
+    param([string]$Name, [string[]]$Arguments)
+    $code = 0; $text = ''
+    switch -Wildcard ("$Name $($Arguments -join ' ')") {
+        'git --version' { $text = 'git version 2.0.0' }
+        'node --version' { $text = 'v22.0.0' }
+        'az version --output json' { $text = '{}' }
+        'az extension show *' { $code = 1 }
+        'az account show --query state --output tsv' { $text = 'Enabled' }
+        'az provider show *' { $text = 'NotRegistered' }
+        'azd version' { $text = 'azd version 1.37.3' }
+        'azd auth login --check-status' { $code = 1 }
+        default { throw "Unexpected read-only probe: $Name $Arguments" }
+    }
+    return [pscustomobject]@{ Code = $code; Text = $text }
+}
+$script:CheckResults.Clear()
+Test-CommonTools docker dotnet
+Assert-Action (@($script:CheckResults | Where-Object Status -eq FAIL).Count -eq 8)
+function Invoke-ToolProbe { return [pscustomobject]@{ Code = 0; Text = 'Registered' } }
+Test-AzureProvider Microsoft.App
+Assert-Action ($script:CheckResults[-1].Status -eq 'PASS')
 Write-Host 'PASS: Azure action approval, selection, failure and noninteractive cases'

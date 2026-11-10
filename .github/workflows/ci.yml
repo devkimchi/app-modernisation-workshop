@@ -30,6 +30,7 @@ jobs:
             echo "::notice::Bash regression tests are not present yet; skipping."
           fi
           bash tests/install-prerequisites.tests.sh
+          bash tests/azure-actions.tests.sh
 
   powershell-tests:
     name: PowerShell regression tests

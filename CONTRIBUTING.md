@@ -46,6 +46,8 @@ Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fa
 
 Linux azd script-install fixtures cover fresh installs, explicit adoption of existing default-layout installs, separate update consent, package-ownership refusal, local path/version/SHA-256 records, changed files, and installer/runtime failures. Official-script installs and updates use the same installer; APT-owned installs retain the verified Microsoft APT route. Fixtures never run the real installer or change system paths.
 
+The `azure-actions` suites verify that login, subscription selection, extension installation and provider registration require installer consent, and that prerequisite checks only query state even in interactive sessions. Run `bash tests/azure-actions.tests.sh` alongside the Bash suites; the PowerShell command is listed above. Download prechecks use the same query-only checks.
+
 These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/8-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/8-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
 
 ## Branches and commits

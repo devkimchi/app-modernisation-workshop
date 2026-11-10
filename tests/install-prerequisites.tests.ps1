@@ -52,6 +52,30 @@ if ($IsWindows) {
     function winget { $global:LASTEXITCODE=1 }
     Assert-True (-not (Install-WindowsTools dotnet)) 'installer failure propagates'
     foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath','Install-WorkshopNode')) { Remove-Item "Function:\$name" }
+    $Update = $false
+    $Track = 'dotnet'
+    $script:PreparationSuccess = $true
+    $script:ToolsSuccess = $true
+    $script:MainCalls = [Collections.Generic.List[string]]::new()
+    function Install-WindowsTools { $script:MainCalls.Add('install'); return $script:ToolsSuccess }
+    function Initialize-AzureEnvironment { $script:MainCalls.Add('prepare'); return $script:PreparationSuccess }
+    function Invoke-PrerequisiteMain { $script:MainCalls.Add('check'); return 0 }
+    function Invoke-ToolProbe { return [pscustomobject]@{ Code = 0; Text = 'v22.0.0' } }
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) '.NET preparation and final check succeed'
+    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,check') '.NET preparation occurs only after installation and before final check'
+    $script:MainCalls.Clear()
+    $script:PreparationSuccess = $false
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'Azure preparation failure survives successful final check'
+    $script:MainCalls.Clear()
+    $script:ToolsSuccess = $false
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'tool failure prevents preparation'
+    Assert-True (($script:MainCalls -join ',') -eq 'install') 'failed tool setup skips Azure actions and probes'
+    $script:MainCalls.Clear()
+    $script:ToolsSuccess = $true
+    $Track = 'java'
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'Java Windows host setup succeeds without Azure preparation'
+    Assert-True (($script:MainCalls -join ',') -eq 'install') 'Java Azure preparation remains in WSL'
+    foreach ($name in @('Install-WindowsTools','Initialize-AzureEnvironment','Invoke-PrerequisiteMain','Invoke-ToolProbe')) { Remove-Item "Function:\$name" }
     . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
 }
 

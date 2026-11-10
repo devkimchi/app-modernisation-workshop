@@ -100,10 +100,12 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 
 1. Copilot app에서 GitHub 계정으로 로그인합니다.
 2. **Customize**의 마켓플레이스 추가 기능(앱 버전에 따라 Settings > Plugins)에서 `microsoft/github-copilot-modernization`을 추가합니다.
-3. 출처를 검토하고 허용한 뒤 `github-copilot-modernization` 플러그인을 설치합니다. Agent picker에서 `modernize` 또는 `github-copilot-modernization:modernize`를 확인합니다.
-4. [공식 Upgrade 설치 안내](https://github.com/microsoft/upgrade-agent-plugins#github-copilot-app)에 따라 `microsoft/upgrade-agent-plugins` 마켓플레이스를 추가하고 `upgrade-agent`를 설치합니다. Agent picker에서 **Upgrade**를 확인합니다.
+3. 출처를 검토하고 허용한 뒤 `github-copilot-modernization` 플러그인을 설치합니다.
+4. Agent picker에 `modernize` 또는 `github-copilot-modernization:modernize`가 보이는지 확인합니다. 내부 coordinator/worker를 직접 선택하지 않습니다.
+5. [공식 Upgrade 설치 안내](https://github.com/microsoft/upgrade-agent-plugins#github-copilot-app)에 따라 `microsoft/upgrade-agent-plugins` 마켓플레이스를 추가하고 `upgrade-agent`를 설치합니다.
+6. Agent picker에 **Upgrade**가 보이는지 확인합니다.
 
-업그레이드는 **Upgrade**, Azure 이전은 **modernize**를 사용합니다. 내부 coordinator/worker는 직접 선택하지 않습니다. 외부 안내가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다.
+업그레이드는 **Upgrade**, Azure 이전은 **modernize**를 사용합니다. 외부 안내가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다.
 
 목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
 

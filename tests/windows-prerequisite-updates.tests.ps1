@@ -35,6 +35,10 @@ try {
         $script:InstallCode = 0; $script:UseCode = 0; $script:InstalledVersion = '22.9.0'
         $script:Activate = $true; $script:Refreshes = 0; $script:FailLookup = $false
         $script:ConcurrentVersion = $null
+        $script:NvmVersion = '1.2.2'; $script:NvmMode = 'shim'
+        $script:NvmAutoInstall = $false; $script:NvmEnabled = $true; $script:NvmDefault = $true
+        $script:NvmList = $null
+        $script:NodeProbeCode = 0
         $script:WslVersion = [version]'2.6.1'; $script:WslAfter = [version]'2.6.2'
         $script:WslCode = 0; $script:WslGood = $true
         $script:Managed = [pscustomobject]@{ Path = 'C:\PowerShell\7\pwsh.exe'; Version = [version]'7.5.0' }
@@ -79,15 +83,24 @@ try {
         $operation = "$Name $($Arguments -join ' ')"
         $script:Calls.Add($operation)
         $code = 0; $text = ''
-        if ($Name -eq 'node') { $text = "v$script:Current" }
+        if ($Name -eq 'node') { $text = "v$script:Current"; $code = $script:NodeProbeCode }
         elseif ($Name -like '*\v*\node.exe') { $text = "v$script:InstalledVersion" }
+        elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'version') { $text = $script:NvmVersion }
+        elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'config') {
+            $text = @{ root='C:\fixture-data\installs'; mode=$script:NvmMode; auto_install=$script:NvmAutoInstall; enabled=$script:NvmEnabled } | ConvertTo-Json
+        }
+        elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'list') {
+            $text = if ($null -ne $script:NvmList) { $script:NvmList } elseif ($script:NvmDefault) {
+                '[{"version":"22.1.0","installed":true,"default":true}]'
+            } else { '[]' }
+        }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'install') {
             $code = $script:InstallCode
             if ($script:ConcurrentVersion) { $script:Current = $script:ConcurrentVersion }
         }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'use') {
             $code = $script:UseCode
-            if ($script:Activate -and $code -eq 0) { $script:HasNode = $true; $script:Current = $script:InstalledVersion }
+            if ($script:Activate -and $code -eq 0) { $script:HasNode = $true; $script:Current = $script:InstalledVersion; $script:NodeProbeCode = 0 }
         }
         elseif ($Name -eq 'fixture-wsl') { $code = $script:WslCode; $script:WslVersion = $script:WslAfter }
         elseif ($Name -eq 'winget') { $text = $script:Show; $code = $script:ShowCode }
@@ -104,72 +117,72 @@ try {
     }
 
     Reset-Fixture
-    Assert-True (Install-WorkshopJavaNode) 'default preserves managed current Node'
-    Assert-True ($script:Calls.Count -eq 1 -and $script:Prompts.Count -eq 0) 'default no resolution or installation'
+    Assert-True (Install-WorkshopNode) 'default preserves managed current Node'
+    Assert-True ($script:Calls.Count -eq 2 -and $script:Prompts.Count -eq 0) 'default only verifies nvm and current Node'
     Reset-Fixture; $script:Approvals.Enqueue($false)
-    Assert-True (Install-WorkshopJavaNode -Update) 'decline update preserves supported Node'
-    Assert-True ($script:Calls.Count -eq 1) 'decline never contacts release service'
+    Assert-True (Install-WorkshopNode -Update) 'decline update preserves supported Node'
+    Assert-True ($script:Calls.Count -eq 2) 'decline never contacts release service'
     Reset-Fixture
-    Assert-True (Install-WorkshopJavaNode -Update) 'installs and activates latest same major'
+    Assert-True (Install-WorkshopNode -Update) 'installs and activates latest same major'
     Assert-True ($script:Calls -contains 'release 22' -and $script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') 'exact nvm commands'
     Assert-True ($script:Prompts.Count -eq 2 -and $script:Refreshes -eq 2) 'separate install activation consent and PATH refresh'
     Assert-True (@($script:Calls | Where-Object { $_ -match 'uninstall|delete|OpenJS|azd|AzureCLI' }).Count -eq 0) 'no removals or unrelated tools'
-    Assert-True (Install-WorkshopJavaNode -Update) 'repeat latest succeeds'
+    Assert-True (Install-WorkshopNode -Update) 'repeat latest succeeds'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'nvm install 22.9.0' }).Count -eq 1) 'repeat no reinstall'
     Reset-Fixture; $script:Current = '24.1.0'; $script:Latest = [version]'24.9.0'; $script:InstalledVersion = '24.9.0'
-    Assert-True (Install-WorkshopJavaNode -Update) 'newer major updated in place'
+    Assert-True (Install-WorkshopNode -Update) 'newer major updated in place'
     Assert-True ($script:Calls -contains 'release 24' -and $script:Calls -notcontains 'release 22') 'never select 22 for active 24'
     Reset-Fixture; $script:Current = '22.10.0'
-    Assert-True (Install-WorkshopJavaNode -Update) 'ahead of catalog retained'
+    Assert-True (Install-WorkshopNode -Update) 'ahead of catalog retained'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') 'no downgrade'
     Reset-Fixture; $script:Current = '20.19.0'
-    Assert-True (Install-WorkshopJavaNode -Update) 'unsupported major moves to 22'
+    Assert-True (Install-WorkshopNode -Update) 'unsupported major moves to 22'
     Reset-Fixture; $script:Current = '20.19.0'
-    Assert-True (-not (Install-WorkshopJavaNode)) 'default does not silently update old managed Node'
+    Assert-True (-not (Install-WorkshopNode)) 'default does not silently update old managed Node'
     Reset-Fixture; $script:HasNode = $false
-    Assert-True (Install-WorkshopJavaNode) 'missing Node installs 22 through existing nvm'
+    Assert-True (Install-WorkshopNode) 'missing Node installs 22 through existing nvm'
     Reset-Fixture; $script:ExistingRelease = $true
-    Assert-True (Install-WorkshopJavaNode -Update) 'existing inactive release reused'
+    Assert-True (Install-WorkshopNode -Update) 'existing inactive release reused'
     Assert-True ($script:Calls -notcontains 'nvm install 22.9.0') 'no reinstall installed release'
     Reset-Fixture; $script:Approvals.Enqueue($true); $script:Approvals.Enqueue($false)
-    Assert-True (Install-WorkshopJavaNode -Update) 'declined activation preserves old supported active version'
+    Assert-True (Install-WorkshopNode -Update) 'declined activation preserves old supported active version'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0' -and $script:Current -eq '22.1.0') 'activation separately optional'
     Reset-Fixture; $script:InstallCode = 1
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'nvm install failure'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'nvm install failure'
     Reset-Fixture; $script:UseCode = 1
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'nvm use failure'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'nvm use failure'
     Reset-Fixture; $script:InstalledVersion = '22.8.0'
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'wrong installed version fails'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'wrong installed version fails'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') 'failed verification never activates'
     Reset-Fixture; $script:Activate = $false
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'exit zero with unchanged active version fails'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'exit zero with unchanged active version fails'
     Reset-Fixture; $script:ConcurrentVersion = '24.1.0'
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'concurrent active major change remains untouched'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'concurrent active major change remains untouched'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0' -and $script:Current -eq '24.1.0') 'concurrent change never downgraded'
     Reset-Fixture; $script:Current = 'invalid'
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'invalid active version fails'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'invalid active version fails'
     Reset-Fixture; $script:FailLookup = $true
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'release lookup failure'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'release lookup failure'
     Reset-Fixture; $script:Owned = $false
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'unknown ownership manual'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'unknown ownership manual'
     Assert-True ($script:Prompts.Count -eq 0) 'unknown ownership never prompts takeover'
     Reset-Fixture; $script:HasNvm = $false
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'standalone Node blocks nvm installer'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'standalone Node blocks nvm installer'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'winget *' }).Count -eq 0) 'no standalone takeover'
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false
-    Assert-True (-not (Install-WorkshopJavaNode)) 'unknown nvm environment blocks installer'
+    Assert-True (-not (Install-WorkshopNode)) 'unknown nvm environment blocks installer'
     $env:NVM_HOME = ''; $env:NVM_SYMLINK = ''
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false
-    Assert-True (Install-WorkshopJavaNode) 'fresh nvm manager and Node install'
+    Assert-True (Install-WorkshopNode) 'fresh nvm manager and Node install'
     Assert-True ($script:Calls -contains 'winget install --id AuthorSoftware.NVMWindows --exact --source winget') 'verified nvm winget identifier'
     Assert-True ($script:Prompts.Count -eq 3) 'manager install Node install activation separately consented'
     $env:NVM_HOME = ''; $env:NVM_SYMLINK = ''
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false; $script:Approvals.Enqueue($false)
-    Assert-True (-not (Install-WorkshopJavaNode)) 'decline manager install'
+    Assert-True (-not (Install-WorkshopNode)) 'decline manager install'
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false; $script:InstallCode = 1
-    Assert-True (-not (Install-WorkshopJavaNode)) 'manager failure propagates'
+    Assert-True (-not (Install-WorkshopNode)) 'manager failure propagates'
     Reset-Fixture; $script:Interactive = $false
-    Assert-True (-not (Install-WorkshopJavaNode -Update)) 'noninteractive Node rejected'
+    Assert-True (-not (Install-WorkshopNode -Update)) 'noninteractive Node rejected'
     Assert-True ($script:Calls.Count -eq 0 -and $script:Prompts.Count -eq 0) 'noninteractive no activity'
 
     Reset-Fixture
@@ -207,10 +220,41 @@ try {
     Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'noninteractive host rejected'
     Assert-True ($script:Calls.Count -eq 0 -and $script:Prompts.Count -eq 0) 'noninteractive no host prompts'
 
+    $env:NVM_HOME = 'C:\fixture-nvm'; $env:NVM_SYMLINK = 'C:\fixture-node'
+    Reset-Fixture; $Update = $true
+    Assert-True (Install-WindowsTools dotnet) '.NET installs same-major Node through shared nvm implementation'
+    Assert-True ($script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') '.NET installs and activates with nvm'
+    Assert-True ($script:Calls -contains 'winget install --id Microsoft.AzureCLI --exact --source winget' -and
+        $script:Calls -contains 'winget install --id Microsoft.Azd --exact --source winget') '.NET retains missing Azure CLI installers'
+    Reset-Fixture; $script:Approvals.Enqueue($true); $script:Approvals.Enqueue($false)
+    Assert-True (Install-WindowsTools dotnet) '.NET declined activation keeps supported current Node'
+    Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') '.NET activation decline never switches common link'
+    foreach ($mode in @('shim', 'link')) {
+        Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmMode = $mode
+        Assert-True (Install-WorkshopNode -Update) "v2 $mode update succeeds"
+        Assert-True ($script:Calls -contains 'C:\fixture-data\installs\v22.9.0\node.exe --version') "v2 $mode uses configured install root"
+        Assert-True ($script:Calls -contains 'nvm use 22.9.0 --no-install') "v2 $mode activation never implicitly installs"
+    }
+    Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmDefault = $false; $script:NodeProbeCode = 1
+    Assert-True (Install-WorkshopNode) 'v2 fresh shim without selected runtime can install'
+    Assert-True ($script:Calls -contains 'nvm install 22.9.0') 'v2 empty installed list selects 22'
+    Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmDefault = $false
+    $script:Current = '24.1.0'; $script:Latest = [version]'24.9.0'; $script:InstalledVersion = '24.9.0'
+    Assert-True (Install-WorkshopNode -Update) 'v2 detected runtime without default still preserves active major'
+    Assert-True ($script:Calls -contains 'release 24') 'v2 detected runtime never downgraded to 22'
+    Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmAutoInstall = $true
+    Assert-True (-not (Install-WorkshopNode -Update)) 'v2 auto-install requires manual preparation'
+    Assert-True ($script:Calls -notcontains 'node --version' -and
+        @($script:Calls | Where-Object { $_ -like 'nvm install *' }).Count -eq 0) 'v2 auto-install cannot bypass per-tool consent through shim probes'
+    foreach ($badList in @('{}', '[{}]', '[{"version":"bad","installed":true,"default":true}]', '[invalid]')) {
+        Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmList = $badList
+        Assert-True (-not (Install-WorkshopNode -Update)) 'v2 malformed installed list rejected'
+    }
     function Update-WorkshopWindowsHost { $script:HostRuns++; return $script:HostCode }
-    function Install-WindowsTools { param($SelectedTrack); $script:ToolRuns++; return $true }
-    function Invoke-PrerequisiteMain { return 0 }
+    function Install-WindowsTools { param($SelectedTrack); $script:ToolRuns++; return $script:ToolSuccess }
+    function Invoke-PrerequisiteMain { $script:PrerequisiteRuns++; return 0 }
     Reset-Fixture; $script:HostRuns = 0; $script:ToolRuns = 0; $script:HostCode = 0
+    $script:ToolSuccess = $true; $script:PrerequisiteRuns = 0
     $Update = $true; $Track = 'java'
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'main update then Java verification'
     Assert-True ($script:HostRuns -eq 1 -and $script:ToolRuns -eq 1) 'host update runs once only'
@@ -222,6 +266,10 @@ try {
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) '.NET host updates keep existing CLI path'
     $Update = $false; $runs = $script:HostRuns
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0 -and $script:HostRuns -eq $runs) 'default never calls host updater'
+    $script:ToolSuccess = $false; $Track = 'java'; $script:Calls.Clear()
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:Calls.Count -eq 0) 'Java preparation failure never invokes a potentially auto-installing Node shim'
+    $Track = 'dotnet'; $prerequisiteRuns = $script:PrerequisiteRuns
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:PrerequisiteRuns -eq $prerequisiteRuns) '.NET preparation failure never reenters potentially auto-installing prerequisite probes'
     $env:PATH = 'C:\fixture-first'
     & $realUpdatePath
     Assert-True (($env:PATH -split ';')[0] -eq 'C:\fixture-first') 'real PATH refresh preserves existing priority'
@@ -246,7 +294,11 @@ try {
     function Invoke-ToolProbe {
         param($Name, $Arguments)
         $text = switch ($Name) {
-            nvm { '1.2.2' }
+            nvm {
+                if ($Arguments[0] -eq 'config') {
+                    @{ root='C:\fixture-data\installs'; mode=$script:NvmMode; auto_install=$script:NvmAutoInstall; enabled=$true } | ConvertTo-Json
+                } else { $script:NvmVersion }
+            }
             node { 'v22.1.0' }
             fixture-wsl { $script:WslText }
             winget { $script:WingetText }
@@ -254,7 +306,7 @@ try {
         }
         return [pscustomobject]@{ Code=$script:ProbeCode; Text=$text }
     }
-    $script:ProbeCode = 0
+    $script:ProbeCode = 0; $script:NvmVersion = '1.2.2'
     Assert-True (Test-WorkshopNvmOwnership 'C:\fixture-node\node.exe') 'real ownership helper verified'
     $script:LinkType = 'Junction'
     Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-node\node.exe')) 'junction collision rejected'
@@ -271,6 +323,21 @@ try {
     $script:ProbeCode = 0; $script:NvmSource = 'C:\foreign\nvm.exe'
     Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-node\node.exe')) 'foreign nvm executable rejected'
     $script:NvmSource = 'C:\fixture-nvm\nvm.exe'
+    $script:NvmVersion = '2.0.1'; $script:NvmMode = 'shim'; $script:NvmAutoInstall = $false
+    $script:LinkType = 'Junction'; $script:Target = 'C:\fixture-data\.shim'
+    Assert-True (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe') 'v2 real shim ownership accepts managed junction'
+    $script:LinkType = $null
+    Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 ordinary runtime directory collision rejected'
+    $script:LinkType = 'Junction'; $script:Target = 'C:\foreign\.shim'
+    Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 foreign shim target rejected'
+    $script:Target = 'C:\fixture-data\.shim'
+    Assert-True (-not (Test-WorkshopNvmOwnership 'C:\standalone\node.exe')) 'v2 standalone PATH Node rejected'
+    $script:NvmMode = 'link'; $script:Target = 'C:\fixture-data\installs\v22.1.0'
+    Assert-True (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe') 'v2 link mode accepts managed version junction'
+    $script:Target = 'C:\foreign\v22.1.0'
+    Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 foreign linked version rejected'
+    $script:Target = 'C:\fixture-data\installs\v22.1.0'; $script:NvmAutoInstall = $true
+    Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 ownership gate refuses automatic installation'
     $script:ProbeCode = 0; $script:WslText = "WSL 버전: 2.6.1.0`n커널 버전: 6.6.0"
     Assert-True ((Get-WorkshopWslVersion) -eq [version]'2.6.1.0') 'localized WSL first line version'
     $script:WslText = ($script:WslText.ToCharArray() -join "`0")

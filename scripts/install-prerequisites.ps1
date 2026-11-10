@@ -48,14 +48,14 @@ function Update-ProcessPath {
 function Install-WindowsTools {
     param([string]$SelectedTrack)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
-    if ($SelectedTrack -eq 'java') { return (Install-WorkshopJavaNode -Update:$Update) }
+    $nodeInstalled = Install-WorkshopNode -Update:$Update
+    if ($SelectedTrack -eq 'java') { return $nodeInstalled }
     $tools =
         @(
-            @{ Command='node'; Package='OpenJS.NodeJS.LTS'; Name='Node.js LTS' },
             @{ Command='az'; Package='Microsoft.AzureCLI'; Name='Azure CLI' },
             @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' }
         )
-    $failed = $false
+    $failed = -not $nodeInstalled
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($existing) {
@@ -99,6 +99,10 @@ function Invoke-InstallPrerequisiteMain {
     Write-Host '설치 대상: Windows 호스트. -Update가 없으면 기존 도구는 업데이트하지 않습니다.'
     $installed = Install-WindowsTools $Track
     if ($hostResult -ne 0) { $installed = $false }
+    if (-not $installed) {
+        Write-Host '[FAIL] 설치 또는 업데이트를 완료하지 못했습니다. 위 안내를 해결한 뒤 다시 실행하세요. 추가 도구 실행은 건너뜁니다.'
+        return 1
+    }
     if ($Track -eq 'java') {
         $node = Invoke-ToolProbe node @('--version')
         if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) {

@@ -111,71 +111,92 @@ install_node_with_nvm() {
     if [[ ! -s "$NVM_DIR/nvm.sh" ]] || ! source "$NVM_DIR/nvm.sh" --no-use || [[ $(type -t nvm) != function ]]; then
         printf '%s\n' '[FAIL] nvm 초기화에 실패했습니다.' >&2; return 1
     fi
-    if [[ $(nvm version 22) == v22.* ]]; then
-        if ! nvm use 22; then printf '%s\n' '[FAIL] 기존 Node.js 22를 활성화하지 못했습니다.' >&2; return 1; fi
-    elif confirm_install 'Node.js 22: nvm으로 현재 사용자에게 설치합니다. 네트워크가 필요하며 시스템 Node.js는 변경하지 않습니다.'; then
-        if ! nvm install 22 || ! nvm use 22; then
-            printf '%s\n' '[FAIL] nvm을 통한 Node.js 22 설치에 실패했습니다.' >&2; return 1
-        fi
-    else
-        return 0
-    fi
-    if [[ $(node --version) != v22.* ]] || ! npm --version; then
-        printf '%s\n' '[FAIL] 설치된 Node.js 22 또는 npm 실행에 실패했습니다.' >&2; return 1
-    fi
-    printf '[INFO] 현재 터미널에도 적용하려면: export NVM_DIR=%q; source "$NVM_DIR/nvm.sh"; nvm use 22\n' "$NVM_DIR"
-    if [[ "${1:-0}" == 1 ]]; then update_node_with_nvm || return 1; fi
+    update_node_with_nvm "${1:-0}"
 }
 
-update_node_with_nvm() (
-    local current latest nvm_dir installed active resolved_dir
-    current=$(node --version) || { printf '%s\n' '[FAIL] Node.js 버전 확인에 실패했습니다.' >&2; return 1; }
-    if [[ "$current" =~ ^v([0-9]+)\. ]] && (( BASH_REMATCH[1] > 22 )); then
-        printf '[INFO] Node.js %s: 더 높은 major를 22로 낮추지 않습니다.\n' "$current"
-        return 0
+update_node_with_nvm() {
+    local update="${1:-1}" current='' latest nvm_dir installed active resolved_dir major=22 node_path live_path
+    node_path=$(tool_path node)
+    if [[ -n "${WSL_DISTRO_NAME:-}" && "$node_path" =~ ^/mnt/[a-zA-Z]/ ]]; then node_path=''; fi
+    if [[ -n "$node_path" ]]; then
+        current=$(node --version) || { printf '%s\n' '[FAIL] Node.js 버전 확인에 실패했습니다.' >&2; return 1; }
+        if [[ ! "$current" =~ ^v([0-9]+)\.[0-9]+\.[0-9]+$ ]]; then
+            printf '%s\n' '[FAIL] Node.js 정식 버전 확인에 실패했습니다.' >&2; return 1
+        fi
+        if (( BASH_REMATCH[1] >= 22 )); then major="${BASH_REMATCH[1]}"; fi
     fi
     nvm_dir=$(nvm_directory)
     if [[ ! -s "$nvm_dir/nvm.sh" ]]; then
         printf '%s\n' '[MANUAL] 기존 Node.js는 nvm 관리 설치로 확인되지 않았습니다. 기존 설치 관리자로 업데이트하세요.'
-        return 0
+        return 1
     fi
     export NVM_DIR="$nvm_dir"
     if ! source "$NVM_DIR/nvm.sh" --no-use || [[ $(type -t nvm) != function ]]; then
         printf '%s\n' '[FAIL] nvm 초기화에 실패했습니다.' >&2; return 1
     fi
     # nvm이 있어도 현재 실행 파일이 다른 관리자 소유라면 덮어쓰지 않는다.
-    installed=$(nvm which current) || return 1
     resolved_dir=$(cd -P -- "$NVM_DIR" && pwd) || return 1
-    active=$(canonical_tool_path "$(tool_path node)") || return 1
-    installed=$(canonical_tool_path "$installed") || return 1
-    if [[ "$active" != "$installed" || "$installed" != "$resolved_dir"/versions/node/*/bin/node ]]; then
-        printf '%s\n' '[MANUAL] 현재 Node.js의 nvm 출처를 확인하지 못했습니다. 기존 설치 관리자로 업데이트하세요.'
-        return 0
+    if [[ -n "$current" ]]; then
+        installed=$(nvm which current) || return 1
+        active=$(canonical_tool_path "$node_path") || return 1
+        installed=$(canonical_tool_path "$installed") || return 1
+        if [[ "$active" != "$installed" || "$installed" != "$resolved_dir/versions/node/$current/bin/node" ]]; then
+            printf '%s\n' '[MANUAL] 현재 Node.js의 nvm 출처를 확인하지 못했습니다. 기존 설치 관리자로 업데이트하세요.'
+            return 1
+        fi
+        if (( ! update )); then
+            printf '[INFO] Node.js %s 유지 (--update 없음).\n' "$current"
+            version_not_older "${current#v}" 22.0.0
+            return $?
+        fi
     fi
-    latest=$(nvm version-remote 22) || { printf '%s\n' '[FAIL] 최신 Node.js 22 조회에 실패했습니다.' >&2; return 1; }
-    if [[ ! "$latest" =~ ^v22\.[0-9]+\.[0-9]+$ ]]; then
-        printf '%s\n' '[FAIL] 정식 Node.js 22 식별자를 확인하지 못했습니다.' >&2; return 1
+    if ! confirm_install "Node.js $major: nvm으로 최신 정식 버전을 조회하고 필요하면 추가 설치합니다. 기존 버전은 보존합니다."; then
+        [[ -n "$current" ]] && version_not_older "${current#v}" 22.0.0
+        return $?
     fi
-    if [[ "$current" == "$latest" ]]; then
+    latest=$(nvm version-remote "$major") || { printf '[FAIL] 최신 Node.js %s 조회에 실패했습니다.\n' "$major" >&2; return 1; }
+    if [[ ! "$latest" =~ ^v$major\.[0-9]+\.[0-9]+$ ]]; then
+        printf '[FAIL] 정식 Node.js %s 식별자를 확인하지 못했습니다.\n' "$major" >&2; return 1
+    fi
+    if [[ -n "$current" ]] && version_not_older "${current#v}" "${latest#v}"; then
         npm --version || return 1
-        printf '[INFO] Node.js %s: 이미 최신입니다.\n' "$latest"; return 0
-    fi
-    if ! version_not_older "${latest#v}" "${current#v}"; then
-        printf '%s\n' '[FAIL] Node.js를 이전 버전으로 낮추지 않습니다.' >&2; return 1
+        printf '[INFO] Node.js %s 유지 (이미 최신 또는 다운그레이드 없음).\n' "$current"; return 0
     fi
     if [[ $(type -t nvm_ensure_default_set) != function ]]; then
         printf '%s\n' '[MANUAL] 이 nvm의 기본 alias 보존 방식을 확인하지 못했습니다. 수동으로 업데이트하세요.'
-        return 0
+        return 1
     fi
-    if ! confirm_install "Node.js 22: nvm으로 최신 정식 $latest를 추가 설치합니다. 네트워크가 필요하며 기존 버전과 기본 alias는 유지합니다."; then return 0; fi
-    # nvm install에는 --no-alias 옵션이 없다. 이 하위 셸에서 기본 alias 생성만 막는다.
-    nvm_ensure_default_set() { return 0; }
-    if ! nvm install "$latest" || ! nvm use "$latest" ||
-        [[ $(node --version) != "$latest" ]] || ! npm --version; then
-        printf '%s\n' '[FAIL] Node.js 업데이트 또는 실행 확인에 실패했습니다.' >&2; return 1
+    installed="$NVM_DIR/versions/node/$latest/bin"
+    # nvm install의 자동 default alias 생성은 설치 하위 셸에서만 막는다.
+    if [[ $(nvm version "$latest") != "$latest" ]] && ! (
+        nvm_ensure_default_set() { return 0; }
+        nvm install --no-use "$latest"
+    ); then
+        printf '%s\n' '[FAIL] Node.js 설치에 실패했습니다.' >&2; return 1
     fi
-    printf '[INFO] 현재 터미널에서 선택하려면: nvm use %s (기본 alias는 유지).\n' "$latest"
-)
+    if [[ $("$installed/node" --version) != "$latest" ]] || ! PATH="$installed:$PATH" "$installed/npm" --version; then
+        printf '%s\n' '[FAIL] 설치된 Node.js 또는 npm 실행 검증 실패.' >&2; return 1
+    fi
+    if ! confirm_install "Node.js $latest 활성화: 스크립트 환경에서 nvm use를 실행합니다. 기본 alias와 기존 버전은 유지하며 부모 터미널은 변경하지 않습니다."; then
+        printf '[INFO] 활성화하지 않았습니다. 필요하면 nvm use %s를 직접 실행하세요.\n' "$latest"
+        [[ -n "$current" ]] && version_not_older "${current#v}" 22.0.0
+        return $?
+    fi
+    live_path=$(tool_path node)
+    if [[ -n "${WSL_DISTRO_NAME:-}" && "$live_path" =~ ^/mnt/[a-zA-Z]/ ]]; then live_path=''; fi
+    if [[ "$live_path" != "$node_path" ]] ||
+        { [[ -n "$current" ]] && { [[ $(node --version) != "$current" ]] ||
+            [[ $(canonical_tool_path "$live_path") != "$active" ]]; }; }; then
+        printf '%s\n' '[MANUAL] 활성 Node.js가 변경되어 활성화하지 않습니다.' >&2; return 1
+    fi
+    if ! nvm use "$latest" || [[ $(node --version) != "$latest" ]] ||
+        [[ $(canonical_tool_path "$(tool_path node)") != "$resolved_dir/versions/node/$latest/bin/node" ]] ||
+        ! npm --version; then
+        printf '%s\n' '[FAIL] Node.js 활성화 또는 실행 검증 실패.' >&2; return 1
+    fi
+    printf '[PASS] Node.js %s 활성화 완료 (스크립트 환경, 기본 alias 유지).\n' "$latest"
+    printf '[INFO] 부모 터미널은 변경되지 않습니다. 현재 터미널에서 실행: export NVM_DIR=%q; source "$NVM_DIR/nvm.sh" --no-use; nvm use %s\n' "$NVM_DIR" "$latest"
+}
 
 canonical_tool_path() (
     local path="$1" link count=0
@@ -429,7 +450,7 @@ install_missing_tools() {
             if [[ -n "$path" && ! ( "$os" == Linux && -n "${WSL_DISTRO_NAME:-}" && "$path" =~ ^/mnt/[a-zA-Z]/ ) ]]; then
                 if (( update )); then
                     case "$tool" in
-                        node) update_node_with_nvm || failed=1 ;;
+                        node) update_node_with_nvm "$update" || failed=1 ;;
                         az|azd) update_azure_tool "$os" "$tool" "$path" || failed=1 ;;
                     esac
                     continue
@@ -518,7 +539,7 @@ install_prerequisite_main() {
         return 1
     fi
     if (( update )); then
-        printf '%s\n' '업데이트 모드: 도구별 출처 확인과 별도 동의 후 변경합니다. Node.js/JDK의 기존 버전과 기본 런타임은 유지합니다.'
+        printf '%s\n' '업데이트 모드: 도구별 출처 확인과 별도 동의 후 변경합니다. 기존 버전과 기본 런타임은 유지하며 Node.js 활성화는 별도 동의를 받습니다.'
     else
         printf '설치 대상: %s%s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os" "${WSL_DISTRO_NAME:+ / WSL $WSL_DISTRO_NAME}"
     fi

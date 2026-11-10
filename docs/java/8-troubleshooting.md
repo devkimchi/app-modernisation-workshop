@@ -35,14 +35,16 @@
 
 기본 설치 도우미는 기존 도구를 업데이트하지 않습니다. `bash scripts/install-prerequisites.sh --track java --update`는 대화형 터미널에서만 도구별 동의를 받아 업데이트합니다. 거부한 항목은 변경하지 않으며, 필요한 도구가 여전히 부족하면 최종 사전 점검은 실패할 수 있습니다.
 
-- **Node.js**: `command -v node`, `node --version`과 `nvm which current`를 비교합니다. nvm 설치가 있어도 선택된 Node.js가 다른 관리자 소유라면 자동으로 변경하지 않습니다. 더 높은 major를 22로 낮추지 않습니다. 새 22.x를 추가해도 기본 alias와 기존 설치는 보존하므로 필요하면 출력된 `nvm use <새-버전>`을 현재 Bash에서 실행하세요.
+- **Node.js**: `command -v node`, `node --version`과 `nvm which current`를 비교합니다. nvm 설치가 있어도 선택된 Node.js가 다른 관리자 소유라면 자동으로 변경하지 않습니다. 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 추가합니다. 설치에는 `nvm install --no-use <버전>`을 사용하고, 별도 동의 후 `nvm use`로 스크립트 환경에서 활성화합니다. 기존 버전과 기본 alias는 유지합니다. 부모 터미널에는 적용되지 않으므로 출력된 초기화 명령과 `nvm use <새-버전>`을 현재 Bash에서도 실행하세요. 활성화를 거부하고 기존 Node.js가 없거나 22 미만이면 최종 점검은 실패합니다.
 - **JDK**: `sdk list java` 조회 실패, 정식 Temurin 미제공, 실제 java/javac 버전 불일치는 자동 설치 성공으로 처리하지 않습니다. 최신 JDK가 이미 있으면 재설치하지 않습니다. 기존 경로를 삭제하지 말고 아래 SDKMAN 복구 절차로 확인하세요. 기존 기본 JDK는 유지됩니다.
 - **Azure CLI/azd**: `command -v az`, `command -v azd`와 실제 버전을 확인합니다. macOS는 해당 formula의 `brew --prefix <formula>`와 선택된 실행 파일의 실제 경로가 일치해야 합니다. WSL은 `dpkg-query -S <실행-파일-경로>`의 소유 패키지 및 `apt-cache policy azure-cli` 또는 `apt-cache policy azd`의 Microsoft HTTPS 저장소 후보를 확인합니다. 알 수 없는 경로, pip/독립 바이너리/공식 스크립트 설치 등은 경로만으로 출처를 보장할 수 없어 `MANUAL`로 남깁니다. [Azure CLI](https://learn.microsoft.com/cli/azure/update-azure-cli) 또는 [azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)의 공식 안내에서 **원래 설치 방식**의 업데이트 절차를 선택하세요. 다른 관리자로 덮어쓰지 않습니다.
 - **Homebrew**: 누락 시 `--update`에서만 별도로 설치를 제안합니다. 거부하거나 설치 후 `brew --version`이 실패하면 자동 설치를 계속하지 않습니다. [공식 안내](https://brew.sh)에 따라 복구한 뒤 새 터미널에서 다시 점검하세요.
 
 Windows는 `powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update`를 사용합니다.
 
-- **Node.js**: nvm-windows의 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 실행 경로가 일치해야 합니다. 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 추가합니다. 설치와 `nvm use` 활성화는 별도 동의를 받으며 기존 버전은 보존합니다. 독립 설치나 일반 디렉터리가 링크 경로를 차지하면 자동 전환하지 않습니다. 원래 관리자를 확인하고 [nvm-windows 안내](https://github.com/coreybutler/nvm-windows#installation--upgrades)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
+- **Node.js**: nvm-windows 2.x는 `nvm config get root mode --json`의 설치 루트와 shim/link 경로를, 기존 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`를 확인합니다. 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 추가합니다. 설치와 `nvm use` 활성화는 별도 동의를 받으며 기존 버전은 보존합니다. 활성화는 Windows 공용 선택(shim/link)을 변경하므로 이후 터미널의 선택도 바뀌지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. Bash의 셸별 활성화 및 default alias와는 다릅니다. 독립 설치나 일반 디렉터리가 실행 경로를 차지하면 자동 전환하지 않습니다. 원래 관리자를 확인하고 [nvm-windows 안내](https://github.com/nvm-windows/nvm)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
+
+nvm-windows 2.x의 `auto_install=true`는 Node.js 검사만으로도 다른 버전을 설치할 수 있어 자동 처리를 중단합니다. `nvm config get auto_install --json`으로 확인하고 설정 변경은 직접 결정하세요. 프로젝트의 `.nvmrc`, `.node-version`, `package.json`이 버전을 고정했다면 공용 선택과 실제 실행 버전이 다를 수 있습니다. 도우미는 해당 파일이나 자동 감지 설정을 변경하지 않으며 활성화 후 실제 버전이 다르면 실패로 알립니다.
 - **PowerShell 7**: 실행 경로·MSI 등록·winget 패키지가 일치하는 정식 7 버전만 업데이트합니다. Store/ZIP 등 확인할 수 없는 설치는 원래 관리자를 사용하세요. 업데이트 예약은 성공이 아니며 종료 코드 1로 멈춥니다. 현재 pwsh 종료 후 같은 콘솔의 작업 프로세스가 표시하는 `PASS`/`FAIL`을 확인하고 새 터미널에서 `pwsh --version`과 설치 도우미를 다시 실행하세요. 다른 pwsh가 열려 있으면 먼저 종료하세요.
 - **WSL**: `wsl.exe --version`을 확인할 수 있는 플랫폼만 별도 동의 후 `wsl.exe --update`합니다. 버전을 제공하지 않는 inbox WSL은 [공식 안내](https://learn.microsoft.com/windows/wsl/install)에 따라 직접 준비하세요. 배포판 업데이트·삭제·자동 재부팅은 하지 않습니다. 재부팅 필요/검증 실패 시 직접 재부팅한 뒤 점검하세요.
 

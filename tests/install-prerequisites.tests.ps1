@@ -21,6 +21,9 @@ if ($IsWindows) {
     function Test-WorkshopBootstrapInteractive { return $true }
     $script:InstallCalls = [Collections.Generic.List[string]]::new()
     $script:Approved = $false
+    $script:NodeSuccess = $true
+    $script:NodeUpdates = [Collections.Generic.List[bool]]::new()
+    function Install-WorkshopNode { param([switch]$Update); $script:NodeUpdates.Add([bool]$Update); return $script:NodeSuccess }
     function Get-Command {
         [CmdletBinding()]param($Name, $CommandType)
         if ($Name -eq 'winget' -or $Name -eq 'az') { return [pscustomobject]@{ Source="fixture-$Name" } }
@@ -32,13 +35,23 @@ if ($IsWindows) {
     Assert-True ($script:InstallCalls.Count -eq 0) 'declined tools never installed'
     $script:Approved = $true
     Assert-True (Install-WindowsTools dotnet) 'approved installations succeed'
-    Assert-True ($script:InstallCalls.Count -eq 2) 'only missing tools installed'
-    Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*OpenJS.NodeJS.LTS*' }).Count -eq 1) 'Node package selected'
+    Assert-True ($script:InstallCalls.Count -eq 1) 'only missing Azure tools installed'
+    Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*OpenJS.NodeJS.LTS*' }).Count -eq 0) 'standalone Node package never selected'
+    Assert-True ($script:NodeUpdates.Count -eq 2 -and -not $script:NodeUpdates[0]) '.NET Node uses shared nvm installer without update by default'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 1) 'azd package selected'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.AzureCLI*' }).Count -eq 0) 'existing Azure CLI skipped'
+    $Update = $true
+    Assert-True (Install-WindowsTools dotnet) '.NET update succeeds'
+    Assert-True ($script:NodeUpdates[2]) '.NET forwards update to nvm'
+    Assert-True (Install-WindowsTools java) 'Java uses same nvm installer'
+    Assert-True ($script:NodeUpdates[3]) 'Java forwards update to nvm'
+    $script:NodeSuccess = $false
+    Assert-True (-not (Install-WindowsTools dotnet)) '.NET nvm failure propagates'
+    Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 3) 'Node failure does not block independent missing Azure tools'
+    $script:NodeSuccess = $true
     function winget { $global:LASTEXITCODE=1 }
     Assert-True (-not (Install-WindowsTools dotnet)) 'installer failure propagates'
-    foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath')) { Remove-Item "Function:\$name" }
+    foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath','Install-WorkshopNode')) { Remove-Item "Function:\$name" }
     . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
 }
 

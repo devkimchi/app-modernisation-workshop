@@ -53,11 +53,13 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Containe
 
 먼저 누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻습니다. `y`로 승인한 항목만 설치하며 Linux 배포판은 설치하지 않습니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 안내에 따라 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 가상화 설정이나 Windows 업데이트가 필요한 경우 수동으로 준비합니다.
 
-두 항목이 준비되면 PowerShell 7에서 기존 winget으로 누락된 **Node.js LTS, Azure CLI, azd**를 설치합니다. 도구마다 설치 대상과 권한을 표시하고 `y`로 승인한 항목만 설치합니다. 관리자 승인이 필요할 수 있으며 winget의 약관은 직접 확인하세요. winget 자체는 설치하지 않습니다.
+두 항목이 준비되면 PowerShell 7에서 **Node.js는 nvm-windows**, 누락된 **Azure CLI와 azd는 기존 winget**으로 설치합니다. nvm-windows가 없으면 winget의 `AuthorSoftware.NVMWindows` 설치부터 제안합니다. 도구마다 설치 대상과 권한을 표시하고 `y`로 승인한 항목만 설치합니다. 관리자 승인이 필요할 수 있으며 winget의 약관은 직접 확인하세요. winget 자체는 설치하지 않습니다.
 
 기존 PATH의 도구는 오래됐더라도 자동 업데이트하지 않습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다. Node.js는 안정 버전 22 이상, azd는 1.37.3 이상이 필요합니다.
 
-`powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update`는 **PowerShell 7과 WSL 플랫폼만** 항목별 동의를 받아 업데이트합니다. 실행 경로·MSI·winget 출처가 확인되는 PowerShell만 지원하며, 업데이트 예약 후 종료하면 작업 결과를 확인하고 새 터미널에서 다시 실행하세요. 버전 확인이 불가능한 inbox WSL은 수동 안내로 남깁니다. 배포판·OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Node.js/Azure CLI/azd의 기존 설치 방식과 누락 도구만 설치하는 동작은 그대로이며, 해당 CLI의 업데이트는 원래 관리자로 직접 진행합니다.
+`powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update`는 **PowerShell 7, WSL 플랫폼과 Node.js**를 항목별 동의를 받아 업데이트합니다. Node.js는 현재 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 선택합니다. 기존 버전은 삭제하지 않고 설치와 활성화는 별도 승인을 받습니다. 활성화는 Windows 공용 선택(shim/link)을 변경하므로 이후 터미널의 선택도 바뀌지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 기존 독립 설치나 경로 충돌은 덮어쓰지 않으며 [문제 해결](8-troubleshooting.md#nodejs-설치와-업데이트)을 참고하세요.
+
+실행 경로·MSI·winget 출처가 확인되는 PowerShell만 업데이트하며, 업데이트 예약 후 종료하면 작업 결과를 확인하고 새 터미널에서 다시 실행하세요. 버전 확인이 불가능한 inbox WSL은 수동 안내로 남깁니다. 배포판·OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Azure CLI/azd는 계속 누락된 도구만 설치하며 업데이트는 원래 관리자로 직접 진행합니다.
 
 ### Windows 빌드 및 실행 도구 준비
 

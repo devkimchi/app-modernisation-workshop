@@ -9,12 +9,66 @@ function Get-WorkshopReleaseVersion {
     }
 }
 
+function Get-WorkshopNvmConfiguration {
+    $probe = Invoke-ToolProbe nvm @('config', 'get', 'root', 'mode', 'auto_install', 'enabled', '--json')
+    if ($probe.Code -ne 0) { Write-Host '[FAIL] nvm-windows 2 설정 조회 실패.'; return }
+    try { $config = $probe.Text | ConvertFrom-Json -ErrorAction Stop }
+    catch [ArgumentException] { Write-Host '[FAIL] nvm-windows 2 설정 JSON이 올바르지 않습니다.'; return }
+    if ($config.root -isnot [string] -or -not [IO.Path]::IsPathFullyQualified($config.root) -or
+        -not (Split-Path $config.root.TrimEnd('\') -Parent) -or
+        $config.mode -cnotin @('shim', 'link') -or $config.enabled -isnot [bool] -or
+        $config.auto_install -isnot [bool] -or -not $config.enabled -or $config.auto_install) {
+        Write-Host '[MANUAL] nvm-windows 2의 root/mode/enabled 설정을 확인하세요. 개별 동의 없는 설치를 막기 위해 auto_install=true 환경에서는 진행하지 않습니다.'
+        return
+    }
+    return $config
+}
+
+function Get-WorkshopNvmSelection {
+    $list = Invoke-ToolProbe nvm @('list', '--json')
+    if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-Host '[FAIL] nvm-windows 2 설치 버전 목록 조회 실패.'; return }
+    try { $versions = @($list.Text | ConvertFrom-Json -ErrorAction Stop) }
+    catch [ArgumentException] { Write-Host '[FAIL] nvm-windows 2 버전 목록 JSON이 올바르지 않습니다.'; return }
+    foreach ($entry in $versions) {
+        if (-not (Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$entry.version })) -or
+            $entry.installed -isnot [bool] -or $entry.default -isnot [bool]) {
+            Write-Host '[FAIL] nvm-windows 2 버전 목록 형식이 올바르지 않습니다.'; return
+        }
+    }
+    $defaults = @($versions | Where-Object { $_.installed -eq $true -and $_.default -eq $true })
+    if ($defaults.Count -gt 1) { Write-Host '[FAIL] nvm-windows 2 기본 버전이 여러 개입니다.'; return }
+    return [pscustomobject]@{ Version = if ($defaults.Count) {
+        Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$defaults[0].version })
+    } else { $null } }
+}
+
 function Test-WorkshopNvmOwnership {
     param([string]$NodePath)
     $nvm = Get-Command nvm -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (-not $nvm -or -not $env:NVM_HOME -or -not $env:NVM_SYMLINK) { return $false }
+    if (-not $nvm) { return $false }
+    $version = Get-WorkshopReleaseVersion (Invoke-ToolProbe nvm @('version'))
+    if (-not $version) { return $false }
+    if ($version.Major -eq 2) {
+        $config = Get-WorkshopNvmConfiguration
+        if (-not $config) { return $false }
+        $root = [IO.Path]::GetFullPath($config.root).TrimEnd('\')
+        $dataRoot = Split-Path $root -Parent
+        $runtime = Join-Path $dataRoot '.nodejs'
+        $link = Get-Item -LiteralPath $runtime -Force -ErrorAction SilentlyContinue
+        if ($link) {
+            if ($link.LinkType -notin @('Junction', 'SymbolicLink') -or @($link.Target).Count -ne 1) { return $false }
+            $target = [IO.Path]::GetFullPath(@($link.Target)[0]).TrimEnd('\')
+            if ($config.mode -eq 'shim') {
+                if ($target -ine (Join-Path $dataRoot '.shim')) { return $false }
+            }
+            elseif ((Split-Path $target -Parent) -ine $root -or (Split-Path $target -Leaf) -notmatch '^v\d+\.\d+\.\d+$') { return $false }
+        }
+        if ($NodePath -and (-not $link -or
+            [IO.Path]::GetFullPath($NodePath) -ine (Join-Path $runtime 'node.exe'))) { return $false }
+        return $true
+    }
+    if ($version.Major -ne 1 -or -not $env:NVM_HOME -or -not $env:NVM_SYMLINK) { return $false }
     if ([IO.Path]::GetFullPath($nvm.Source) -ine [IO.Path]::GetFullPath((Join-Path $env:NVM_HOME 'nvm.exe'))) { return $false }
-    if (-not (Get-WorkshopReleaseVersion (Invoke-ToolProbe nvm @('version')))) { return $false }
     $settings = Join-Path $env:NVM_HOME 'settings.txt'
     if (-not (Test-Path -LiteralPath $settings -PathType Leaf)) { return $false }
     $lines = Get-Content -LiteralPath $settings
@@ -48,12 +102,11 @@ function Get-WorkshopNodeRelease {
         ForEach-Object { [version]$_.version.TrimStart('v') } | Sort-Object -Descending | Select-Object -First 1)[0]
 }
 
-function Install-WorkshopJavaNode {
+function Install-WorkshopNode {
     param([switch]$Update)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
     Update-ProcessPath
     $node = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    $current = if ($node) { Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version')) }
     $nvm = Get-Command nvm -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $nvm) {
         # nvm's installer may offer to take over an existing Node installation.
@@ -74,10 +127,27 @@ function Install-WorkshopJavaNode {
         Update-ProcessPath
     }
     if (-not (Test-WorkshopNvmOwnership $node.Source)) {
-        Write-Host '[MANUAL] nvm.exe/settings.txt/NVM_HOME/NVM_SYMLINK 또는 활성 Node.js의 관리 출처가 불명확합니다. 경로를 삭제하거나 덮어쓰지 않습니다.'
+        Write-Host '[MANUAL] nvm-windows 설정 또는 활성 Node.js의 관리 출처가 불명확합니다. 경로를 삭제하거나 덮어쓰지 않습니다.'
         return $false
     }
-    if ($node -and -not $current) { Write-Host '[FAIL] Node.js 정식 버전 확인 실패.'; return $false }
+    $nvmVersion = Get-WorkshopReleaseVersion (Invoke-ToolProbe nvm @('version'))
+    if (-not $nvmVersion -or $nvmVersion.Major -notin @(1, 2)) { Write-Host '[FAIL] 지원하는 nvm-windows 버전을 확인하지 못했습니다.'; return $false }
+    $root = $env:NVM_HOME
+    $hasActive = [bool]$node
+    if ($nvmVersion -and $nvmVersion.Major -eq 2) {
+        $config = Get-WorkshopNvmConfiguration
+        if (-not $config) { return $false }
+        $root = $config.root
+        $selection = Get-WorkshopNvmSelection
+        if (-not $selection) { return $false }
+        $hasActive = $null -ne $selection.Version
+        if ($hasActive -and -not $node) { Write-Host '[MANUAL] nvm-windows의 Node.js 실행 경로가 PATH에 없습니다. 새 터미널에서 다시 실행하세요.'; return $false }
+    }
+    if (-not $root) { Write-Host '[FAIL] nvm-windows 설치 루트를 확인하지 못했습니다.'; return $false }
+    $currentProbe = if ($node) { Invoke-ToolProbe node @('--version') }
+    $current = if ($currentProbe) { Get-WorkshopReleaseVersion $currentProbe }
+    if ($node -and -not $current -and ($hasActive -or $currentProbe.Code -eq 0)) { Write-Host '[FAIL] Node.js 정식 버전 확인 실패.'; return $false }
+    $hasActive = [bool]$current
     if ($current -and -not $Update) {
         Write-Host "[INFO] Node.js $current 유지 (-Update 없음)."
         return $current.Major -ge 22
@@ -90,31 +160,46 @@ function Install-WorkshopJavaNode {
     catch { Write-Host "[FAIL] Node.js 릴리스 조회 실패: $($_.Exception.Message)"; return $false }
     if (-not $latest -or $latest.Major -ne $major) { Write-Host '[FAIL] 정식 Node.js 릴리스를 확인하지 못했습니다.'; return $false }
     if ($current -and $current -ge $latest) { Write-Host "[PASS] Node.js $current 유지 (다운그레이드 없음)."; return $true }
-    $installedNode = Join-Path $env:NVM_HOME "v$latest\node.exe"
+    $installedNode = Join-Path $root "v$latest\node.exe"
     if (-not (Test-Path -LiteralPath $installedNode -PathType Leaf)) {
         $install = Invoke-ToolProbe nvm @('install', "$latest")
         if ($install.Code -ne 0) { Write-Host "[FAIL] nvm install 실패: $($install.Text)"; return $false }
     }
     $probe = Invoke-ToolProbe $installedNode @('--version')
     if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-Host '[FAIL] 설치된 Node.js 버전 검증 실패.'; return $false }
-    if (-not (Confirm-ToolInstall "nvm use $latest 실행: Windows 공용 Node.js 링크를 변경합니다. 관리자 승인이 필요할 수 있습니다.")) {
+    if (-not (Confirm-ToolInstall "nvm use $latest 실행: Windows 공용 Node.js 선택(shim/link)을 변경합니다. 이후 터미널에도 적용되지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 관리자 승인이 필요할 수 있습니다.")) {
         Write-Host "[INFO] 활성화하지 않았습니다. 필요하면 직접 nvm use $latest 실행 후 점검하세요."
         return ($current -and $current.Major -ge 22)
     }
     # Recheck immediately before a link change; never take over a new collision.
     $liveNode = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    $liveVersion = if ($liveNode) { Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version')) }
-    if (-not (Test-WorkshopNvmOwnership $liveNode.Source) -or $liveVersion -ne $current) {
+    if (-not (Test-WorkshopNvmOwnership $liveNode.Source)) {
+        Write-Host '[MANUAL] nvm-windows 관리 설정이 변경되어 활성화하지 않습니다.'
+        return $false
+    }
+    if ($nvmVersion.Major -eq 2) {
+        $liveConfig = Get-WorkshopNvmConfiguration
+        $liveSelection = Get-WorkshopNvmSelection
+        if (-not $liveConfig -or -not $liveSelection -or $liveConfig.root -ine $root -or
+            $liveConfig.mode -cne $config.mode -or $liveSelection.Version -ne $selection.Version) {
+            Write-Host '[MANUAL] nvm-windows 2 설정 또는 기본 선택이 변경되어 활성화하지 않습니다.'
+            return $false
+        }
+    }
+    $liveVersion = if ($liveNode -and $hasActive) { Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version')) }
+    if ($liveVersion -ne $current) {
         Write-Host '[MANUAL] Node.js 경로 충돌 또는 활성 버전 변경을 발견했습니다. 활성화하지 않습니다.'
         return $false
     }
-    $use = Invoke-ToolProbe nvm @('use', "$latest")
+    $useArguments = @('use', "$latest")
+    if ($nvmVersion -and $nvmVersion.Major -eq 2) { $useArguments += '--no-install' }
+    $use = Invoke-ToolProbe nvm $useArguments
     Update-ProcessPath
     $activeNode = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($use.Code -ne 0 -or -not $activeNode -or
         -not (Test-WorkshopNvmOwnership $activeNode.Source) -or
         (Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version'))) -ne $latest) {
-        Write-Host '[FAIL] nvm 활성화/실행 버전 검증 실패. 새 터미널에서 PATH와 nvm current를 확인하세요.'
+        Write-Host '[FAIL] nvm 활성화/실행 버전 검증 실패. 새 터미널에서 PATH와 nvm list를 확인하세요.'
         return $false
     }
     Write-Host "[PASS] [Windows 호스트] nvm Node.js $latest"

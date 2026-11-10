@@ -146,25 +146,46 @@ if [[ "$broken_existing_output" == *'UNEXPECTED INSTALL'* ]]; then exit 1; else 
 
 mkdir -p "$test_dir/nvm"
 cat > "$test_dir/nvm/nvm.sh" <<'FIXTURE'
+nvm_ensure_default_set() { mkdir -p "$NVM_DIR/alias"; printf '%s\n' "$1" > "$NVM_DIR/alias/default"; }
 nvm() {
     printf 'nvm-call: %s\n' "$*" >&2
     case "$1" in
-        version) printf 'N/A\n' ;;
-        install) return "${MOCK_NVM_FAILURE:-0}" ;;
-        use) node() { printf 'v22.1.0\n'; }; npm() { printf '10.0.0\n'; } ;;
+        which) printf '%s/versions/node/%s/bin/node\n' "$NVM_DIR" "$(node --version)" ;;
+        version) if [[ "${MOCK_REUSE:-0}" == 1 ]]; then printf '%s\n' "$2"; else printf 'N/A\n'; fi ;;
+        version-remote) printf '%s\n' "${MOCK_REMOTE:-v$2.99.1}"; return "${MOCK_REMOTE_FAILURE:-0}" ;;
+        install)
+            [[ "$#" == 3 && "$2" == --no-use ]] || return 1
+            [[ "${MOCK_NVM_FAILURE:-0}" == 0 && "${MOCK_UPDATE_FAILURE:-0}" == 0 ]] || return 1
+            local folder="$NVM_DIR/versions/node/$3/bin"
+            mkdir -p "$folder"
+            printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "${MOCK_INSTALLED_VERSION:-$3}" > "$folder/node"
+            printf '#!/usr/bin/env bash\nexit %s\n' "${MOCK_NPM_FAILURE:-0}" > "$folder/npm"
+            chmod +x "$folder/node" "$folder/npm"
+            nvm_ensure_default_set "$3"
+            ;;
+        use)
+            [[ "${MOCK_NVM_USE_FAILURE:-0}" == 0 ]] || return 1
+            MOCK_ACTIVE_VERSION="$2"
+            node() { printf '%s\n' "${MOCK_NODE_AFTER:-$MOCK_ACTIVE_VERSION}"; }
+            npm() { return "${MOCK_NPM_FAILURE:-0}"; }
+            ;;
     esac
 }
 FIXTURE
 nvm_output=$(
     NVM_DIR="$test_dir/nvm"
+    tool_path() { if [[ -n "${MOCK_ACTIVE_VERSION:-}" ]]; then printf '%s/versions/node/%s/bin/node\n' "$NVM_DIR" "$MOCK_ACTIVE_VERSION"; fi; }
     confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
     install_node_with_nvm 2>&1
 )
-assert 'nvm installs Node 22' grep -q 'nvm-call: install 22' <<< "$nvm_output"
-assert 'nvm activates Node 22' grep -q 'nvm-call: use 22' <<< "$nvm_output"
+assert 'nvm installs Node 22 without activating it' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$nvm_output"
+assert 'nvm activates Node 22' grep -q 'nvm-call: use v22.99.1' <<< "$nvm_output"
 assert 'Node install requires approval' grep -q 'approval: Node.js 22' <<< "$nvm_output"
+assert 'Node activation requires separate approval' grep -q 'approval: Node.js v22.99.1 활성화' <<< "$nvm_output"
+assert 'fresh install does not create default alias' test ! -e "$test_dir/nvm/alias/default"
 nvm_failure=$(
     NVM_DIR="$test_dir/nvm"
+    tool_path() { :; }
     MOCK_NVM_FAILURE=1
     confirm_install() { return 0; }
     if install_node_with_nvm 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
@@ -172,12 +193,23 @@ nvm_failure=$(
 assert 'nvm Node failure propagates' grep -q 'EXPECTED FAILURE' <<< "$nvm_failure"
 nvm_declined=$(
     NVM_DIR="$test_dir/nvm"
+    tool_path() { :; }
     confirm_install() { return 1; }
-    install_node_with_nvm 2>&1
+    if install_node_with_nvm 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
 if [[ "$nvm_declined" == *'nvm-call: install'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
+fresh_activation_declined=$(
+    NVM_DIR="$test_dir/nvm"
+    tool_path() { :; }
+    confirm_install() { [[ "$1" != *' 활성화:'* ]]; }
+    if install_node_with_nvm 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+assert 'fresh activation decline leaves no usable Node and fails' grep -q 'EXPECTED FAILURE' <<< "$fresh_activation_declined"
+assert 'fresh activation decline never selects new Node' test "${fresh_activation_declined#*nvm-call: use}" = "$fresh_activation_declined"
+assert 'fresh activation decline leaves default unset' test ! -e "$test_dir/nvm/alias/default"
 fresh_nvm=$(
     NVM_DIR="$test_dir/fresh-nvm"
+    tool_path() { if [[ -n "${MOCK_ACTIVE_VERSION:-}" ]]; then printf '%s/versions/node/%s/bin/node\n' "$NVM_DIR" "$MOCK_ACTIVE_VERSION"; fi; }
     confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
     run_remote_installer() {
         printf 'installer: %s %s\n' "$1" "$2"
@@ -187,7 +219,7 @@ fresh_nvm=$(
 )
 assert 'nvm installed from pinned official source' grep -q 'installer: https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh user' <<< "$fresh_nvm"
 assert 'nvm and Node separate approvals' grep -q 'approval: nvm:' <<< "$fresh_nvm"
-assert 'fresh nvm installs Node' grep -q 'nvm-call: install 22' <<< "$fresh_nvm"
+assert 'fresh nvm installs Node' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$fresh_nvm"
 
 cat > "$test_dir/bin/sdkman-init.sh" <<'FIXTURE'
 sdk() {
@@ -297,36 +329,30 @@ mkdir -p "$test_dir/update-nvm/versions/node/v22.1.0/bin" "$test_dir/update-nvm/
 printf 'v22.1.0\n' > "$test_dir/update-nvm/alias/default"
 printf '#!/usr/bin/env bash\nprintf "v22.1.0\\n"\n' > "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
 chmod +x "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
-cat > "$test_dir/update-nvm/nvm.sh" <<'FIXTURE'
-nvm_ensure_default_set() { printf '%s\n' "$1" > "$NVM_DIR/alias/default"; }
-nvm() {
-    printf 'nvm-call: %s\n' "$*" >&2
-    case "$1" in
-        which) printf '%s/versions/node/v22.1.0/bin/node\n' "$NVM_DIR" ;;
-        version-remote) printf '%s\n' "${MOCK_REMOTE:-v22.99.1}"; return "${MOCK_REMOTE_FAILURE:-0}" ;;
-        install)
-            [[ "${MOCK_UPDATE_FAILURE:-0}" == 0 ]] || return 1
-            [[ "$#" == 2 && "$2" == v22.99.1 ]] || return 1
-            nvm_ensure_default_set "$2"
-            ;;
-        use)
-            [[ "${MOCK_NVM_USE_FAILURE:-0}" == 0 ]] || return 1
-            node() { printf '%s\n' "${MOCK_NODE_AFTER:-v22.99.1}"; }
-            npm() { return "${MOCK_NPM_FAILURE:-0}"; }
-            ;;
-    esac
-}
-FIXTURE
+cp "$test_dir/nvm/nvm.sh" "$test_dir/update-nvm/nvm.sh"
 node_update_case() (
     NVM_DIR="$test_dir/update-nvm"
-    tool_path() { printf '%s/versions/node/v22.1.0/bin/node\n' "$NVM_DIR"; }
-    node() { printf '%s\n' "${MOCK_NODE_BEFORE:-v22.1.0}"; }
+    WSL_DISTRO_NAME=''
+    local before="${MOCK_NODE_BEFORE:-v22.1.0}"
+    mkdir -p "$NVM_DIR/versions/node/$before/bin"
+    printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "$before" > "$NVM_DIR/versions/node/$before/bin/node"
+    chmod +x "$NVM_DIR/versions/node/$before/bin/node"
+    tool_path() { printf '%s/versions/node/%s/bin/node\n' "$NVM_DIR" "${MOCK_ACTIVE_VERSION:-$before}"; }
+    node() { printf '%s\n' "$before"; }
     npm() { return 0; }
-    confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
-    if update_node_with_nvm; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    confirm_install() {
+        printf 'approval: %s\n' "$1"
+        if [[ "$1" == *' 활성화:'* ]]; then
+            if [[ -n "${MOCK_CONCURRENT:-}" ]]; then before="$MOCK_CONCURRENT"; fi
+            [[ "${MOCK_ACTIVATE:-1}" == 1 ]]
+        else [[ "${MOCK_APPROVED:-1}" == 1 ]]; fi
+    }
+    if update_node_with_nvm "${MOCK_UPDATE:-1}"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    printf 'active-node: %s\n' "$(node --version)"
 )
 node_updated=$(node_update_case 2>&1)
-assert 'Node exact latest installed using supported nvm arguments' grep -q 'nvm-call: install v22.99.1' <<< "$node_updated"
+assert 'Node exact latest installed without activation' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$node_updated"
+assert 'approved activation available to following script work' grep -q 'active-node: v22.99.1' <<< "$node_updated"
 assert 'Node default alias preserved' grep -Fxq v22.1.0 "$test_dir/update-nvm/alias/default"
 rm -- "$test_dir/update-nvm/alias/default"
 node_no_default=$(node_update_case 2>&1)
@@ -337,37 +363,58 @@ assert 'old Node remains installed' test -x "$test_dir/update-nvm/versions/node/
 assert 'Node separately approved' grep -q 'approval: Node.js 22' <<< "$node_updated"
 for major in 24 25; do
     newer_node=$(MOCK_NODE_BEFORE="v$major.1.0" node_update_case 2>&1)
-    assert "Node $major not downgraded" grep -q '높은 major를 22로 낮추지 않습니다' <<< "$newer_node"
-    assert "Node $major no installer or prompt" test "${newer_node#*nvm-call:}" = "$newer_node"
-    assert "Node $major no approval needed" test "${newer_node#*approval:}" = "$newer_node"
+    assert "Node $major latest major queried" grep -q "nvm-call: version-remote $major" <<< "$newer_node"
+    assert "Node $major updated without downgrade" grep -q "nvm-call: install --no-use v$major.99.1" <<< "$newer_node"
+    assert "Node $major separately activated" grep -q "nvm-call: use v$major.99.1" <<< "$newer_node"
 done
 node_decline=$(MOCK_APPROVED=0 node_update_case 2>&1)
 assert 'Node decline does not install' test "${node_decline#*nvm-call: install}" = "$node_decline"
 assert 'Node decline does not activate another version' test "${node_decline#*nvm-call: use}" = "$node_decline"
+activation_decline=$(MOCK_ACTIVATE=0 node_update_case 2>&1)
+assert 'activation decline still installs Node' grep -q 'nvm-call: install --no-use' <<< "$activation_decline"
+assert 'activation decline never uses new Node' test "${activation_decline#*nvm-call: use}" = "$activation_decline"
+assert 'activation decline preserves default alias' grep -Fxq v22.1.0 "$test_dir/update-nvm/alias/default"
+assert 'activation decline preserves supported status' grep -q '^SUCCESS$' <<< "$activation_decline"
+assert 'activation decline preserves active Node' grep -q 'active-node: v22.1.0' <<< "$activation_decline"
+node_concurrent=$(MOCK_CONCURRENT=v24.1.0 node_update_case 2>&1)
+assert 'concurrent selection change fails before activation' grep -q 'EXPECTED FAILURE' <<< "$node_concurrent"
+assert 'concurrent Node never overwritten' test "${node_concurrent#*nvm-call: use}" = "$node_concurrent"
 node_latest=$(MOCK_NODE_BEFORE=v22.99.1 node_update_case 2>&1)
 assert 'latest Node skipped' grep -q '이미 최신' <<< "$node_latest"
 assert 'latest Node not reinstalled' test "${node_latest#*nvm-call: install}" = "$node_latest"
-assert 'latest Node does not need approval' test "${node_latest#*approval:}" = "$node_latest"
-for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v22.0.0 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.1 MOCK_UPDATE_FAILURE=1 MOCK_NVM_USE_FAILURE=1 MOCK_NODE_AFTER=v22.1.0 MOCK_NPM_FAILURE=1; do
+node_no_update=$(MOCK_UPDATE=0 node_update_case 2>&1)
+assert 'no update preserves existing Node without prompts' test "${node_no_update#*approval:}" = "$node_no_update"
+node_ahead=$(MOCK_REMOTE=v22.0.0 node_update_case 2>&1)
+assert 'older remote release never downgrades Node' test "${node_ahead#*nvm-call: install}" = "$node_ahead"
+node_old=$(MOCK_NODE_BEFORE=v20.1.0 node_update_case 2>&1)
+assert 'unsupported major uses latest 22' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$node_old"
+node_old_decline=$(MOCK_NODE_BEFORE=v20.1.0 MOCK_ACTIVATE=0 node_update_case 2>&1)
+assert 'unsupported Node without activation fails' grep -q 'EXPECTED FAILURE' <<< "$node_old_decline"
+node_reuse=$(MOCK_REUSE=1 node_update_case 2>&1)
+assert 'existing inactive release reused without reinstall' test "${node_reuse#*nvm-call: install}" = "$node_reuse"
+assert 'existing inactive release still needs activation' grep -q 'approval: Node.js v22.99.1 활성화' <<< "$node_reuse"
+for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.1 MOCK_NODE_BEFORE=invalid MOCK_UPDATE_FAILURE=1 MOCK_INSTALLED_VERSION=v22.0.0 MOCK_NVM_USE_FAILURE=1 MOCK_NODE_AFTER=v22.1.0 MOCK_NPM_FAILURE=1; do
     node_failed=$(export "$setting"; node_update_case 2>&1)
     assert "Node error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$node_failed"
 done
 unknown_node=$(
     NVM_DIR="$test_dir/update-nvm"
+    WSL_DISTRO_NAME=''
     node() { printf 'v22.1.0\n'; }
     tool_path() { printf '%s/bin/sdkman-init.sh\n' "$test_dir"; }
     confirm_install() { return 0; }
-    update_node_with_nvm 2>&1
+    if update_node_with_nvm 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
 assert 'foreign Node not overwritten even with nvm installed' grep -q MANUAL <<< "$unknown_node"
 assert 'foreign Node never installed' test "${unknown_node#*nvm-call: install}" = "$unknown_node"
 missing_path_update=$(
     NVM_DIR="$test_dir/nvm"
+    tool_path() { :; }
     confirm_install() { return 0; }
-    update_node_with_nvm() { printf 'update-after-node-activation\n'; }
+    update_node_with_nvm() { printf 'node-setup-update=%s\n' "$1"; }
     install_node_with_nvm 1
 )
-assert 'update also handles nvm Node absent from initial PATH' grep -q update-after-node-activation <<< "$missing_path_update"
+assert 'update also handles nvm Node absent from initial PATH' grep -q 'node-setup-update=1' <<< "$missing_path_update"
 
 unordered=$'vendor | 21.0.9+99-tem\n | 21.0.10+2-tem\n | 21.0.10+11-tem\n | 21.0.11-ea-tem\n | 21.0.10+3-tem\n | 21.0.99-zulu'
 assert 'latest JDK ordering uses version and numeric build, excludes EA/vendor' test "$(latest_temurin_identifier 21 <<< "$unordered")" = 21.0.10+11-tem

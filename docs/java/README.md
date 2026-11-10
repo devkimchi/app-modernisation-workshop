@@ -1,12 +1,12 @@
 # Java 트랙: Asset Manager
 
-[전체 목차](../../README.md) | [이전: 공통 준비](../setup.md) | [다음: 원본 실행](01-run-locally.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [다음: 준비](0-setup.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
 Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드하고 Azure 서비스를 연결한 뒤, web과 worker를 ACA에 배포합니다. 두 모듈과 기존 사용자 기능을 유지합니다.
 
-[공통 준비](../setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `java`입니다. macOS 또는 Windows WSL2의 Bash를 사용하고, Copilot app에는 이 앱 폴더를 프로젝트로 추가합니다.
+[준비](0-setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `java`입니다. macOS 또는 Windows WSL2의 Bash를 사용하고, Copilot app에는 이 앱 폴더를 프로젝트로 추가합니다.
 
 | 순서 | 실습 | 완료 시 확인할 것 |
 | --- | --- | --- |
@@ -24,4 +24,4 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드�
 
 Windows에서는 SDKMAN과 Java 도구가 WSL2 안에 있습니다. Copilot app이 Windows 셸에서 작업한다면 프롬프트에 실제 WSL 배포판과 앱 경로를 전달하고 **Java 명령을 WSL2에 명시적으로 위임**하도록 합니다. macOS에서는 같은 앱 루트에서 Bash를 사용합니다. 앱의 세션 작업 경로가 바뀌면 WSL 경로도 다시 확인하세요.
 
-스크립트나 에이전트의 성공 메시지는 기능 확인을 대신하지 않습니다. 원본 `dev` 프로필에서는 업로드, 파일 저장, 메시지 처리와 결과 표시를 연결해 확인하고 DB 연결은 별도로 확인합니다. Azure 이전 후에는 `dev` 외 원본 구현의 DB 메타데이터 기능도 확인합니다. 문제가 생기면 [문제 해결](../troubleshooting.md)을 보고, 진행을 중단해도 [정리](07-cleanup.md)는 수행합니다.
+스크립트나 에이전트의 성공 메시지는 기능 확인을 대신하지 않습니다. 원본 `dev` 프로필에서는 업로드, 파일 저장, 메시지 처리와 결과 표시를 연결해 확인하고 DB 연결은 별도로 확인합니다. Azure 이전 후에는 `dev` 외 원본 구현의 DB 메타데이터 기능도 확인합니다. 문제가 생기면 [문제 해결](8-troubleshooting.md)을 보고, 진행을 중단해도 [정리](07-cleanup.md)는 수행합니다.

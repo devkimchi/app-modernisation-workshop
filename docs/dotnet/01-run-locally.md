@@ -1,6 +1,6 @@
 # .NET 1. 원본 앱을 로컬에서 실행하기
 
-[목차](README.md) | [이전: 공통 준비](../setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: 준비](0-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -145,4 +145,4 @@ Git 신원이 없으면 참가자가 워크숍 저장소 범위에 본인 설정
 
 ## 완료 기준과 문제 해결
 
-원본 빌드, IIS Express와 LocalDB/MSMQ, 주요 화면과 데이터 동작을 확인하고 기준선 커밋을 남겨야 합니다. 실패한 원본 상태로 업그레이드를 시작하면 원인 구분이 어려워집니다. [문제 해결](../troubleshooting.md)에서 Targeting Pack, MSMQ, 인증서 항목을 확인하세요.
+원본 빌드, IIS Express와 LocalDB/MSMQ, 주요 화면과 데이터 동작을 확인하고 기준선 커밋을 남겨야 합니다. 실패한 원본 상태로 업그레이드를 시작하면 원인 구분이 어려워집니다. [문제 해결](8-troubleshooting.md)에서 Targeting Pack, MSMQ, 인증서 항목을 확인하세요.

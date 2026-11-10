@@ -69,7 +69,7 @@ prepare_sdkman_dependencies() {
         printf '[FAIL] 설치 후에도 SDKMAN 선행 명령을 찾을 수 없습니다: %s\n' "${missing//$'\n'/, }" >&2
         return 1
     fi
-    printf '%s\n' '[FAIL] 누락된 명령을 직접 설치한 뒤 다시 실행하세요. docs/setup.md를 참고하세요.' >&2
+    printf '%s\n' '[FAIL] 누락된 명령을 직접 설치한 뒤 다시 실행하세요. docs/java/0-setup.md를 참고하세요.' >&2
     return 1
 }
 
@@ -206,7 +206,7 @@ install_missing_tools() {
                 install_node_with_nvm || failed=1 ;;
             Linux:az)
                 if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
-                    printf '%s\n' '[WARN] Azure CLI 자동 설치에는 apt-get과 sudo가 필요합니다. docs/setup.md에서 수동 설치 방법을 확인하세요.'
+                    printf '%s\n' '[WARN] Azure CLI 자동 설치에는 apt-get과 sudo가 필요합니다. docs/java/0-setup.md에서 수동 설치 방법을 확인하세요.'
                     continue
                 fi
                 if confirm_install 'Azure CLI: 현재 Linux 환경에 Microsoft 공식 설치 스크립트를 실행합니다. sudo와 네트워크가 필요하며 APT 저장소와 시스템 패키지가 변경됩니다. 출처: https://aka.ms/InstallAzureCLIDeb'; then

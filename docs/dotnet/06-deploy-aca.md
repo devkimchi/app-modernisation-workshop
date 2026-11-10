@@ -1,6 +1,6 @@
 # .NET 6. azd로 ACA에 배포하기
 
-[목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -83,4 +83,4 @@ private Blob 업로드/조회와 Data Protection 키 보존을 검증해 줘.
 
 ## 완료 기준과 문제 해결
 
-정상 revision과 실제 데이터/메시지/파일 동작이 확인되면 이미지 식별자와 검증 결과를 기록합니다. Windows 실행 성공만으로 Linux 성공을 주장하지 않습니다. 인증, 포트, DB 또는 키 저장 오류는 [문제 해결](../troubleshooting.md)을 참고하고, 실패한 배포도 [정리](07-cleanup.md)를 수행합니다.
+정상 revision과 실제 데이터/메시지/파일 동작이 확인되면 이미지 식별자와 검증 결과를 기록합니다. Windows 실행 성공만으로 Linux 성공을 주장하지 않습니다. 인증, 포트, DB 또는 키 저장 오류는 [문제 해결](8-troubleshooting.md)을 참고하고, 실패한 배포도 [정리](07-cleanup.md)를 수행합니다.

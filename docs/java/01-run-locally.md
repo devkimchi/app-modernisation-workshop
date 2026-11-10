@@ -1,6 +1,6 @@
 # Java 1. 원본 앱을 로컬에서 실행하기
 
-[목차](README.md) | [이전: 공통 준비](../setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](0-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -136,4 +136,4 @@ git commit -m "Baseline: verified Java 8 sample"
 
 ## 완료 기준과 문제 해결
 
-Java 8 빌드, 웹/worker와 DB/큐의 연결, 업로드의 실제 결과를 확인했고 기준선 커밋이 있어야 합니다. 포트나 컨테이너 이름 충돌은 [문제 해결](../troubleshooting.md)을 참고합니다. 업그레이드 전 실행 프로세스를 정지하는 방법은 [정리](07-cleanup.md)의 로컬 항목을 따릅니다. DB/큐는 다음 실습에 필요하므로 아직 삭제하지 않아도 됩니다.
+Java 8 빌드, 웹/worker와 DB/큐의 연결, 업로드의 실제 결과를 확인했고 기준선 커밋이 있어야 합니다. 포트나 컨테이너 이름 충돌은 [문제 해결](8-troubleshooting.md)을 참고합니다. 업그레이드 전 실행 프로세스를 정지하는 방법은 [정리](07-cleanup.md)의 로컬 항목을 따릅니다. DB/큐는 다음 실습에 필요하므로 아직 삭제하지 않아도 됩니다.

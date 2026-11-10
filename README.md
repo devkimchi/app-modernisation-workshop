@@ -20,9 +20,9 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 
 - Azure 구독. 없다면 [Azure 무료 구독](https://aka.ms/azure/free)을 직접 신청합니다. 무료 크레딧의 서비스, 리전, 쿼터 제한과 유료 전환 조건을 확인하세요.
 - GitHub 계정과 유효한 GitHub Copilot 라이선스. 조직 정책에 따라 플러그인 사용이 제한될 수 있습니다.
-- [공통 준비](docs/setup.md)의 선택 트랙 도구와 컨테이너 엔진.
+- [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)의 도구와 컨테이너 엔진.
 
-이 저장소는 공개 템플릿 저장소입니다. 원본을 직접 복제하거나 포크하지 말고, **Use this template** > **Create a new repository**로 본인 **개인 계정**에 새 저장소를 만든 뒤 로컬에 복제합니다. 자세한 절차는 [공통 준비](docs/setup.md)에 있습니다. 복제한 폴더가 이후 명령을 실행할 **워크숍 자료 폴더**입니다.
+이 저장소는 공개 템플릿 저장소입니다. 원본을 직접 복제하거나 포크하지 말고, **Use this template** > **Create a new repository**로 본인 **개인 계정**에 새 저장소를 만든 뒤 로컬에 복제합니다. 자세한 절차는 [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)를 따릅니다. 복제한 폴더가 이후 명령을 실행할 **워크숍 자료 폴더**입니다.
 
 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)
 
@@ -42,7 +42,7 @@ pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine dock
 pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
 ```
 
-Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다. Windows에서 Java를 PowerShell로 시작하거나 .NET을 Git Bash로 시작하는 방법은 [공통 준비](docs/setup.md)에 있습니다. 다운로드 스크립트 자체도 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다.
+Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다. 대체 셸로 시작하는 방법과 플러그인 설치는 [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)를 따릅니다. 다운로드 스크립트 자체도 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다.
 
 선택형 개발 환경은 [Dev Container 안내](.devcontainer/README.md)를 참고하세요. .NET Framework 원본 실습은 여전히 Windows에서 진행합니다.
 
@@ -63,7 +63,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 
 | 순서 | Java 트랙 | .NET 트랙 |
 | --- | --- | --- |
-| 0 | [준비](docs/setup.md) | [준비](docs/setup.md) |
+| 0 | [준비](docs/java/0-setup.md) | [준비](docs/dotnet/0-setup.md) |
 | 1 | [원본 로컬 실행](docs/java/01-run-locally.md) | [원본 로컬 실행](docs/dotnet/01-run-locally.md) |
 | 2 | [평가와 계획](docs/java/02-assess-and-plan.md) | [평가와 계획](docs/dotnet/02-assess-and-plan.md) |
 | 3 | [JDK 25 업그레이드](docs/java/03-upgrade.md) | [.NET 10 업그레이드](docs/dotnet/03-upgrade.md) |
@@ -71,7 +71,7 @@ Podman 사용자는 두 명령의 `docker`를 모두 `podman`으로 바꿉니다
 | 5 | [azd 배포 준비](docs/java/05-prepare-azd.md) | [azd 배포 준비](docs/dotnet/05-prepare-azd.md) |
 | 6 | [ACA 배포](docs/java/06-deploy-aca.md) | [ACA 배포](docs/dotnet/06-deploy-aca.md) |
 | 7 | [정리](docs/java/07-cleanup.md) | [정리](docs/dotnet/07-cleanup.md) |
-| 8 | [문제 해결](docs/troubleshooting.md) | [문제 해결](docs/troubleshooting.md) |
+| 8 | [문제 해결](docs/java/8-troubleshooting.md) | [문제 해결](docs/dotnet/8-troubleshooting.md) |
 
 ## 원본과 검증 범위
 
@@ -95,7 +95,7 @@ bash tests/scripts.tests.sh
 
 누락된 도구/잘못된 커밋을 재현하는 시나리오에서는 `FAIL`/`fatal` 출력이 나올 수 있습니다. 테스트 실행 자체의 성공 여부는 마지막 `PASS` 요약과 종료 코드 `0`으로 판단합니다.
 
-공식 근거와 설치 링크는 [준비 문서](docs/setup.md)에 있습니다. 진행 중단 여부와 관계없이 마지막에는 [Java 정리](docs/java/07-cleanup.md) 또는 [.NET 정리](docs/dotnet/07-cleanup.md)를 확인하세요.
+설치 링크는 [Java 준비](docs/java/0-setup.md) 또는 [.NET 준비](docs/dotnet/0-setup.md)에 있습니다. 진행 중단 여부와 관계없이 마지막에는 [Java 정리](docs/java/07-cleanup.md) 또는 [.NET 정리](docs/dotnet/07-cleanup.md)를 확인하세요.
 
 ## 기여와 보안
 

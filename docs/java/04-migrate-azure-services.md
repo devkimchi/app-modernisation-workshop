@@ -1,6 +1,6 @@
 # Java 4. Azure 서비스로 의존성 이전하기
 
-[목차](README.md) | [이전: 업그레이드](03-upgrade.md) | [다음: azd 준비](05-prepare-azd.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 업그레이드](03-upgrade.md) | [다음: azd 준비](05-prepare-azd.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -62,4 +62,4 @@ git diff
 
 코드에서 DB, 큐, Blob 경로가 모두 연결되고 S3 경로의 이전 범위와 역할/환경 변수/DB 초기화 계약이 정리되어야 합니다. 단위 검사 통과와 미실행 통합 항목을 기록합니다. Service Bus만 새 SDK로 바꿔 놓고 소비자가 실제로 시작되지 않거나, 업로드 경로가 임시 디스크에 남아 있으면 다음 단계로 넘어가지 않습니다.
 
-JDK/SDK 충돌과 인증 문제는 [문제 해결](../troubleshooting.md)을 참고합니다. 실제 자격 증명이나 토큰을 채팅에 붙이지 말고 오류 코드와 비밀을 제거한 로그만 사용합니다.
+JDK/SDK 충돌과 인증 문제는 [문제 해결](8-troubleshooting.md)을 참고합니다. 실제 자격 증명이나 토큰을 채팅에 붙이지 말고 오류 코드와 비밀을 제거한 로그만 사용합니다.

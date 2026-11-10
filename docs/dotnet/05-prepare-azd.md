@@ -1,6 +1,6 @@
 # .NET 5. Linux 컨테이너와 azd 배포 산출물 준비하기
 
-[목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](8-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -73,4 +73,4 @@ SQL 방화벽의 "Azure 서비스 허용"은 본인 구독만 허용하는 기�
 
 ## 완료 기준과 문제 해결
 
-Dockerfile/`azure.yaml`/Bicep, 포트/비루트 사용자, Data Protection, SQL 초기화, 네트워크, 비용과 정리 범위를 검토하고 참가자가 생성 범위를 승인해야 합니다. 실제 로컬 이미지 빌드는 실습 6의 `azd package`로 확인합니다. 문제는 [문제 해결](../troubleshooting.md)을 참고합니다.
+Dockerfile/`azure.yaml`/Bicep, 포트/비루트 사용자, Data Protection, SQL 초기화, 네트워크, 비용과 정리 범위를 검토하고 참가자가 생성 범위를 승인해야 합니다. 실제 로컬 이미지 빌드는 실습 6의 `azd package`로 확인합니다. 문제는 [문제 해결](8-troubleshooting.md)을 참고합니다.

@@ -181,7 +181,7 @@ check_container() {
     local engine="$1" format
     probe "$engine" --version
     if (( PROBE_CODE != 0 )); then
-        check_result FAIL container-cli "$engine 실행 실패 (종료 코드 $PROBE_CODE). docs/setup.md를 확인하세요."
+        check_result FAIL container-cli "$engine 실행 실패 (종료 코드 $PROBE_CODE). docs/java/0-setup.md를 확인하세요."
         return
     fi
     check_result PASS container-cli "$engine CLI 실행: $PROBE_TEXT (경로: $(tool_path "$engine"))"
@@ -218,7 +218,7 @@ check_container() {
 check_java_sdks() {
     local sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate output compiler major compiler_major found8=0 found21=0 found25=0
     if [[ ! -r "$sdk_dir/bin/sdkman-init.sh" ]]; then
-        check_result FAIL sdkman 'SDKMAN 초기화 파일이 없습니다. docs/setup.md를 확인하세요.'
+        check_result FAIL sdkman 'SDKMAN 초기화 파일이 없습니다. docs/java/0-setup.md를 확인하세요.'
         return
     fi
     # SDKMAN 초기화는 격리된 셸에서 수행해 현재 셸의 JAVA_HOME을 바꾸지 않는다.

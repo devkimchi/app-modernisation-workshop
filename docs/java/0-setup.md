@@ -4,15 +4,21 @@
 
 ## 실행 환경
 
-Windows에서는 **WSL2 Bash**, macOS에서는 **Bash**를 사용합니다. Windows Git Bash는 Java 실습 환경이 아닙니다.
+Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사용합니다.
 
-Windows의 Copilot app은 프로젝트 파일을 수정하고, Java 빌드와 실행 및 Azure 배포 명령은 WSL에서 수행합니다. 에이전트에게 사용할 WSL 배포판과 프로젝트 경로를 알려 주고 해당 환경에서 명령을 실행하도록 요청하세요. Windows에 설치하거나 로그인한 도구를 WSL에서도 사용할 수 있다고 가정하지 마세요.
+> [!WARNING]
+> **Windows 사용자**
+>
+> Windows의 Copilot app은 프로젝트 파일을 수정하고, Java 빌드와 실행 및 Azure 배포 명령은 WSL에서 수행합니다. 에이전트에게 사용할 WSL 배포판과 프로젝트 경로를 알려 주고 해당 환경에서 명령을 실행하도록 요청하세요. Windows에 설치하거나 로그인한 도구를 WSL에서도 사용할 수 있다고 가정하지 마세요.
 
-Git, GitHub 계정, 유효한 Copilot 사용 권한과 Azure 구독을 먼저 준비합니다. Windows에서는 WSL2도 필요합니다. 설치 안내: [Git](https://git-scm.com/downloads), [WSL](https://learn.microsoft.com/windows/wsl/install), [Copilot app](https://github.com/copilot/app).
+### 사전 설치 항목
+
+- [Copilot app](https://github.com/copilot/app)
+- [WSL](https://learn.microsoft.com/windows/wsl/install)
 
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
-1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택합니다.
+1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택합니다. 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)을 클릭하세요.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
 3. 저장소를 만든 뒤 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요.
 

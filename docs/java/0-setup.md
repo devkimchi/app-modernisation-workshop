@@ -36,19 +36,21 @@ cd <저장소-이름>
 
 ## 2. 필수 도구 설치여부 확인하기
 
-WSL2 또는 macOS Bash에서 실행합니다.
+### 도구 설치 여부 점검
+
+실습에 사용할 필수 도구들이 설치되어 있는지 확인합니다. 아래 명령어를 실행시키세요.
 
 ```bash
-bash scripts/check-prerequisites.sh --track java --container-engine docker
+# zsh/bash
+bash scripts/check-prerequisites.sh --track java
 ```
-
-Windows 호스트의 Git과 Node.js까지 함께 검사하려면 **Windows PowerShell 7**에서 다음 명령을 대신 실행합니다. 기본 배포판은 정확한 이름이 `Ubuntu`인 WSL2 배포판입니다. 해당 배포판이 없거나 WSL1이면 실패하며 다른 배포판으로 자동 전환하지 않습니다. 다른 이름을 사용한다면 [배포판 지정 방법](8-troubleshooting.md#wsl-배포판-지정)을 참고하세요.
 
 ```powershell
-pwsh -File ./scripts/check-prerequisites.ps1 -Track java -ContainerEngine docker
+# PowerShell
+pwsh -File ./scripts/check-prerequisites.ps1 -Track java
 ```
 
-이 문서는 Docker를 기준으로 설명합니다. 현재 셸에 `AZD_CONTAINER_RUNTIME`이 이미 설정되어 있다면 `docker`인지 확인합니다. 엔진 설정 충돌이나 대체 엔진은 [문제 해결의 엔진 설정](8-troubleshooting.md#대체-엔진-설정)을 참고하세요.
+확인 결과는 아래를 참고하세요.
 
 | 결과 | 할 일 |
 | --- | --- |
@@ -58,42 +60,24 @@ pwsh -File ./scripts/check-prerequisites.ps1 -Track java -ContainerEngine docker
 | `MANUAL` | 직접 확인. Copilot 플러그인은 3단계에서 설치 |
 | `INFO` | 참고 정보 |
 
-대화형 점검에서는 별도 동의를 받아 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치 및 공급자 등록을 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요. CI와 비대화형 환경에서는 검사만 합니다.
+### 도구 설치와 업데이트
 
-### 누락된 도구 설치
-
-**WSL2/macOS의 대화형 Bash**에서 설치 도우미를 실행합니다. 도구마다 설치 대상, 출처와 권한을 표시하며 `y`로 승인한 항목만 설치합니다.
+**워크숍 루트의 WSL2/macOS 대화형 터미널**에서 실행합니다. 누락된 도구를 설치하고, 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `--update`를 생략하세요.
 
 ```bash
-bash scripts/install-prerequisites.sh --track java --container-engine docker
+# zsh/bash
+bash scripts/install-prerequisites.sh --track java --update
 ```
 
-| 대상 | 설치 방식 |
+| 대상 | 설치와 업데이트 |
 | --- | --- |
-| Node.js 22 | nvm 설치 또는 재사용 후 설치 |
-| Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 기존 Homebrew 사용 |
-| JDK 8, 21, 25 | SDKMAN 설치 또는 재사용 후 누락된 정식 Temurin JDK만 설치 |
+| Node.js 22 | nvm으로 설치하고, 업데이트 시 최신 22.x를 추가합니다. 더 높은 메이저 버전은 낮추지 않습니다. |
+| JDK 8, 21, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 메이저의 최신 버전을 추가합니다. |
+| Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치합니다. 업데이트는 관리 출처가 확인된 APT/Homebrew 패키지만 지원합니다. |
 
-기존 PATH의 도구는 오래됐더라도 자동 업데이트하지 않습니다. WSL에서 Windows 실행 파일만 발견하면 WSL에 별도로 설치할 수 있습니다. 기존 기본 JDK는 유지합니다. nvm과 SDKMAN은 셸 설정을 변경할 수 있으며, 현재 터미널에 적용할 초기화 명령은 설치 후 출력됩니다.
+기존 Node.js/JDK 버전과 기본 선택은 보존합니다. 셸 설정이나 시스템 패키지가 변경되거나 관리자 권한이 필요할 수 있으며, 누락된 선행 도구와 Homebrew(`--update` 사용 시)는 별도 동의를 받습니다. CI와 비대화형 환경에서는 설치·업데이트하지 않습니다.
 
-WSL의 Azure CLI 설치에는 `apt-get`과 `sudo`가 필요하며 APT 저장소와 시스템 패키지가 변경됩니다. azd도 설치 위치에 따라 sudo가 필요할 수 있습니다. SDKMAN의 선행 도구가 없으면 APT 환경에서 패키지 설치 여부를 별도로 묻습니다. Homebrew 자체는 설치하지 않습니다.
-
-### 기존 도구를 선택적으로 업데이트하기
-
-위 기본 명령은 그대로 유지됩니다. 기존 도구도 업데이트하려면 **WSL2/macOS의 대화형 Bash, 워크숍 루트**에서 `--update`를 명시합니다. 누락된 도구의 설치 동의와 별도로, 업데이트할 도구마다 `y`로 승인해야 합니다.
-
-```bash
-bash scripts/install-prerequisites.sh --track java --container-engine docker --update
-```
-
-| 대상 | `--update` 동작 |
-| --- | --- |
-| nvm 관리 Node.js | 최신 정식 **22.x**를 추가 설치합니다. 기존 버전과 기본 alias를 유지하며 활성 Node.js가 24/25 등 더 높은 major이면 22로 낮추지 않습니다. 현재 Node.js의 nvm 출처를 확인하지 못하면 수동 안내만 합니다. |
-| SDKMAN JDK 8, 21, 25 | major마다 목록에서 최신 정식 **Temurin**을 숫자 버전/빌드 순으로 선택합니다. EA는 제외하고 `+빌드번호`를 보존합니다. 이미 설치된 최신 버전은 실행 확인만 하고, 기존 버전과 기본 JDK는 유지합니다. |
-| Azure CLI, azd | macOS는 선택된 실행 파일의 Homebrew 소유 경로를 확인한 뒤 해당 formula만 업데이트합니다. WSL은 실행 파일을 소유한 설치된 APT 패키지와 Microsoft 저장소의 후보를 확인한 경우만 해당 패키지를 업데이트합니다. 독립 설치 스크립트, pip 등 출처가 확인되지 않는 설치는 덮어쓰지 않고 `MANUAL`로 안내합니다. |
-| 누락된 Homebrew | **이 옵션에서만** 공식 Homebrew 설치를 별도 동의로 제안합니다. 관리자 권한과 macOS 개발 도구 설치가 필요할 수 있습니다. 이후 Azure 도구 설치도 별도로 묻습니다. |
-
-CI와 입력·출력이 리디렉션된 비대화형 환경에서는 이 옵션도 설치/업데이트하지 않습니다. OS 전체 업그레이드를 수행하지 않으며, 승인한 패키지의 의존성은 패키지 관리자가 변경할 수 있습니다. 업데이트 실패나 실제 버전/실행 검증 실패는 종료 코드 `1`로 보고합니다. 기존 기본 런타임을 보존하므로 새 Node.js/JDK를 현재 터미널에서 사용할지는 `nvm use <새-버전>` 또는 `sdk use java <새-식별자>`로 직접 선택하세요. 출처 확인이나 수동 복구는 [문제 해결](8-troubleshooting.md#기존-도구-업데이트와-설치-출처)을 참고하세요.
+새 버전을 현재 터미널에서 사용하는 방법, 설치 출처와 복구 절차는 [문제 해결](8-troubleshooting.md#기존-도구-업데이트와-설치-출처)을 참고하세요.
 
 ### Windows 호스트 도구 설치
 

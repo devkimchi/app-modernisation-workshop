@@ -77,7 +77,7 @@ bash scripts/install-prerequisites.sh --track java --update
 | JDK 8, 21, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 메이저의 최신 버전을 추가합니다. |
 | Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치합니다. 업데이트는 확인된 APT/Homebrew 패키지와 WSL azd 공식 스크립트 설치본을 지원합니다. azd의 기존 설치 기록이 없으면 관리 방식 인계를 별도 승인합니다. |
 
-Node.js 설치와 활성화는 별도 승인을 받습니다. 기존 버전과 기본 alias는 보존하며, 활성화를 승인해도 부모 터미널은 바뀌지 않으므로 출력된 `nvm use` 명령을 현재 터미널에서도 실행하세요.
+설치한 Node.js를 현재 터미널에서도 사용하려면 스크립트가 출력한 초기화 명령과 `nvm use` 명령을 실행하세요.
 
 ### Windows 호스트 도구 설치
 

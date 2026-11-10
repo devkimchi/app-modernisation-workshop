@@ -64,8 +64,6 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track java
 
 누락된 도구를 설치하고, 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `--update`를 생략하세요.
 
-점검은 상태만 조회합니다. 설치 도우미는 도구 설치 후 로그인, 구독 선택, `containerapp` 확장 설치와 공급자 등록을 항목별 동의를 받아 진행합니다.
-
 ```bash
 # zsh/bash
 bash scripts/install-prerequisites.sh --track java --update

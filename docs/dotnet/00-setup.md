@@ -4,12 +4,15 @@
 
 ## 실행 환경
 
-원본 .NET Framework 앱은 **Windows**에서 진행합니다. Copilot app에서 코드 작업을 하고 **Windows PowerShell 7, MSBuild와 IIS Express**로 빌드하고 실행합니다. Visual Studio IDE를 열 필요는 없습니다.
+원본 .NET Framework 앱은 **Windows**에서 진행합니다.
+
+> [!NOTE]
+>
+> Copilot app에서 코드 작업을 하고 **Windows PowerShell 7, MSBuild와 IIS Express**로 빌드하고 실행합니다. Visual Studio IDE를 열 필요는 없습니다.
 
 ### 사전 설치 항목
 
 - [GitHub Copilot app](https://gh.io/app)
-- [Git](https://git-scm.com/downloads)과 [GitHub CLI](https://cli.github.com/)
 - [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 - [WSL2 플랫폼](https://learn.microsoft.com/windows/wsl/install)
 
@@ -40,6 +43,8 @@ cd <저장소-이름>
 powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet
 ```
 
+확인 결과는 아래를 참고하세요.
+
 | 결과 | 할 일 |
 | --- | --- |
 | `PASS` | 해당 검사 통과. 실제 앱 실행이나 배포 성공을 뜻하지 않음 |
@@ -56,7 +61,7 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track dotnet
 powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ```
 
-점검은 상태만 조회합니다. 설치 도우미는 도구 설치 후 Azure CLI와 `azd` 로그인, 구독 선택, 누락된 `containerapp` 확장 설치와 공급자 등록을 항목별 동의를 받아 진행합니다. 브라우저나 장치 코드 인증은 직접 완료하세요.
+설치하려는 도구는 아래와 같습니다.
 
 | 대상 | 설치와 업데이트 |
 | --- | --- |
@@ -65,7 +70,9 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 | Node.js 22 이상 | nvm-windows로 설치합니다. 업데이트 시 현재 메이저의 최신 정식 버전을 추가하며, 없거나 22 미만이면 22.x를 선택합니다. |
 | Azure CLI, azd | winget으로 누락된 도구만 설치합니다. 업데이트는 원래 설치 관리자로 직접 진행합니다. |
 
-관리자 승인이나 WSL2 설치 후 재부팅이 필요할 수 있습니다. 도우미는 자동 재부팅하지 않으므로 안내에 따라 직접 재부팅한 뒤 다시 실행하세요. 설치나 업데이트가 끝나지 않으면 [문제 해결](08-troubleshooting.md#사전-준비-수동-복구)을 확인합니다.
+> [!NOTE]
+>
+> 관리자 승인이나 WSL2 설치 후 재부팅이 필요할 수 있습니다. 도우미는 자동 재부팅하지 않으므로 안내에 따라 직접 재부팅한 뒤 다시 실행하세요. 설치나 업데이트가 끝나지 않으면 [문제 해결](08-troubleshooting.md#사전-준비-수동-복구)을 확인합니다.
 
 ### Windows 빌드 및 실행 도구 준비
 
@@ -88,14 +95,6 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 - **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드를 켭니다.
 - **Copilot 사용 권한**: 앱 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
 
-azd가 같은 엔진을 사용하도록 **실습할 PowerShell마다** 설정합니다. 스크립트는 부모 셸을 변경하지 않습니다.
-
-```powershell
-$env:AZD_CONTAINER_RUNTIME = 'docker'
-```
-
-준비 후 점검 명령을 다시 실행해 필수 `FAIL`을 해결하고, 이 단계에서 확인 가능한 수동 항목을 확인하세요.
-
 ## 3. Copilot app에 플러그인 설치하기
 
 1. Copilot app에서 GitHub 계정으로 로그인합니다.
@@ -105,13 +104,13 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 5. [공식 Upgrade 설치 안내](https://github.com/microsoft/upgrade-agent-plugins#github-copilot-app)에 따라 `microsoft/upgrade-agent-plugins` 마켓플레이스를 추가하고 `upgrade-agent`를 설치합니다.
 6. Agent picker에 **Upgrade**가 보이는지 확인합니다.
 
-업그레이드는 **Upgrade**, Azure 이전은 **modernize**를 사용합니다. 외부 안내가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다.
+> [!NOTE]
+>
+> 업그레이드는 **Upgrade**, Azure 이전은 **modernize**를 사용합니다. 외부 안내가 더 새 버전을 가리켜도 이번 목표는 **.NET 10**입니다.
 
 목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
 
 ## 4. 샘플 다운로드하기
-
-점검과 플러그인 설치를 마친 뒤 **Windows PowerShell의 워크숍 루트**에서 실행합니다.
 
 ```powershell
 powershell.exe -File ./scripts/download-sample.ps1 -Track dotnet

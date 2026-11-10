@@ -25,4 +25,4 @@ Windows의 ASP.NET MVC 5/.NET Framework **`v4.8`** 앱을 .NET 10/ASP.NET Core�
 >
 > Copilot app에서 앱 폴더를 열고 Windows 터미널의 MSBuild와 IIS Express로 원본을 빌드하고 실행합니다. Visual Studio IDE를 열 필요는 없습니다.
 
-각 실습의 완료 조건에 따라 실제 앱 동작을 확인하세요. 문제가 생기면 [문제 해결](8-troubleshooting.md)을 참고하고, 중단해도 [정리](07-cleanup.md)를 수행하세요.
+각 실습의 완료 조건에 따라 실제 앱 동작을 확인하세요. 문제가 생기면 [문제 해결](8-troubleshooting.md)을 참고하세요.

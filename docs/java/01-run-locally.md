@@ -84,7 +84,13 @@ git diff --cached
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
-Git 사용자 이름이나 이메일이 설정되지 않아 커밋이 거부되면, 이 저장소에서 사용할 이름과 이메일을 설정합니다. 스크립트가 대신 설정하지 않습니다.
+Git 사용자 이름이나 이메일이 설정되지 않아 커밋이 거부되면, 이 저장소에서 사용할 이름과 이메일을 설정합니다. 아래 명령은 이 저장소에만 적용되며, 스크립트가 대신 설정하지 않습니다.
+
+```bash
+# zsh/bash
+git config user.name "Your Name"
+git config user.email "you@example.com"
+```
 
 이제 Copilot app에 앱 루트를 추가하고 작업 세션을 만듭니다. Windows에서는 Windows 경로로 앱 폴더를 열되 WSL2에서 같은 폴더를 참조하는 경로를 확인합니다. 에이전트 실행 환경과 작업 디렉터리를 확인하고, 원본을 실행하던 세션과 다른 복사본을 수정하지 않도록 합니다.
 

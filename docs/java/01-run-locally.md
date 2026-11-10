@@ -6,25 +6,22 @@
 
 업그레이드 전에 Java 8 원본의 동작을 확인하고 비교 기준을 남깁니다. 사전 점검과 다운로드가 통과했으며 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있어야 합니다.
 
-셸은 **WSL2/macOS Bash**입니다. 워크숍 자료 루트에 있고 기본 다운로드 위치를 사용했다면 다음 명령으로 앱 루트에 이동합니다. 사용자 지정 경로를 선택했다면 그 폴더로 이동하세요. 이미 앱 루트에 있다면 이동 명령을 건너뜁니다.
+워크숍 자료 루트에 있고 기본 다운로드 위치를 사용했다면 다음 명령으로 앱 루트(`java`)로 이동합니다.
 
 ```bash
+# zsh/bash
 cd java
 ```
 
-이후 명령은 **앱 루트**에서 실행합니다.
+이후 명령은 **앱 루트(`java`)** 에서 실행합니다.
 
 ## JDK 8과 빌드 확인
 
 ```bash
-source ../scripts/use-java.sh 8 &&
-java -version &&
-javac -version &&
-bash ./mvnw -version &&
-bash ./mvnw clean verify
+source ../scripts/use-java.sh 8
 ```
 
-이 스크립트는 현재 셸에서 Java 8, 21 또는 25를 선택합니다. 사용자 지정 경로에 샘플을 다운로드했다면 `../scripts/use-java.sh`를 워크숍 저장소의 스크립트 경로로 바꾸세요. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
+이 스크립트는 현재 셸에서 Java 8을 선택한 뒤 `java -version`, `javac -version`, `bash ./mvnw -version`, `bash ./mvnw clean verify`를 순서대로 실행하고 결과를 표시합니다. 사용자 지정 경로에 샘플을 다운로드했다면 스크립트 경로를 워크숍 저장소 위치에 맞게 바꾸세요. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
 
 ## 로컬 서비스와 앱 실행
 

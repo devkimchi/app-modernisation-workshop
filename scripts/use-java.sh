@@ -12,6 +12,10 @@ _workshop_use_java() {
         8|21|25) ;;
         *) printf '%s\n' '[FAIL] Java 버전으로 8, 21, 25 중 하나를 지정하세요.' >&2; return 2 ;;
     esac
+    if [[ ! -f ./mvnw ]]; then
+        printf '%s\n' '[FAIL] 샘플 앱 루트에서 실행하세요. 현재 폴더에 mvnw가 없습니다.' >&2
+        return 1
+    fi
 
     if [[ ! -r "$sdkman_dir/bin/sdkman-init.sh" ]]; then
         printf '[FAIL] SDKMAN 초기화 파일이 없습니다: %s/bin/sdkman-init.sh\n' "$sdkman_dir" >&2
@@ -61,10 +65,47 @@ _workshop_use_java() {
     printf '[PASS] SDKMAN JDK %s 선택: %s\n' "$major" "$identifier"
 }
 
-if _workshop_use_java "${1:-}"; then
+_workshop_run_baseline() {
+    local status
+    printf '[INFO] java -version\n'
+    if java -version; then
+        :
+    else
+        status=$?
+        printf '[FAIL] java -version에 실패했습니다.\n' >&2
+        return "$status"
+    fi
+    printf '[INFO] javac -version\n'
+    if javac -version; then
+        :
+    else
+        status=$?
+        printf '[FAIL] javac -version에 실패했습니다.\n' >&2
+        return "$status"
+    fi
+    printf '[INFO] bash ./mvnw -version\n'
+    if bash ./mvnw -version; then
+        :
+    else
+        status=$?
+        printf '[FAIL] Maven Wrapper 버전 확인에 실패했습니다.\n' >&2
+        return "$status"
+    fi
+    printf '[INFO] bash ./mvnw clean verify\n'
+    if bash ./mvnw clean verify; then
+        :
+    else
+        status=$?
+        printf '[FAIL] Maven clean verify에 실패했습니다.\n' >&2
+        return "$status"
+    fi
+}
+
+if _workshop_use_java "${1:-}" && _workshop_run_baseline; then
     _workshop_use_java_status=0
 else
     _workshop_use_java_status=$?
 fi
 unset -f _workshop_use_java
+unset -f _workshop_run_baseline
 return "$_workshop_use_java_status"

@@ -21,8 +21,6 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드�
 | 7 | [정리](07-cleanup.md) | Azure 리소스와 로컬 실습 프로세스 정리 |
 | 8 | [문제 해결](8-troubleshooting.md) | 진행 중 발생한 오류의 원인과 조치 확인 |
 
-## 진행 원칙
-
 > [!WARNING]
 > **Windows 사용자**
 >

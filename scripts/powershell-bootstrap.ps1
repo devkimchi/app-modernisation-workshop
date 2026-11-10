@@ -237,8 +237,14 @@ exit $LASTEXITCODE
     $command = $command.Replace('__DATA__', $data)
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
     $workerArguments = @('-NoLogo', '-NoProfile', '-InputFormat', 'Text', '-OutputFormat', 'Text')
-    if (-not (Test-WorkshopBootstrapInteractive)) { $workerArguments += '-NonInteractive' }
+    $interactive = Test-WorkshopBootstrapInteractive
+    if (-not $interactive) { $workerArguments += '-NonInteractive' }
     $workerArguments += @('-EncodedCommand', $encoded)
+    if ($interactive) {
+        # Inherit console handles instead of redirecting the worker through a pipeline.
+        $worker = Start-Process -FilePath $executable -ArgumentList $workerArguments -NoNewWindow -Wait -PassThru -ErrorAction Stop
+        return $worker.ExitCode
+    }
     & $executable @workerArguments | Out-Host
     return $LASTEXITCODE
 }

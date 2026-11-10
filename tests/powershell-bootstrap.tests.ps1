@@ -162,6 +162,22 @@ try {
     }
 
     $worker = Join-Path $fixture 'worker 한글 & spaces.ps1'
+    & {
+        function Test-WorkshopBootstrapInteractive { return $true }
+        function Find-WorkshopPowerShell { return 'fixture-pwsh.exe' }
+        function Start-Process {
+            [CmdletBinding()]
+            param($FilePath, $ArgumentList, [switch]$NoNewWindow, [switch]$Wait, [switch]$PassThru)
+            Assert-Bootstrap ($FilePath -eq 'fixture-pwsh.exe') 'interactive worker uses discovered executable'
+            Assert-Bootstrap ($NoNewWindow -and $Wait -and $PassThru) 'interactive worker inherits console and waits for completion'
+            Assert-Bootstrap ($ArgumentList -notcontains '-NonInteractive') 'interactive worker is not forced noninteractive'
+            Assert-Bootstrap ($ArgumentList[-2] -eq '-EncodedCommand') 'interactive worker retains serialized argument transport'
+            return [pscustomobject]@{ ExitCode = 23 }
+        }
+        $code = Invoke-WorkshopPowerShell -ScriptPath 'not-run.ps1' -BoundParameters @{}
+        Assert-Bootstrap ($code -eq 23 -and @($code).Count -eq 1) 'interactive worker returns only its exit code'
+    }
+
     $report = Join-Path $fixture 'arguments.json'
     [IO.File]::WriteAllText($worker, @'
 param([string]$Name, [string[]]$Values, [switch]$Enabled, [switch]$Disabled, [switch]$Update, [string]$Report)
@@ -191,6 +207,13 @@ exit 23
     Assert-Bootstrap ((Invoke-WorkshopPowerShell -ScriptPath $successfulWorker -BoundParameters @{}) -eq 0) 'successful script does not inherit stale native exit code'
 
     if ($IsWindows) {
+        & {
+            function Test-WorkshopBootstrapInteractive { return $true }
+            $code = Invoke-WorkshopPowerShell -ScriptPath $worker -BoundParameters $parameters -RemainingArguments @('last value', '한글 "tail"')
+            Assert-Bootstrap ($code -eq 23) 'real inherited-handle worker preserves exit status'
+            $actual = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+            Assert-Bootstrap ($actual.Name -ceq $parameters.Name -and $actual.Update -and -not $actual.Disabled) 'real inherited-handle worker preserves serialized values'
+        }
         $legacy = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
         Assert-Bootstrap (-not (Test-WorkshopPowerShellExecutable $legacy)) 'PowerShell 5.1 executable is rejected as worker'
         $legacyParameters = @{}

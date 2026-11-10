@@ -85,8 +85,8 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ### 직접 준비할 항목
 
 - **Azure 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위의 권한을 요청하고 구독 전체 Owner를 무조건 요청하지 마세요.
-- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Linux containers 모드를 사용합니다.
-- **Copilot 사용 권한**: [앱](https://github.com/copilot/app) 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
+- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드를 켭니다.
+- **Copilot 사용 권한**: 앱 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
 
 azd가 같은 엔진을 사용하도록 **실습할 PowerShell마다** 설정합니다. 스크립트는 부모 셸을 변경하지 않습니다.
 

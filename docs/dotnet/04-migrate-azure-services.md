@@ -1,6 +1,6 @@
 # .NET 4. Azure 서비스로 이전하고 Windows 의존성 제거하기
 
-[목차](README.md) | [이전: 업그레이드](03-upgrade.md) | [다음: azd 준비](05-prepare-azd.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: 업그레이드](03-upgrade.md) | [다음: azd 준비](05-prepare-azd.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -55,4 +55,4 @@ git diff
 
 ## 완료 기준과 문제 해결
 
-MSMQ가 SDK 패키지 이름만 바뀐 채 남아 있지 않고, SQL/Service Bus/Blob/Data Protection 경로와 환경 설정이 연결되어야 합니다. 단위 검사와 DB 초기화 절차가 있고 미실행 통합 항목이 명확해야 합니다. Linux 컨테이너 빌드와 실제 서비스 연결은 실습 6에서 확인합니다. [문제 해결](../troubleshooting.md)에서 인증과 Linux 의존성 항목을 참고하세요.
+MSMQ가 SDK 패키지 이름만 바뀐 채 남아 있지 않고, SQL/Service Bus/Blob/Data Protection 경로와 환경 설정이 연결되어야 합니다. 단위 검사와 DB 초기화 절차가 있고 미실행 통합 항목이 명확해야 합니다. Linux 컨테이너 빌드와 실제 서비스 연결은 실습 6에서 확인합니다. [문제 해결](08-troubleshooting.md)에서 인증과 Linux 의존성 항목을 참고하세요.

@@ -1,6 +1,6 @@
 # Java 2. 평가하고 계획 승인하기
 
-[목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -48,7 +48,7 @@ web/worker의 책임, DB/큐/파일 의존성, 화면과 API, 환경 설정과 �
   RabbitMQ -> Service Bus, dev의 로컬 파일 및 dev 외 AWS S3 -> private Blob으로 이전한다.
 - 관리 ID, 최소 권한, TLS를 기본으로 하고 비밀을 코드/Git에 저장하지 않는다.
 - 최종 실행 대상은 Linux Azure Container Apps다. AKS/App Service가 아니다.
-- 배포는 azd와 Bicep, 이미지 빌드는 선택한 로컬 Docker/Podman 엔진을 사용한다.
+- 배포는 azd와 Bicep, 이미지 빌드는 로컬 Docker 엔진을 사용한다.
   ACR Tasks나 az acr build를 사용하지 않는다.
 - 단계는 기준 동작 테스트, JDK 21, JDK 25, Azure 서비스 코드, azd 산출물,
   리소스 생성과 배포, 기능 검증, 정리로 나눈다.
@@ -62,4 +62,4 @@ web/worker의 책임, DB/큐/파일 의존성, 화면과 API, 환경 설정과 �
 
 평가 결과를 읽고 범위를 확인했으며, **JDK 25 + ACA + azd + 로컬 빌드**가 계획과 rulebook에 반영되어 있어야 합니다. 평가 중 실제 소스가 변경되었다면 워크숍 저장소의 diff를 먼저 검토합니다. 이 저장소에는 원본 샘플의 복구 브랜치나 완성 배포 브랜치가 없습니다.
 
-평가가 인증/도구 문제로 중단되면 [문제 해결](../troubleshooting.md)을 따릅니다. 미완료 평가를 완료로 바꾸거나 전체 실행을 일괄 승인해서 우회하지 않습니다.
+평가가 인증/도구 문제로 중단되면 [문제 해결](08-troubleshooting.md)을 따릅니다. 미완료 평가를 완료로 바꾸거나 전체 실행을 일괄 승인해서 우회하지 않습니다.

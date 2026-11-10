@@ -1,6 +1,6 @@
 # .NET 2. 평가하고 도구별 실행 계획 세우기
 
-[목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [정리](07-cleanup.md)
+[전체 목차](../../README.md) | [.NET 목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [문제 해결](08-troubleshooting.md)
 
 ## 목표와 시작 조건
 
@@ -38,7 +38,7 @@ ASP.NET MVC 5/System.Web, EF Core/LocalDB, MSMQ, 파일 저장과 큐 처리,
 - 관리 ID, 최소 권한과 TLS를 사용하고 비밀은 코드/Git에 넣지 않는다.
 - DB 초기화의 데이터 삭제/재생성을 제거하고 명시적인 migration으로 바꾼다.
 - Data Protection 키를 revision/인스턴스 간 보존한다.
-- 배포는 azd와 Bicep, 선택한 로컬 Docker/Podman 엔진을 사용한다.
+- 배포는 azd와 Bicep, 로컬 Docker 엔진을 사용한다.
   원격 이미지 빌드, ACR Tasks, az acr build를 사용하지 않는다.
 - 기준 테스트, .NET 10 업그레이드, Azure 코드, Linux 컨테이너,
   인프라 준비, 배포, 실제 기능 검증과 정리로 작업을 나눈다.
@@ -50,4 +50,4 @@ ASP.NET MVC 5/System.Web, EF Core/LocalDB, MSMQ, 파일 저장과 큐 처리,
 
 ## 완료 기준과 문제 해결
 
-평가 결과와 계획을 읽었고 두 에이전트의 책임, 소스 변경 범위, 데이터 보존과 최종 Linux 확인 기준이 명확해야 합니다. 다음 실습은 **업그레이드 부분만** 승인합니다. Agent picker/평가 도구 문제는 [문제 해결](../troubleshooting.md)을 확인하세요.
+평가 결과와 계획을 읽었고 두 에이전트의 책임, 소스 변경 범위, 데이터 보존과 최종 Linux 확인 기준이 명확해야 합니다. 다음 실습은 **업그레이드 부분만** 승인합니다. Agent picker/평가 도구 문제는 [문제 해결](08-troubleshooting.md)을 확인하세요.

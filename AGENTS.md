@@ -40,7 +40,7 @@
 - 존재하지 않는 이전이나 다음 단계, 중복 링크와 자기 자신을 가리키는 링크는 생략하세요.
 - 트랙 목차에서는 전체 목차, 다음 단계인 준비, 문제 해결로 연결하세요.
 - 준비 문서에는 이전 링크를, 마지막 실습인 정리 문서에는 다음 링크를 넣지 마세요.
-- [Java 문제 해결](docs/java/8-troubleshooting.md)과 [.NET 문제 해결](docs/dotnet/8-troubleshooting.md)에는 전체 목차와 해당 트랙 목차만 두세요. 이전과 다음 링크는 넣지 마세요.
+- [Java 문제 해결](docs/java/8-troubleshooting.md)과 [.NET 문제 해결](docs/dotnet/8-troubleshooting.md) 문서의 상단 링크는 전체 목차와 해당 트랙 목차만 두세요. 이전과 다음 링크는 넣지 마세요.
 - 파일을 이동하거나 나누면 참조 링크와 스크립트의 안내 경로도 함께 수정하세요.
 
 README는 참가자 안내에 집중하고, 유지보수와 개발자용 테스트 안내는 CONTRIBUTING에 두세요.
@@ -52,8 +52,8 @@ README는 참가자 안내에 집중하고, 유지보수와 개발자용 테스�
 - .NET Framework 원본의 빌드와 실행 환경은 Windows입니다. Visual Studio IDE 실행을 필수로 만들지 말고 기존 MSBuild/IIS Express 도우미를 활용하세요.
 - 기존 옵션, 출력 상태(`PASS`, `FAIL`, `WARN`, `MANUAL`, `INFO`)와 종료 코드의 의미를 유지하세요. 오류를 숨기거나 성공으로 처리하지 마세요.
 - [.gitattributes](.gitattributes)에 따라 Markdown, Bash와 PowerShell 파일의 줄바꿈은 LF로 유지하세요.
-- `.ps1`은 Windows PowerShell 5.1 파서가 한국어를 올바르게 읽도록 UTF-8 BOM을 유지하세요. 진입점은 공통 `powershell-bootstrap.ps1`에서 Windows의 PowerShell 7/WSL2 플랫폼을 함께 검사하고 5.1에서는 7에 위임합니다. 두 항목이 없으면 본 작업 전에 종료하며, 설치 도우미만 항목별 동의를 받아 설치를 제안합니다. WSL2 배포판 검사는 Java용 기존 검사와 구분하세요.
-- 함수/변수의 호출자 범위를 유지하는 dot-sourcing은 PowerShell 7에서 수행하세요. 5.1에서는 자식 프로세스의 범위를 가져올 수 없으므로 dot-sourcing에 명확한 오류를 내며 호출자 셸을 종료하지 않습니다. PowerShell 7의 dot-sourcing은 본 작업이나 호스트 설치를 실행하지 않아야 합니다.
+- `.ps1`은 Windows PowerShell 5.1 파서가 한국어를 올바르게 읽도록 UTF-8 BOM을 유지하세요. 진입점은 공통 `powershell-bootstrap.ps1`에서 Windows의 PowerShell 7/WSL2 플랫폼을 함께 검사하고 5.1에서는 7에 위임합니다. PowerShell 7 또는 WSL2 플랫폼 중 하나라도 없으면 본 작업 전에 종료하며, 설치 도우미만 항목별 동의를 받아 설치를 제안합니다. WSL2 배포판 검사는 Java용 기존 검사와 구분하세요.
+- 함수/변수의 호출자 범위를 유지하는 dot-sourcing은 PowerShell 7에서 수행하세요. Windows PowerShell 5.1에서 dot-sourcing하면 명확한 오류를 표시하되 호출자 셸은 종료하지 마세요. 자식 프로세스에서 정의한 함수와 변수는 호출자 셸로 가져올 수 없습니다. PowerShell 7의 dot-sourcing은 본 작업이나 호스트 설치를 실행하지 않아야 합니다.
 
 ## 6. 안전과 사용자 동의
 

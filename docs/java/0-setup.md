@@ -47,7 +47,7 @@ bash scripts/check-prerequisites.sh --track java --container-engine docker
 Windows 호스트의 Git과 Node.js까지 함께 검사하려면 **Windows PowerShell 7**에서 다음 명령을 대신 실행합니다. `Ubuntu`는 실제 WSL2 배포판 이름으로 바꿉니다. 배포판이 여러 개라면 이름을 반드시 지정하세요.
 
 ```powershell
-pwsh -File .\scripts\check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
+pwsh -File ./scripts/check-prerequisites.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
 ```
 
 Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바꿉니다.
@@ -83,7 +83,7 @@ WSL의 Azure CLI 설치에는 `apt-get`과 `sudo`가 필요하며 APT 저장소�
 Windows 호스트의 선행 도구나 Node.js가 없다면 **대화형 PowerShell 7 또는 Windows PowerShell 5.1**에서 별도로 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다.
 
 ```powershell
-powershell.exe -File .\scripts\install-prerequisites.ps1 -Track java -ContainerEngine docker
+powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -ContainerEngine docker
 ```
 
 누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻고 `y`로 승인한 항목만 설치합니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 필요하면 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. CI와 입력·출력이 리디렉션된 비대화형 환경에서는 설치하지 않습니다. Linux 배포판과 WSL 안의 도구는 설치하지 않으므로 Java용 WSL2 배포판은 따로 준비합니다. 두 항목이 준비되면 PowerShell 7에서 누락된 Windows Node.js의 설치 동의를 받습니다.
@@ -126,7 +126,7 @@ bash scripts/download-sample.sh --track java --container-engine docker
 Windows PowerShell에서 WSL에 위임하려면 위 명령 대신 다음을 사용합니다.
 
 ```powershell
-pwsh -File .\scripts\download-sample.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
+pwsh -File ./scripts/download-sample.ps1 -Track java -WslDistribution Ubuntu -ContainerEngine docker
 ```
 
 다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 기본 대상은 워크숍 루트의 `java`입니다. 다른 경로가 필요하면 Bash에서 `--destination "$HOME/workshops/asset-app"`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다.

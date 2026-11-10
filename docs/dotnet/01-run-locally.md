@@ -9,13 +9,13 @@
 터미널은 **Windows PowerShell 7**입니다. 워크숍 자료 루트에 있고 기본 다운로드 위치를 사용했다면 다음 명령으로 앱 루트에 이동합니다. 사용자 지정 경로를 선택했다면 그 폴더로 이동하세요. 이미 앱 루트에 있다면 이동 명령을 건너뜁니다.
 
 ```powershell
-Set-Location .\dotnet
+Set-Location ./dotnet
 ```
 
-이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크숍 최상위나 `docs\dotnet`을 열지 않습니다. 원본 기준선은 다운로드한 동일 경로에서 확인하는 것이 간단합니다. 별도 worktree 세션을 사용하면 앱과 도우미가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다.
+이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 원본 기준선은 다운로드한 동일 경로에서 확인하는 것이 간단합니다. 별도 worktree 세션을 사용하면 앱과 도우미가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다.
 
 ```powershell
-Get-Content .\ContosoUniversity.csproj | Select-String TargetFrameworkVersion
+Get-Content ./ContosoUniversity.csproj | Select-String TargetFrameworkVersion
 Get-Service MSMQ
 dotnet --list-sdks
 ```
@@ -30,7 +30,7 @@ dotnet --list-sdks
 
 ```text
 이 세션의 실제 앱 루트를 확인하고 Windows PowerShell 7에서 원본을 복원/빌드해 줘.
-Visual Studio IDE를 열지 말고, 워크숍 scripts\run-dotnet-original.ps1에
+Visual Studio IDE를 열지 말고, 워크숍 scripts/run-dotnet-original.ps1에
 -AppPath로 이 앱의 절대 경로를 전달해 실행해 줘. 지금은 -Run을 붙이지 마.
 고정된 net48 타깃과 packages.config를 유지하고 full-framework MSBuild.exe를 사용해.
 명령/경로/종료 코드와 오류를 기록하고, 실패하면 앱을 실행하거나 업그레이드하지 마.
@@ -40,27 +40,27 @@ Visual Studio IDE를 열지 말고, 워크숍 scripts\run-dotnet-original.ps1에
 참가자가 직접 실행해도 같은 경로입니다. 기본 폴더 구조에서는 앱 루트에서:
 
 ```powershell
-pwsh -NoProfile -File ..\scripts\run-dotnet-original.ps1 -AppPath .
+pwsh -NoProfile -File ../scripts/run-dotnet-original.ps1 -AppPath .
 if ($LASTEXITCODE -ne 0) { throw '원본 복원/빌드 실패. 다음 단계로 진행하지 마세요.' }
 ```
 
-사용자 지정 다운로드 위치라면 `..\scripts` 대신 **워크숍 자료 폴더의 도우미 절대 경로**를 지정합니다. 도우미는 `vswhere`로 IDE/Build Tools의 MSBuild와 웹 타깃을 찾고, 공백이 있는 경로도 인자로 보존합니다. 별도 `nuget.exe`나 Developer Command Prompt는 필요하지 않습니다. 원본은 솔루션과 프로젝트가 같은 폴더이며 `HintPath`가 `packages\...`를 참조하므로 다음 순서로 실행합니다.
+사용자 지정 다운로드 위치라면 `../scripts` 대신 **워크숍 자료 폴더의 도우미 절대 경로**를 지정합니다. 도우미는 `vswhere`로 IDE/Build Tools의 MSBuild와 웹 타깃을 찾고, 공백이 있는 경로도 인자로 보존합니다. 별도 `nuget.exe`나 Developer Command Prompt는 필요하지 않습니다. 원본은 솔루션과 프로젝트가 같은 폴더이며 `HintPath`가 `packages/...`를 참조하므로 다음 순서로 실행합니다.
 
 ```text
-MSBuild.exe <앱 루트>\ContosoUniversity.sln /t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=<앱 루트>\packages
-MSBuild.exe <앱 루트>\ContosoUniversity.sln /t:Build /p:Configuration=Debug
+MSBuild.exe <앱 루트>/ContosoUniversity.sln /t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=<앱 루트>/packages
+MSBuild.exe <앱 루트>/ContosoUniversity.sln /t:Build /p:Configuration=Debug
 ```
 
 위 두 줄은 실행 구조 설명이며 실제 경로의 따옴표/버전 설정은 도우미가 처리합니다. 두 명령 모두 선택한 설치본의 `VisualStudioVersion` 및 `VSToolsPath`를 명시해 원본의 오래된 웹 타깃 기본값을 피합니다. 복원 실패 시 빌드하지 않고, 빌드 실패 시 IIS Express를 실행하지 않습니다. `dotnet restore/build/run`으로 대체하거나 NuGet의 TLS 검증을 끄지 않습니다.
 
 ## 2. DB 대상을 확인한 뒤 IIS Express 실행
 
-**첫 HTTP 요청은 `Global.asax.cs`의 DB 초기화를 실행합니다.** 고정 샘플의 `Data\DbInitializer.cs`는 `EnsureCreated()`와 seed를 사용하며, 이 경로에서 모델 변경 시 DB를 자동 삭제/재생성한다고 가정해서는 안 됩니다. **실습 전용 DB만 사용하고 개인/업무 DB를 연결하지 않습니다.** 코드가 달라졌다면 초기화/삭제 경로를 다시 검토합니다.
+**첫 HTTP 요청은 `Global.asax.cs`의 DB 초기화를 실행합니다.** 고정 샘플의 `Data/DbInitializer.cs`는 `EnsureCreated()`와 seed를 사용하며, 이 경로에서 모델 변경 시 DB를 자동 삭제/재생성한다고 가정해서는 안 됩니다. **실습 전용 DB만 사용하고 개인/업무 DB를 연결하지 않습니다.** 코드가 달라졌다면 초기화/삭제 경로를 다시 검토합니다.
 
 ```powershell
-Select-String -Path .\Web.config -Pattern 'connectionString|NotificationQueuePath'
-Get-Content .\Data\DbInitializer.cs
-Get-Content .\Services\NotificationService.cs
+Select-String -Path ./Web.config -Pattern 'connectionString|NotificationQueuePath'
+Get-Content ./Data/DbInitializer.cs
+Get-Content ./Services/NotificationService.cs
 ```
 
 원본 연결은 `(LocalDb)\MSSQLLocalDB`의 `ContosoUniversityNoAuthEFCore`, 큐는 `.\Private$\ContosoUniversityNotifications`입니다. 다른 실습도 같은 이름을 사용할 수 있으니 소유와 데이터 보존 필요를 확인하세요. 도우미는 연결 문자열 변경, LocalDB 인스턴스/큐 생성 또는 데이터 삭제를 직접 수행하지 않지만 앱 자체는 요청 처리 중 DB/큐에 쓰기 작업을 할 수 있습니다. 특히 원본 `NotificationService`는 큐가 없으면 생성하고 `Everyone`에 FullControl을 부여합니다. 전용 로컬 실습 환경에서만 사용하고, 공유 PC에서는 실행 전 관리자와 최소 권한 큐를 별도로 준비할지 검토합니다. 앱을 무조건 관리자 권한으로 올려 해결하지 않습니다.
@@ -84,10 +84,10 @@ Web.config와 DB 생성/재생성 경로를 확인했고 실습 전용 데이터
 ```
 
 ```powershell
-pwsh -NoProfile -File ..\scripts\run-dotnet-original.ps1 -AppPath . -Run -AllowDatabaseInitialization
+pwsh -NoProfile -File ../scripts/run-dotnet-original.ps1 -AppPath . -Run -AllowDatabaseInitialization
 ```
 
-도우미는 IIS Express 설치본의 `AppServer\applicationhost.config`를 기반으로 앱 내부 `.vs\workshop\applicationhost-<고유값>.config`를 생성합니다. 전역 IIS 설정, `Web.config`와 기존 `.vs` 설정은 바꾸지 않습니다. CLR v4 Integrated 풀과 원본 프로젝트의 **Windows 인증 활성/익명 인증 비활성**을 유지합니다. 기본 주소는 **`http://localhost:58801/`**입니다. 원본 IDE 프로필의 `https://localhost:44300/`과 달리, CLI 기본은 localhost 전용 HTTP 바인딩으로 인증서/HTTP.sys SSL 등록 없이 실행합니다. 외부 공개나 실제 비밀 데이터 전송에 사용하지 않습니다.
+도우미는 IIS Express 설치본의 `AppServer/applicationhost.config`를 기반으로 앱 내부 `.vs/workshop/applicationhost-<고유값>.config`를 생성합니다. 전역 IIS 설정, `Web.config`와 기존 `.vs` 설정은 바꾸지 않습니다. CLR v4 Integrated 풀과 원본 프로젝트의 **Windows 인증 활성/익명 인증 비활성**을 유지합니다. 기본 주소는 **`http://localhost:58801/`**입니다. 원본 IDE 프로필의 `https://localhost:44300/`과 달리, CLI 기본은 localhost 전용 HTTP 바인딩으로 인증서/HTTP.sys SSL 등록 없이 실행합니다. 외부 공개나 실제 비밀 데이터 전송에 사용하지 않습니다.
 
 포트가 사용 중이면 해당 앱을 종료하지 말고 `-Port 58802` 등 빈 포트를 선택합니다. 브라우저에 출력된 주소를 직접 엽니다. 도우미는 브라우저/HTTP 요청을 자동 실행하지 않으며, 성공 종료 코드나 IIS 시작 로그만으로 DB/큐/화면 동작 성공이라 하지 않습니다.
 

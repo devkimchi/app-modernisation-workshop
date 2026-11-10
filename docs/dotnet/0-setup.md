@@ -28,7 +28,7 @@ cd <저장소-이름>
 **Windows PowerShell 7**에서 실행합니다.
 
 ```powershell
-pwsh -File .\scripts\check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
+pwsh -File ./scripts/check-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```
 
 Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바꿉니다. Windows Git Bash를 사용하려면 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 시작할 수도 있습니다. 이 명령도 Windows PowerShell 7에 검사를 위임합니다.
@@ -48,7 +48,7 @@ Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바
 **대화형 PowerShell 7 또는 Windows PowerShell 5.1**에서 설치 도우미를 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다.
 
 ```powershell
-powershell.exe -File .\scripts\install-prerequisites.ps1 -Track dotnet -ContainerEngine docker
+powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```
 
 먼저 누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻습니다. `y`로 승인한 항목만 설치하며 Linux 배포판은 설치하지 않습니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 안내에 따라 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 가상화 설정이나 Windows 업데이트가 필요한 경우 수동으로 준비합니다.
@@ -104,10 +104,10 @@ $env:AZD_CONTAINER_RUNTIME = 'docker' # Podman은 'podman'
 점검과 플러그인 설치를 마친 뒤 **Windows PowerShell 7의 워크숍 루트**에서 실행합니다.
 
 ```powershell
-pwsh -File .\scripts\download-sample.ps1 -Track dotnet -ContainerEngine docker
+pwsh -File ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine docker
 ```
 
-다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 기본 대상은 워크숍 루트의 `dotnet`입니다. 다른 경로가 필요하면 `-Destination 'C:\workshops\contoso-app'`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다.
+다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 기본 대상은 워크숍 루트의 `dotnet`입니다. 다른 경로가 필요하면 `-Destination 'C:/workshops/contoso-app'`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다.
 
 대상은 없거나 빈 폴더여야 합니다. 기존 파일을 덮어쓰지 않으며 홈, 파일시스템 루트, 워크숍 루트, `docs`/`scripts`/`tests`, 심볼릭 링크/junction을 경유하는 경로는 거부합니다. Windows 확장/장치 경로도 지원하지 않습니다. 실패 시 대상 상태를 확인하고 빈 경로로 다시 시도하세요. 복사 도중 실패하면 미완료 파일이 남을 수 있습니다.
 

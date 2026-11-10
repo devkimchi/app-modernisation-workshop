@@ -10,7 +10,7 @@
 
 | 증상 | 확인과 조치 |
 | --- | --- |
-| PowerShell 7 또는 WSL2 플랫폼 누락 | 두 항목이 모두 필요합니다. `powershell.exe -File .\scripts\install-prerequisites.ps1 -Track dotnet`으로 시작하면 누락된 항목마다 별도 동의를 받습니다. WSL2는 관리자 권한/Windows 기능 변경/재부팅이 필요할 수 있습니다. 안내에 따라 직접 재부팅하고 다시 실행하세요. .NET 원본은 계속 Windows에서 실행하며 배포판은 필수가 아닙니다. |
+| PowerShell 7 또는 WSL2 플랫폼 누락 | 두 항목이 모두 필요합니다. `powershell.exe -File ./scripts/install-prerequisites.ps1 -Track dotnet`으로 시작하면 누락된 항목마다 별도 동의를 받습니다. WSL2는 관리자 권한/Windows 기능 변경/재부팅이 필요할 수 있습니다. 안내에 따라 직접 재부팅하고 다시 실행하세요. .NET 원본은 계속 Windows에서 실행하며 배포판은 필수가 아닙니다. |
 | `pwsh`를 찾을 수 없음 | Windows PowerShell 5.1에서 `.ps1`을 실행하면 기본 설치 경로와 갱신된 PATH에서도 PowerShell 7을 찾습니다. 발견하지 못하면 설치 안내와 함께 종료합니다. 위 설치 도우미로 준비하거나 PowerShell 7 설치 후 새 터미널을 엽니다. |
 | `MANUAL`인데 종료 코드 0 | 수동 항목은 미검증입니다. Copilot 권한, 플러그인, RBAC/쿼터를 직접 확인합니다. |
 | 스크립트 실행 권한/인코딩/줄바꿈 | `pwsh -File` 또는 Windows PowerShell 5.1의 `powershell.exe -File`로 시작합니다. 실제 작업은 PowerShell 7입니다. `.ps1`은 5.1 파서를 위해 UTF-8 BOM과 LF를 유지합니다. Git Bash 진입점은 `bash scripts/...sh`로 실행합니다. 임의로 시스템 실행 정책을 완화하지 않습니다. |
@@ -53,10 +53,10 @@ az provider show --namespace "<미등록-공급자>" --query registrationState -
 
 기본 MSBuild만으로는 원본 웹 프로젝트를 빌드할 수 없습니다. Visual Studio Installer에서 IDE의 `Microsoft.VisualStudio.Workload.NetWeb` 또는 Build Tools의 `Microsoft.VisualStudio.Workload.WebBuildTools`를 준비하세요. 설치본에 다음 파일이 있어야 합니다.
 
-- `MSBuild\Current\Bin\MSBuild.exe`
-- `MSBuild\Microsoft\VisualStudio\v17.0` 또는 `v18.0` 아래의 `WebApplications\Microsoft.WebApplication.targets`
+- `MSBuild/Current/Bin/MSBuild.exe`
+- `MSBuild/Microsoft/VisualStudio/v17.0` 또는 `v18.0` 아래의 `WebApplications/Microsoft.WebApplication.targets`
 
-IIS Express에는 실행 파일뿐 아니라 `AppServer\applicationhost.config` 템플릿도 필요합니다. 원본은 전체 Framework MSBuild와 IIS Express로 빌드하고 실행하며, `dotnet build`/`dotnet run`으로 대체하지 않습니다.
+IIS Express에는 실행 파일뿐 아니라 `AppServer/applicationhost.config` 템플릿도 필요합니다. 원본은 전체 Framework MSBuild와 IIS Express로 빌드하고 실행하며, `dotnet build`/`dotnet run`으로 대체하지 않습니다.
 
 원본 README의 "4.8.2" 표기와 달리 고정 커밋의 프로젝트 대상은 `v4.8`입니다. **4.8 이상 런타임과 4.8 참조 어셈블리**를 각각 준비합니다. 4.8.1 런타임만으로는 4.8 Targeting Pack을 대체할 수 없습니다. [공식 버전 확인 안내](https://learn.microsoft.com/dotnet/framework/migration-guide/how-to-determine-which-versions-are-installed)를 따르고, "4.8.2 설치 파일"을 임의 사이트에서 받지 마세요.
 
@@ -78,7 +78,7 @@ IIS Express에는 실행 파일뿐 아니라 `AppServer\applicationhost.config` 
 | 증상 | 확인과 조치 |
 | --- | --- |
 | Framework 참조 어셈블리 누락 | 런타임과 별개로 **4.8 Targeting Pack**을 설치합니다. 4.8.2 다운로드를 찾거나 csproj를 임의 retarget하지 않습니다. |
-| `framework-build` 검사 실패 | VS 2022/2026 IDE 또는 Build Tools를 사용할 수 있습니다. `vswhere`와 선택 설치본의 MSBuild 실행 파일, `WebApplications\Microsoft.WebApplication.targets`를 확인합니다. Build Tools에는 Web development build tools가 필요하며 기본 MSBuild만으로는 부족합니다. IDE 실행은 필요하지 않습니다. |
+| `framework-build` 검사 실패 | VS 2022/2026 IDE 또는 Build Tools를 사용할 수 있습니다. `vswhere`와 선택 설치본의 MSBuild 실행 파일, `WebApplications/Microsoft.WebApplication.targets`를 확인합니다. Build Tools에는 Web development build tools가 필요하며 기본 MSBuild만으로는 부족합니다. IDE 실행은 필요하지 않습니다. |
 | MSB4019 / 웹 타깃 import 실패 | `dotnet build`가 아니라 도우미의 전체 Framework MSBuild를 사용합니다. 도우미는 해당 설치본의 `VSToolsPath`/`VisualStudioVersion`을 전달합니다. 웹 타깃 없이 프로젝트 import를 삭제해 우회하지 않습니다. |
 | 패키지/HintPath 누락 | 원본은 `packages.config`이며 앱 루트의 `packages`를 참조합니다. 도우미의 `/t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=...` 성공을 먼저 확인하고 프록시/패키지 소스 오류를 해결합니다. |
 | IIS Express CLI가 종료되거나 주소 접근 실패 | 장기 실행 터미널, 실행 PID와 로그를 확인합니다. 기본 CLI는 `http://localhost:58801/`이며 IDE의 HTTPS 44300과 다릅니다. 포트 충돌은 `-Port`로 해결하고 관리자 실행/URL ACL/방화벽 전역 변경으로 우회하지 않습니다. HTTP 응답 확인은 DB 초기화를 유발할 수 있습니다. |

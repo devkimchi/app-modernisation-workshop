@@ -10,7 +10,7 @@
 
 | 증상 | 확인과 조치 |
 | --- | --- |
-| PowerShell 7 또는 WSL2 플랫폼 누락 | Windows의 모든 `.ps1` 진입점은 두 항목을 함께 확인합니다. `powershell.exe -File .\scripts\install-prerequisites.ps1 -Track java`로 시작하면 누락된 항목마다 별도 설치 동의를 받습니다. WSL2는 관리자 권한/기능 변경/재부팅이 필요할 수 있으며 도우미가 배포판을 설치하거나 재부팅하지는 않습니다. 직접 재부팅한 뒤 다시 실행하고 Java용 WSL2 배포판을 별도 준비하세요. |
+| PowerShell 7 또는 WSL2 플랫폼 누락 | Windows의 모든 `.ps1` 진입점은 두 항목을 함께 확인합니다. `powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java`로 시작하면 누락된 항목마다 별도 설치 동의를 받습니다. WSL2는 관리자 권한/기능 변경/재부팅이 필요할 수 있으며 도우미가 배포판을 설치하거나 재부팅하지는 않습니다. 직접 재부팅한 뒤 다시 실행하고 Java용 WSL2 배포판을 별도 준비하세요. |
 | `pwsh`를 찾을 수 없음 | Windows PowerShell 5.1에서 `.ps1`을 실행하면 PowerShell 7의 기본 설치 경로와 갱신된 PATH까지 찾습니다. 그래도 없으면 작업 전에 종료합니다. 위 설치 도우미로 준비하거나 PowerShell 7 설치 후 새 터미널을 엽니다. `.ps1`의 UTF-8 BOM과 LF를 유지하세요. |
 | Java를 Git Bash에서 실행해 사전 점검 실패 | Java는 WSL2/macOS Bash입니다. Windows PowerShell wrapper에 실제 WSL 배포판을 지정할 수도 있습니다. |
 | WSL 배포판 이름/버전 실패 | `wsl --list --verbose`에서 이름과 VERSION 2를 확인합니다. 여러 배포판이면 `-WslDistribution`을 지정합니다. 사용자 지정 커널은 자동 판정되지 않을 수 있습니다. |

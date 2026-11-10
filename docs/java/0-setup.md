@@ -87,7 +87,7 @@ Windows 호스트의 선행 도구나 Node.js가 없다면 **대화형 PowerShel
 powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -ContainerEngine docker
 ```
 
-워크숍 루트의 대화형 Windows 터미널에서 실행합니다. 누락된 **PowerShell 7**은 winget, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`, **Node.js**는 **nvm-windows**로 설치합니다. nvm-windows가 없으면 기존 winget의 `CoreyButler.NVMforWindows` 설치부터 제안합니다. 설치·업데이트·Node.js 활성화는 각각 `y`로 승인해야 합니다.
+워크숍 루트의 대화형 Windows 터미널에서 실행합니다. 누락된 **PowerShell 7**은 winget, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`, **Node.js**는 **nvm-windows**로 설치합니다. nvm-windows가 없으면 기존 winget의 `AuthorSoftware.NVMWindows` 설치부터 제안합니다. 설치·업데이트·Node.js 활성화는 각각 `y`로 승인해야 합니다.
 
 `-Update`를 추가하면 **PowerShell 7 정식 최신 버전**, **WSL 플랫폼**과 **현재 Node.js 메이저의 최신 버전**을 갱신합니다. Node.js가 없거나 22 미만이면 22.x를 선택하고, 22 이상이면 현재 메이저를 유지합니다. 기존 버전은 삭제하지 않습니다. 옵션을 생략하면 기존 도구는 업데이트하지 않습니다.
 

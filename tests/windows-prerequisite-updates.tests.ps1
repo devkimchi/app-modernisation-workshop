@@ -161,7 +161,7 @@ try {
     $env:NVM_HOME = ''; $env:NVM_SYMLINK = ''
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false
     Assert-True (Install-WorkshopJavaNode) 'fresh nvm manager and Node install'
-    Assert-True ($script:Calls -contains 'winget install --id CoreyButler.NVMforWindows --exact --source winget') 'verified nvm winget identifier'
+    Assert-True ($script:Calls -contains 'winget install --id AuthorSoftware.NVMWindows --exact --source winget') 'verified nvm winget identifier'
     Assert-True ($script:Prompts.Count -eq 3) 'manager install Node install activation separately consented'
     $env:NVM_HOME = ''; $env:NVM_SYMLINK = ''
     Reset-Fixture; $script:HasNode = $false; $script:HasNvm = $false; $script:Approvals.Enqueue($false)

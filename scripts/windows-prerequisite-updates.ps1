@@ -68,8 +68,8 @@ function Install-WorkshopJavaNode {
             Write-Host '[MANUAL] nvm-windows 설치에 기존 winget이 필요합니다.'
             return $false
         }
-        if (-not (Confirm-ToolInstall 'winget의 CoreyButler.NVMforWindows를 설치합니다. 네트워크/관리자 승인과 약관 확인이 필요할 수 있습니다.')) { return $false }
-        & winget install --id CoreyButler.NVMforWindows --exact --source winget | Out-Host
+        if (-not (Confirm-ToolInstall 'winget의 AuthorSoftware.NVMWindows를 설치합니다. 네트워크/관리자 승인과 약관 확인이 필요할 수 있습니다.')) { return $false }
+        & winget install --id AuthorSoftware.NVMWindows --exact --source winget | Out-Host
         if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] nvm-windows 설치 실패.'; return $false }
         Update-ProcessPath
     }

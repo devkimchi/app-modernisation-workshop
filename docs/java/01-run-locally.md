@@ -17,17 +17,23 @@ cd java
 
 ## JDK 8과 빌드 확인
 
+아래 스크립트를 실행시켜 Java 8을 선택합니다.
+
 ```bash
 # zsh/bash
 source ../scripts/use-java.sh --jdk 8
 ```
 
-이 스크립트는 현재 셸에서 Java 8을 선택하고 `java -version`, `javac -version` 결과를 표시합니다. 사용자 지정 경로에 샘플을 다운로드했다면 스크립트 경로를 워크숍 저장소 위치에 맞게 바꾸세요. 이어서 앱 루트에서 Maven Wrapper와 전체 검증을 별도로 실행합니다. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 검증이 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
+이어서 앱 루트에서 Maven Wrapper와 전체 검증을 별도로 실행합니다.
 
 ```bash
-bash ./mvnw -version
-bash ./mvnw clean verify
+# zsh/bash
+bash ./mvnw -version && bash ./mvnw clean verify
 ```
+
+> [!IMPORTANT]
+>
+> 검증이 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.
 
 ## 로컬 서비스와 앱 실행
 
@@ -35,24 +41,10 @@ bash ./mvnw clean verify
 
 ### Docker
 
-```bash
-docker ps -a --filter name=assets-postgres --filter name=assets-rabbitmq
-```
-
-같은 이름의 컨테이너가 이미 있으면 소유 프로젝트를 확인하고 이름 충돌을 해결한 뒤 진행합니다. 다른 프로젝트의 컨테이너를 임의로 중지하거나 삭제하지 않습니다.
-
-원본 스크립트는 Docker를 하드코딩하고 `postgres:latest`, `rabbitmq:management`를 사용합니다. 이 태그의 실제 이미지 ID를 기록하세요. 시작 메시지와 고정 10초 대기만으로 서비스 준비를 판단하지 않습니다.
-
-원본 스크립트의 DB/큐 포트는 모든 인터페이스에 바인딩될 수 있습니다. 신뢰할 수 있는 개인 실습 환경에서만 실행하고 로컬 방화벽을 확인합니다. 공유 장비라면 아래 스크립트를 실행하지 말고 [문제 해결의 루프백 수동 실행](08-troubleshooting.md#루프백-수동-실행)에서 Docker 경로를 사용합니다.
+`startapp.sh`는 Docker 컨테이너를 만들고 web/worker를 백그라운드로 시작합니다. 이미 같은 이름의 컨테이너가 있으면 소유 프로젝트를 확인하세요. 기존 컨테이너를 임의로 중지하거나 삭제하지 않습니다. 이 스크립트는 `postgres:latest`, `rabbitmq:management`를 사용하고 DB/큐 포트를 모든 인터페이스에 바인딩할 수 있으므로, 신뢰할 수 있는 개인 실습 환경에서만 실행하고 로컬 방화벽을 확인합니다. 공유 장비에서는 실행하지 말고 [루프백 수동 실행](08-troubleshooting.md#루프백-수동-실행)을 사용합니다.
 
 ```bash
 bash scripts/startapp.sh
-```
-
-```bash
-docker exec assets-postgres pg_isready -U postgres -d assets_manager
-docker exec assets-rabbitmq rabbitmq-diagnostics -q ping
-tail -n 40 logs/web.log logs/worker.log
 ```
 
 ## 기준 동작과 Git 기준선

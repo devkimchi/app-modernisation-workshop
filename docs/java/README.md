@@ -2,11 +2,12 @@
 
 [전체 목차](../../README.md) | [다음: 준비](0-setup.md) | [문제 해결](8-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
 Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드하고 Azure 서비스를 연결한 뒤, web과 worker를 ACA에 배포합니다. 두 모듈과 기존 사용자 기능을 유지합니다.
 
-[준비](0-setup.md)의 **사전 점검 → 샘플 다운로드**를 끝내야 합니다. 기본 앱 루트는 워크숍 최상위의 `java`입니다. macOS 또는 Windows WSL2의 Bash를 사용하고, Copilot app에는 이 앱 폴더를 프로젝트로 추가합니다.
+
+## 순서
 
 | 순서 | 실습 | 완료 시 확인할 것 |
 | --- | --- | --- |
@@ -22,6 +23,14 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 21을 거쳐 JDK 25**로 업그레이드�
 
 ## 진행 원칙
 
-Windows에서는 SDKMAN과 Java 도구가 WSL2 안에 있습니다. Copilot app이 Windows 셸에서 작업한다면 프롬프트에 실제 WSL 배포판과 앱 경로를 전달하고 **Java 명령을 WSL2에 명시적으로 위임**하도록 합니다. macOS에서는 같은 앱 루트에서 Bash를 사용합니다. 앱의 세션 작업 경로가 바뀌면 WSL 경로도 다시 확인하세요.
+> [!WARNING]
+> **Windows 사용자**
+>
+> SDKMAN과 Java 도구는 WSL2 안에 있습니다. Copilot app이 Windows 셸에서 작업한다면 프롬프트에 실제 WSL 배포판과 앱 경로를 전달하고, **Java 명령을 WSL2에서 실행하도록 명시하세요.** 앱의 세션 작업 경로가 바뀌면 WSL 경로도 다시 확인하세요.
+
+> [!NOTE]
+> **macOS 사용자**
+>
+> Copilot app에 추가한 앱 폴더에서 Bash로 Java 명령을 실행하세요.
 
 각 실습의 완료 조건에 따라 실제 앱 동작을 확인하세요. 문제가 생기면 [문제 해결](8-troubleshooting.md)을 참고하세요.

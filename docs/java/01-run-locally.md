@@ -25,15 +25,15 @@ for candidate in "${SDKMAN_DIR:-$HOME/.sdkman}"/candidates/java/8.*; do
         break
     fi
 done
-if [[ -z "$jdk8" ]]; then
+if [[ -n "$jdk8" ]]; then
+    sdk use java "$jdk8"
+    java -version
+    javac -version
+    bash ./mvnw -version
+    bash ./mvnw clean verify
+else
     printf '%s\n' '[FAIL] 설치된 SDKMAN JDK 8을 찾지 못했습니다. 준비 단계에서 설치를 확인하세요.' >&2
-    exit 1
 fi
-sdk use java "$jdk8"
-java -version
-javac -version
-bash ./mvnw -version
-bash ./mvnw clean verify
 ```
 
 설치된 SDKMAN 후보 중 Java 8과 컴파일러가 모두 있는 버전을 자동으로 선택합니다. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.

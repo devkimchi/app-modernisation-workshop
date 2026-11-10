@@ -27,7 +27,7 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
 | --- | --- | --- |
-| 참가자 환경 | Windows + WSL2 또는 macOS | Windows |
+| 참가자 환경 | Windows + WSL2 또는 macOS | Windows (공통 스크립트용 WSL2 플랫폼 필요) |
 | 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, .NET Framework 4.8, ASP.NET MVC 5 |
 | 최종 런타임 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
 | 도구 | Modernization의 `modernize` | 업그레이드는 `Upgrade`, Azure 이전은 `modernize` |

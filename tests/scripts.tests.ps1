@@ -1,3 +1,9 @@
+﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
+# Regression entrypoints mock the host platform; they never enable OS features.
+function Test-WorkshopWsl2 { return $true }
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
+if ($bootstrap.Handled) { exit $bootstrap.Code }
+
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root 'scripts\check-prerequisites.ps1')
@@ -378,7 +384,7 @@ try {
     Assert-True (-not (Test-Path $Destination)) 'prerequisite failure prevents download'
     Remove-Item Function:\pwsh
     $documents = @((Get-Item (Join-Path $root 'README.md'))) + @(Get-ChildItem (Join-Path $root 'docs') -Recurse -Filter '*.md')
-    Assert-True ($documents.Count -eq 19) '19 workshop documents'
+    Assert-True ($documents.Count -eq 21) '21 workshop documents (root and 20 track documents)'
     foreach ($document in $documents) {
         $text = Get-Content $document.FullName -Raw
         Assert-True ($text -match '[가-힣]') "Korean text: $($document.Name)"
@@ -389,10 +395,23 @@ try {
             $target = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName ($link.Split('#')[0] -replace '/', [IO.Path]::DirectorySeparatorChar)))
             Assert-True (Test-Path -LiteralPath $target -PathType Leaf) "local link: $link in $($document.Name)"
         }
-        if ($document.Name -match '^\d\d-') {
-            foreach ($navigation in @('[목차]', '[이전:', '[다음:', '[정리')) {
-                Assert-True ($text.Contains($navigation)) "navigation $navigation in $($document.Name)"
-            }
+        if ($document.DirectoryName -eq $root) { continue }
+        $track = $document.Directory.Name
+        $trackLabel = if ($track -eq 'java') { 'Java' } else { '.NET' }
+        $navigation = ($text -split '\r?\n' | Where-Object { $_ -match '^\[전체 목차\]' } | Select-Object -First 1)
+        Assert-True (-not [string]::IsNullOrWhiteSpace($navigation)) "top navigation: $track/$($document.Name)"
+        $expected = @('전체 목차')
+        if ($document.Name -ne 'README.md') { $expected += "$trackLabel 목차" }
+        if ($document.Name -match '^0[1-7]-') { $expected += '이전:' }
+        if ($document.Name -notin @('07-cleanup.md', '8-troubleshooting.md')) { $expected += '다음:' }
+        if ($document.Name -ne '8-troubleshooting.md') { $expected += '문제 해결' }
+        $links = @([regex]::Matches($navigation, '\[([^\]]+)\]\(([^)]+)\)'))
+        Assert-True ($links.Count -eq $expected.Count) "navigation count: $track/$($document.Name)"
+        for ($i = 0; $i -lt $expected.Count; $i++) {
+            $label = $links[$i].Groups[1].Value
+            Assert-True ($label.StartsWith($expected[$i])) "navigation order $($expected[$i]): $track/$($document.Name)"
+            $target = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName $links[$i].Groups[2].Value))
+            Assert-True ($target -ne $document.FullName) "no self navigation: $track/$($document.Name)"
         }
     }
     Write-Host "PASS: $script:Passed PowerShell assertions"

@@ -6,7 +6,9 @@
 
 원본 .NET Framework 앱은 **Windows**에서 진행합니다. Copilot app에서 코드 작업을 하고 **Windows PowerShell 7, MSBuild와 IIS Express**로 빌드하고 실행합니다. Visual Studio IDE를 열 필요는 없습니다.
 
-[Git](https://git-scm.com/downloads), [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell), GitHub 계정, 유효한 Copilot 사용 권한과 Azure 구독을 먼저 준비합니다. Windows PowerShell 5.1은 사용하지 않습니다. WSL은 이 트랙의 원본 실행 환경이 아닙니다.
+[Git](https://git-scm.com/downloads), [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell), [WSL2 플랫폼](https://learn.microsoft.com/windows/wsl/install), GitHub 계정, 유효한 Copilot 사용 권한과 Azure 구독을 먼저 준비합니다. WSL2는 공통 스크립트의 Windows 호스트 필수 항목이지만, .NET 원본 앱은 WSL이 아닌 Windows에서 실행합니다. .NET 트랙에는 Linux 배포판이 필요하지 않습니다.
+
+모든 `.ps1` 진입점은 Windows PowerShell 5.1에서도 시작할 수 있으며 실제 작업은 설치된 PowerShell 7에 위임합니다. Windows에서는 트랙과 관계없이 PowerShell 7과 WSL2 플랫폼을 함께 확인하고, 하나라도 없으면 두 항목의 상태와 설치 안내를 출력한 뒤 작업 전에 종료합니다. 설치된 `pwsh`가 현재 PATH에 없어도 기본 설치 경로와 갱신된 사용자/시스템 PATH를 확인합니다.
 
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
@@ -43,13 +45,15 @@ Podman을 사용한다면 이후 명령의 `docker`를 모두 `podman`으로 바
 
 ### 누락된 CLI 설치
 
-**대화형 PowerShell 7**에서 설치 도우미를 실행합니다.
+**대화형 PowerShell 7 또는 Windows PowerShell 5.1**에서 설치 도우미를 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다.
 
 ```powershell
-pwsh -File .\scripts\install-prerequisites.ps1 -Track dotnet -ContainerEngine docker
+powershell.exe -File .\scripts\install-prerequisites.ps1 -Track dotnet -ContainerEngine docker
 ```
 
-기존 winget으로 누락된 **Node.js LTS, Azure CLI, azd**를 설치합니다. 도구마다 설치 대상과 권한을 표시하고 `y`로 승인한 항목만 설치합니다. 관리자 승인이 필요할 수 있으며 winget의 약관은 직접 확인하세요. winget 자체는 설치하지 않습니다.
+먼저 누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻습니다. `y`로 승인한 항목만 설치하며 Linux 배포판은 설치하지 않습니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 안내에 따라 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 가상화 설정이나 Windows 업데이트가 필요한 경우 수동으로 준비합니다.
+
+두 항목이 준비되면 PowerShell 7에서 기존 winget으로 누락된 **Node.js LTS, Azure CLI, azd**를 설치합니다. 도구마다 설치 대상과 권한을 표시하고 `y`로 승인한 항목만 설치합니다. 관리자 승인이 필요할 수 있으며 winget의 약관은 직접 확인하세요. winget 자체는 설치하지 않습니다.
 
 기존 PATH의 도구는 오래됐더라도 자동 업데이트하지 않습니다. CI나 입력·출력이 리디렉션된 환경에서는 설치하지 않습니다. Node.js는 안정 버전 22 이상, azd는 1.37.3 이상이 필요합니다.
 

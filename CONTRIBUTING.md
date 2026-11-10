@@ -15,7 +15,16 @@ PowerShell:
 ```powershell
 pwsh -File ./tests/scripts.tests.ps1
 pwsh -File ./tests/dotnet-original.tests.ps1
+pwsh -File ./tests/install-prerequisites.tests.ps1
+pwsh -File ./tests/azure-actions.tests.ps1
+pwsh -File ./tests/powershell-bootstrap.tests.ps1
 ```
+
+On Windows, all `.ps1` entrypoints also accept `powershell.exe -NoProfile -File .\path\to\script.ps1` from Windows PowerShell 5.1 and delegate to PowerShell 7. Both PowerShell 7 and the WSL2 platform are required before production script work on Windows, including the .NET track. A Linux distribution is a separate Java prerequisite. The installer alone may offer to install missing prerequisites, with separate consent for PowerShell 7 and WSL2; CI, redirected input/output and `-NonInteractive` sessions cannot install. WSL2 installation changes Windows features and may require administrator approval and a manual restart; it never installs a distro or restarts Windows automatically.
+
+Regression entrypoints mock the WSL2 host preflight so tests do not depend on host OS features or an installed distribution. The bootstrap suite additionally uses real Windows PowerShell 5.1 subprocesses against isolated script copies with mocked prerequisite discovery to verify parsing, early failure and delegation. No real installation, login or OS modification is performed. Repeat the commands above with `powershell.exe` to verify the 5.1 entry path on Windows.
+
+Keep `.ps1` files UTF-8 **with BOM** and LF (see `.editorconfig`): Windows PowerShell 5.1 otherwise decodes Korean text using the system ANSI code page before delegation. Do not add PowerShell 7-only syntax to these entrypoint files; the entire file must parse in 5.1. Dot-source helpers only inside PowerShell 7 when caller-scope functions/variables are needed; 5.1 dot-sourcing fails explicitly without exiting the caller because a child process cannot populate that scope. PowerShell 7 dot-sourcing retains definition-only behavior.
 
 The .NET original-app tests use isolated fixtures and mocked native invocations; they never start IIS Express or access LocalDB/MSMQ. A real Windows sample restore/build and browser workflow remain separate rehearsal checks.
 

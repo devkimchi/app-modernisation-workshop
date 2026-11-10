@@ -10,9 +10,10 @@
 
 | 증상 | 확인과 조치 |
 | --- | --- |
-| `pwsh`를 찾을 수 없음 | PowerShell 7 설치 후 새 터미널을 엽니다. `powershell.exe` 5.1로 바꾸지 않습니다. |
+| PowerShell 7 또는 WSL2 플랫폼 누락 | 두 항목이 모두 필요합니다. `powershell.exe -File .\scripts\install-prerequisites.ps1 -Track dotnet`으로 시작하면 누락된 항목마다 별도 동의를 받습니다. WSL2는 관리자 권한/Windows 기능 변경/재부팅이 필요할 수 있습니다. 안내에 따라 직접 재부팅하고 다시 실행하세요. .NET 원본은 계속 Windows에서 실행하며 배포판은 필수가 아닙니다. |
+| `pwsh`를 찾을 수 없음 | Windows PowerShell 5.1에서 `.ps1`을 실행하면 기본 설치 경로와 갱신된 PATH에서도 PowerShell 7을 찾습니다. 발견하지 못하면 설치 안내와 함께 종료합니다. 위 설치 도우미로 준비하거나 PowerShell 7 설치 후 새 터미널을 엽니다. |
 | `MANUAL`인데 종료 코드 0 | 수동 항목은 미검증입니다. Copilot 권한, 플러그인, RBAC/쿼터를 직접 확인합니다. |
-| 스크립트 실행 권한/줄바꿈 | PowerShell 7의 `pwsh -File`로 실행합니다. Git Bash 진입점은 `bash scripts/...sh`로 실행하고 LF 줄바꿈을 유지합니다. 임의로 시스템 실행 정책을 완화하지 않습니다. |
+| 스크립트 실행 권한/인코딩/줄바꿈 | `pwsh -File` 또는 Windows PowerShell 5.1의 `powershell.exe -File`로 시작합니다. 실제 작업은 PowerShell 7입니다. `.ps1`은 5.1 파서를 위해 UTF-8 BOM과 LF를 유지합니다. Git Bash 진입점은 `bash scripts/...sh`로 실행합니다. 임의로 시스템 실행 정책을 완화하지 않습니다. |
 | 엔진 인자 충돌 | `AZD_CONTAINER_RUNTIME`과 `-ContainerEngine`/`--container-engine`을 같은 값으로 맞춥니다. |
 | 다운로드 대상이 비어 있지 않음 | 기존 파일을 보존하고 다른 빈 폴더를 지정합니다. 숨김 파일과 `.git`도 기존 내용입니다. |
 | 보호 경로/심볼릭 링크/junction 오류 | 워크숍 문서, 홈/루트가 아닌 실제 일반 디렉터리를 선택합니다. 자동 삭제로 우회하지 않습니다. |

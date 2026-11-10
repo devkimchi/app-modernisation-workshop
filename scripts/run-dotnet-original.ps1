@@ -1,12 +1,17 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [string]$AppPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dotnet'),
+    [string]$AppPath,
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [ValidateRange(1024, 65535)][int]$Port = 58801,
     [switch]$Run,
     [switch]$AllowDatabaseInitialization,
     [switch]$Help
 )
+
+. (Join-Path $PSScriptRoot 'powershell-bootstrap.ps1')
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
+if ($bootstrap.Handled) { exit $bootstrap.Code }
+if (-not $PSBoundParameters.ContainsKey('AppPath')) { $AppPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'dotnet' }
 
 . (Join-Path $PSScriptRoot 'dotnet-framework-tools.ps1')
 

@@ -47,4 +47,15 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoLogo -NoProfile -File .\tests\dotnet-original.tests.ps1
-          exit $LASTEXITCODE
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($test in @('install-prerequisites', 'azure-actions', 'powershell-bootstrap')) {
+            pwsh -NoLogo -NoProfile -File ".\tests\$test.tests.ps1"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Verify Windows PowerShell 5.1 entrypoints
+        shell: pwsh
+        run: |
+          foreach ($test in @('scripts', 'dotnet-original', 'install-prerequisites', 'azure-actions', 'powershell-bootstrap')) {
+            powershell.exe -NoLogo -NoProfile -NonInteractive -File ".\tests\$test.tests.ps1"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

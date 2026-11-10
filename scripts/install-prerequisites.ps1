@@ -1,9 +1,13 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Track,
     [string]$ContainerEngine,
     [switch]$Help
 )
+
+. (Join-Path $PSScriptRoot 'powershell-bootstrap.ps1')
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.') -AllowInstall
+if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 . (Join-Path $PSScriptRoot 'check-prerequisites.ps1') -Track $Track -ContainerEngine $ContainerEngine -Help:$Help
 
@@ -70,7 +74,7 @@ function Invoke-InstallPrerequisiteMain {
     if (-not $IsWindows) { Write-Host '[FAIL] 이 설치 도우미는 Windows에서만 지원합니다.'; return 1 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
     catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
-    if ([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or $env:CI) {
+    if (-not (Test-WorkshopBootstrapInteractive)) {
         Write-Host '[FAIL] 설치는 대화형 터미널에서만 가능합니다. 비대화형 환경에서는 설치하지 않습니다.'
         return 1
     }

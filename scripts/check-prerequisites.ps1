@@ -1,10 +1,14 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$Track,
     [string]$ContainerEngine,
     [string]$WslDistribution,
     [switch]$Help
 )
+
+. (Join-Path $PSScriptRoot 'powershell-bootstrap.ps1')
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
+if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 $script:WorkshopScripts = $PSScriptRoot
 . (Join-Path $PSScriptRoot 'dotnet-framework-tools.ps1')
@@ -45,7 +49,7 @@ function Add-Check {
 }
 
 function Test-AzurePrompt {
-    return [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected -and -not $env:CI -and $Host.Name -eq 'ConsoleHost'
+    return (Test-WorkshopBootstrapInteractive) -and $Host.Name -eq 'ConsoleHost'
 }
 
 function Confirm-AzureAction {

@@ -17,6 +17,8 @@ Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사�
 - **Windows 사용자**: [WSL](https://learn.microsoft.com/windows/wsl/install)
 - **Windows 사용자**: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 
+모든 `.ps1` 진입점은 Windows PowerShell 5.1에서도 시작할 수 있으며 실제 작업은 설치된 PowerShell 7에 위임합니다. Windows에서는 PowerShell 7과 WSL2 플랫폼을 함께 확인하고 하나라도 없으면 두 항목의 상태와 설치 안내를 출력한 뒤 작업 전에 종료합니다. WSL2 플랫폼 설치 여부와 Java 실습에 사용할 VERSION 2 배포판의 준비 여부는 별도 검사입니다.
+
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
 1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭하세요.
@@ -78,11 +80,13 @@ bash scripts/install-prerequisites.sh --track java --container-engine docker
 
 WSL의 Azure CLI 설치에는 `apt-get`과 `sudo`가 필요하며 APT 저장소와 시스템 패키지가 변경됩니다. azd도 설치 위치에 따라 sudo가 필요할 수 있습니다. SDKMAN의 선행 도구가 없으면 APT 환경에서 패키지 설치 여부를 별도로 묻습니다. Homebrew 자체는 설치하지 않습니다.
 
-Windows 호스트의 Node.js가 없다면 **Windows PowerShell 7**에서 별도로 실행합니다. 기존 winget을 사용하며 WSL 도구는 설치하지 않습니다.
+Windows 호스트의 선행 도구나 Node.js가 없다면 **대화형 PowerShell 7 또는 Windows PowerShell 5.1**에서 별도로 실행합니다. PowerShell 7이 아직 없어도 다음 명령으로 시작할 수 있습니다.
 
 ```powershell
-pwsh -File .\scripts\install-prerequisites.ps1 -Track java -ContainerEngine docker
+powershell.exe -File .\scripts\install-prerequisites.ps1 -Track java -ContainerEngine docker
 ```
+
+누락된 **PowerShell 7**은 기존 winget의 `Microsoft.PowerShell` 패키지로, **WSL2 플랫폼**은 `wsl.exe --install --no-distribution`으로 설치할지 **각각** 묻고 `y`로 승인한 항목만 설치합니다. WSL2 설치는 Windows 기능 변경, 관리자 권한과 재부팅이 필요할 수 있습니다. 도우미는 재부팅하지 않고 종료하므로 필요하면 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. CI와 입력·출력이 리디렉션된 비대화형 환경에서는 설치하지 않습니다. Linux 배포판과 WSL 안의 도구는 설치하지 않으므로 Java용 WSL2 배포판은 따로 준비합니다. 두 항목이 준비되면 PowerShell 7에서 누락된 Windows Node.js의 설치 동의를 받습니다.
 
 설치 후 같은 점검 명령을 다시 실행하세요. Bash 점검은 필요한 경우 `NVM_DIR`, `$XDG_CONFIG_HOME/nvm`, `~/.nvm` 중 설정에 맞는 경로에서 nvm을 불러와 기본 Node.js를 활성화합니다. 다른 도구도 비대화형 Bash에서 실행할 수 있어야 합니다.
 

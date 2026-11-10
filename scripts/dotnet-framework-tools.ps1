@@ -1,3 +1,7 @@
+﻿. (Join-Path $PSScriptRoot 'powershell-bootstrap.ps1')
+$bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
+if ($bootstrap.Handled) { exit $bootstrap.Code }
+
 function Invoke-FrameworkProbe {
     param([string]$File, [string[]]$Arguments)
     try {

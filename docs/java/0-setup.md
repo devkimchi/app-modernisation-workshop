@@ -47,7 +47,7 @@ bash scripts/check-prerequisites.sh --track java
 
 ```powershell
 # PowerShell
-pwsh -File ./scripts/check-prerequisites.ps1 -Track java
+powershell.exe -File ./scripts/check-prerequisites.ps1 -Track java
 ```
 
 확인 결과는 아래를 참고하세요.

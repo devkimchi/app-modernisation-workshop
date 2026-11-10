@@ -20,13 +20,29 @@
 | Git fetch/프록시/인증서 오류 | 회사 프록시와 인증서 체인을 정상 설정하고 고정 SHA 접근을 확인합니다. SSL 검증을 끄지 않습니다. |
 | 다운로드 도중 디스크 오류 | 실패한 대상의 내용을 확인하고 새 빈 경로로 재시도합니다. `.workshop-download-*`는 고유 임시 경로지만 다른 실행이 사용 중인지 확인 없이 일괄 삭제하지 않습니다. |
 
+점검의 종료 코드는 `0`이면 필수 자동 검사 통과, `1`이면 환경 검사 실패, `2`이면 인자 오류입니다. PowerShell의 `$LASTEXITCODE`로 확인합니다. 실제 컨테이너의 `linux/amd64` 빌드, 포트 접근과 ACR 게시는 해당 실습에서 확인합니다.
+
+Windows Git Bash에서는 `bash scripts/check-prerequisites.sh --track dotnet --container-engine docker`로 점검할 수 있습니다. 실제 검사는 Windows PowerShell 7에 위임합니다.
+
+다운로드 직전에 사전 점검을 다시 실행하며 실패하면 다운로드하지 않습니다. 다른 경로가 필요하면 다운로드 명령에 `-Destination 'C:/workshops/contoso-app'`을 지정합니다. 상대 경로는 호출자의 현재 폴더 기준입니다. 홈, 파일시스템 루트, 워크숍 루트, `docs`/`scripts`/`tests`, 심볼릭 링크/junction을 경유하는 경로와 Windows 확장/장치 경로는 사용할 수 없습니다. 복사 도중 실패하면 미완료 파일이 남을 수 있으므로 대상 상태를 확인하고 빈 경로로 다시 시도하세요.
+
 다운로드의 필수 파일 오류를 해결하려고 `main` 최신 커밋으로 자동 전환하지 않습니다. 자료에 고정된 SHA 변경은 원본 차이와 실행 절차를 다시 검토해야 합니다.
 
 ## 사전 준비 수동 복구
 
 점검과 설치 도우미의 조치를 거부했거나 실패한 경우에만 아래에서 필요한 항목을 수행합니다. Windows PowerShell 7에서 실행합니다. 조치 후 같은 환경에서 사전 점검을 다시 실행하세요.
 
+### Windows 호스트 도구 설치와 업데이트
+
+PowerShell 7과 WSL2 플랫폼 중 하나라도 없으면 스크립트는 본 작업 전에 종료합니다. 설치 도우미는 누락된 PowerShell 7을 기존 winget의 `Microsoft.PowerShell`로, WSL2 플랫폼을 `wsl.exe --install --no-distribution`으로 설치할지 각각 묻습니다. winget 자체나 Linux 배포판은 설치하지 않습니다. 가상화 설정이나 Windows 업데이트가 필요하면 수동으로 준비합니다.
+
+`-Update`는 실행 경로, MSI와 winget 출처가 확인되는 PowerShell만 업데이트합니다. 관리 출처를 확인하지 못하면 자동 업데이트만 `MANUAL`로 건너뛰므로 원래 설치 관리자를 사용하세요. 업데이트를 예약하고 종료한 경우에는 작업 결과를 확인한 뒤 새 터미널에서 다시 실행합니다.
+
+버전을 확인할 수 없는 inbox WSL은 수동 업데이트 안내를 따릅니다. 도우미는 배포판이나 OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Azure CLI/azd는 누락된 도구만 기존 winget으로 설치하며, 업데이트는 원래 설치 관리자로 직접 진행합니다. 관리자 승인과 winget 약관은 직접 확인하세요.
+
 ### Node.js 설치와 업데이트
+
+기존 nvm-windows가 없으면 winget의 `AuthorSoftware.NVMWindows` 설치부터 제안합니다.
 
 Windows 설치 도우미는 Java 트랙과 같은 nvm-windows 설치 경로를 사용합니다. 2.x는 `nvm config get root mode --json`의 설치 루트와 shim/link 경로를, 기존 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 `node.exe`의 경로를 확인합니다. 독립 설치나 일반 디렉터리가 실행 경로를 차지하면 덮어쓰지 않습니다. 원래 설치 관리자를 확인하고 [nvm-windows 안내](https://github.com/nvm-windows/nvm)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
 

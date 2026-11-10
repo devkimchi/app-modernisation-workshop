@@ -278,9 +278,9 @@ printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "$BASELINE_LOG"\nprintf "wr
 baseline_log="$java_selector_fixture/baseline.log"
 sequence_output=$(SDKMAN_DIR="$java_selector_fixture" BASELINE_LOG="$baseline_log" bash -c '
     cd "$2" &&
-    source "$1" 8 &&
-    source "$1" 21 &&
-    source "$1" 25
+    source "$1" --jdk 8 &&
+    source "$1" --jdk 21 &&
+    source "$1" --jdk 25
 ' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1)
 for major in 8 21 25; do
     assert "select and verify JDK $major" grep -q "SDKMAN JDK $major 선택: $major.0-test" <<< "$sequence_output"
@@ -293,7 +293,7 @@ assert 'show selected compiler version output' grep -q 'javac 25.0.1' <<< "$sequ
 expected_baseline=$(printf '%s\n' '-version' 'clean verify' '-version' 'clean verify' '-version' 'clean verify')
 assert 'run Maven checks for each JDK' test "$(cat "$baseline_log")" = "$expected_baseline"
 : > "$baseline_log"
-if failure_output=$(SDKMAN_DIR="$java_selector_fixture" BASELINE_LOG="$baseline_log" FAIL_CLEAN_VERIFY=1 bash -c 'cd "$2" && source "$1" 8' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1); then
+if failure_output=$(SDKMAN_DIR="$java_selector_fixture" BASELINE_LOG="$baseline_log" FAIL_CLEAN_VERIFY=1 bash -c 'cd "$2" && source "$1" --jdk 8' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1); then
     printf '%s\n' 'FAILED: Maven build failure must be returned' >&2; exit 1
 else
     PASSED=$((PASSED + 1))
@@ -301,12 +301,12 @@ fi
 assert 'report Maven build failure' grep -q '\[FAIL\] Maven clean verify에 실패했습니다.' <<< "$failure_output"
 expected_baseline=$(printf '%s\n' '-version' 'clean verify')
 assert 'stop commands when Maven build fails' test "$(cat "$baseline_log")" = "$expected_baseline"
-if SDKMAN_DIR="$java_selector_fixture" bash -c 'source "$1" 17' _ "$ROOT/scripts/use-java.sh" >/dev/null 2>&1; then
+if SDKMAN_DIR="$java_selector_fixture" bash -c 'source "$1" --jdk 17' _ "$ROOT/scripts/use-java.sh" >/dev/null 2>&1; then
     printf '%s\n' 'FAILED: reject unsupported JDK major' >&2; exit 1
 else
     PASSED=$((PASSED + 1))
 fi
-if bash "$ROOT/scripts/use-java.sh" 8 >/dev/null 2>&1; then
+if bash "$ROOT/scripts/use-java.sh" --jdk 8 >/dev/null 2>&1; then
     printf '%s\n' 'FAILED: require sourcing to change current shell' >&2; exit 1
 else
     PASSED=$((PASSED + 1))

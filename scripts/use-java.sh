@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    printf '%s\n' '[FAIL] 현재 셸의 Java를 전환하려면 source로 실행하세요: source scripts/use-java.sh 8|21|25' >&2
+    printf '%s\n' '[FAIL] 현재 셸의 Java를 전환하려면 source로 실행하세요: source scripts/use-java.sh --jdk 8|21|25' >&2
     exit 2
 fi
 
 _workshop_use_java() {
-    local major="${1:-}" sdkman_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate identifier runtime compiler runtime_major compiler_major
-
+    local major='' sdkman_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate identifier runtime compiler runtime_major compiler_major
+    if [[ $# -ne 2 || "$1" != --jdk ]]; then
+        printf '%s\n' '사용법: source scripts/use-java.sh --jdk 8|21|25' >&2
+        return 2
+    fi
+    major="$2"
     case "$major" in
         8|21|25) ;;
-        *) printf '%s\n' '[FAIL] Java 버전으로 8, 21, 25 중 하나를 지정하세요.' >&2; return 2 ;;
+        *) printf '%s\n' '[FAIL] --jdk 값으로 8, 21, 25 중 하나를 지정하세요.' >&2; return 2 ;;
     esac
     if [[ ! -f ./mvnw ]]; then
         printf '%s\n' '[FAIL] 샘플 앱 루트에서 실행하세요. 현재 폴더에 mvnw가 없습니다.' >&2
@@ -101,7 +105,7 @@ _workshop_run_baseline() {
     fi
 }
 
-if _workshop_use_java "${1:-}" && _workshop_run_baseline; then
+if _workshop_use_java "$@" && _workshop_run_baseline; then
     _workshop_use_java_status=0
 else
     _workshop_use_java_status=$?

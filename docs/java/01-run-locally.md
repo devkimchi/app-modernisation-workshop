@@ -18,7 +18,8 @@ cd java
 ## JDK 8과 빌드 확인
 
 ```bash
-source ../scripts/use-java.sh 8
+# zsh/bash
+source ../scripts/use-java.sh --jdk 8
 ```
 
 이 스크립트는 현재 셸에서 Java 8을 선택한 뒤 `java -version`, `javac -version`, `bash ./mvnw -version`, `bash ./mvnw clean verify`를 순서대로 실행하고 결과를 표시합니다. 사용자 지정 경로에 샘플을 다운로드했다면 스크립트 경로를 워크숍 저장소 위치에 맞게 바꾸세요. Java/Maven 실행 JDK가 모두 8이어야 합니다. 최초 Wrapper 실행은 Maven과 의존성을 내려받습니다. 빌드가 실패하면 원본 상태의 문제부터 해결하고 현대화를 시작하지 않습니다.

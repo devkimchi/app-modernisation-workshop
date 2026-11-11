@@ -102,7 +102,7 @@ web과 worker의 역할, DB, 큐와 파일에 대한 의존성, 화면과 API,
   RabbitMQ는 Service Bus로 이전한다. dev 프로필의 로컬 파일 저장소와
   dev 이외의 프로필에서 사용하는 AWS S3는 비공개 Blob Storage로 이전한다.
 - 관리 ID, 최소 권한, TLS를 기본으로 사용하고 비밀정보를 코드나 Git에 저장하지 않는다.
-- 최종 실행 환경은 Linux 기반 Azure Container Apps다. AKS나 App Service는 사용하지 않는다.
+- 최종 실행 환경은 Linux 기반 Azure Container Apps이다. AKS나 App Service는 사용하지 않는다.
 - 배포에는 azd와 Bicep을, 이미지 빌드에는 로컬 Docker 엔진을 사용한다.
   ACR Tasks나 az acr build를 사용하지 않는다.
 - 작업은 기준 동작 테스트, JDK 25 업그레이드,

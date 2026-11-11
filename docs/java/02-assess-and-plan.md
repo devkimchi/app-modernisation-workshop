@@ -26,7 +26,8 @@ GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가�
 
 원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했어.
 지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 말아 줘.
-평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은 먼저 알려 줘.
+평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은
+필요한 대상과 목적을 먼저 설명하고 확인받아줘.
 
 Copilot app은 Windows 환경에서 사용하고 있어.
 Java 명령은 WSL2의 <앱의-WSL-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
@@ -71,6 +72,12 @@ web과 worker의 역할, DB, 큐와 파일에 대한 의존성, 화면과 API,
 > ```bash
 > copilot --yolo --agent github-copilot-modernization:modernize
 > ```
+>
+> Copilot CLI 안에서 동일한 프롬프트를 실행시켰을 때 오류가 난다면 `/agent` 명령으로
+> 기본 에이전트로 전환한 후 에이전트 실행 오류를 수정해 달라고 요청합니다.
+> 에이전트와 플러그인을 수정한 후 Copilot CLI를 재시작한 후 동일한 프롬프트로 진행합니다.
+>
+> 이 과정을 몇 번 반복할 수도 있습니다.
 
 ### 평가 결과 확인
 

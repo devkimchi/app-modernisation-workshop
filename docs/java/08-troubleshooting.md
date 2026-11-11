@@ -109,12 +109,52 @@ pwsh -File ./scripts/download-sample.ps1 -Track java -WslDistribution Ubuntu-24.
 | 증상 | 확인과 조치 |
 | --- | --- |
 | `modernize`가 없음 | Customize에서 마켓플레이스와 실제 설치/활성화, 조직 정책을 확인합니다. 새 세션/앱 재시작이 필요할 수 있습니다. |
+| Windows에서 `modernize` 모드만 훅 오류로 중단됨 | 기본 모드와 에이전트 전용 훅을 구분합니다. 아래 [Windows 에이전트 훅 오류](#windows-에이전트-훅-오류)를 확인합니다. |
 | CLI 전용 안내가 보임 | 이 워크숍은 app의 Customize/Agent picker를 사용합니다. CLI나 VS Code 작업 흐름으로 임의 전환하지 않습니다. |
 | 앱을 못 찾음 | app에 연 폴더가 `pom.xml`이 있는 앱 루트인지 확인합니다. |
 | 평가가 오래 걸리거나 중단됨 | 로그의 도구 설치/네트워크/인증 실패를 확인하고 미완료 작업을 구분합니다. 전체 자동 승인을 켜서 해결하지 않습니다. |
 | MCP 인증 만료 | 실패한 서버와 이유를 확인합니다. 전역 서버는 Customize > Installed의 Sign in, 저장소 서버는 프로젝트 Repository customizations > MCP servers의 Sign in을 사용합니다. 표시되지 않으면 관리자/강사에게 상태를 알립니다. |
 
 플러그인 버전별 UI/산출물 위치는 달라질 수 있습니다. 실제 앱 버전, 플러그인 버전과 생성 경로를 기록합니다. 인증 토큰을 채팅에 붙이거나 CLI 전용 `/mcp auth`를 app 해결책으로 사용하지 않습니다.
+
+### Windows 에이전트 훅 오류
+
+Modernization 플러그인 1.24.0의 Windows 환경에서 기본 모드는 동작하지만 `modernize` 모드에서는 `preToolUse … (hook errored)`로 도구 호출이 차단된 사례입니다. Java나 WSL 명령을 실행하기 전에 실패하므로 JDK 설치나 앱 소스 수정으로 해결하지 않습니다.
+
+전역 `com.github.copilot/hooks/hooks.json`은 Node를 직접 실행하지만, `com.github.copilot/agents/modernize.agent.md`의 에이전트 전용 훅은 다음 Windows 명령을 사용했습니다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -NonInteractive -Command "& node (Join-Path $env:APPMOD_HOOK_SCRIPTS_DIR 'guardModernizeDelegation.mjs')"
+```
+
+실패 로그에는 경로 인수가 빠진 `Join-Path 'guardModernizeDelegation.mjs'`와 `ChildPath` 필수 매개변수 오류가 남았습니다. 같은 변수를 쓰는 `sendTelemetry.ps1` 훅도 실패했습니다. 경로가 전달되지 않은 것은 확인했지만, 환경변수 미주입과 바깥 PowerShell의 조기 확장 중 어느 단계가 원인인지는 구분하지 못했습니다.
+
+동일한 로그가 확인된 경우에만 **Windows의 로컬 플러그인 설치본**을 다음과 같이 수정합니다. 워크숍이나 다운로드한 앱의 파일을 수정하는 절차가 아닙니다.
+
+1. 설치 경로를 확인하고 `com.github.copilot/agents/modernize.agent.md`와 `assessment-coordinator.agent.md`를 별도 위치에 백업합니다.
+2. 두 파일의 `hooks`에서 Windows용 `windows:` 항목만 아래 형식으로 바꿉니다. `<플러그인-설치-경로>`는 스크립트가 실제로 존재하는 Windows 절대 경로로 치환합니다. Unix용 `command:`와 기존 이벤트, 보호 스크립트는 유지합니다.
+
+   ```yaml
+   # modernize의 PreToolUse
+   windows: 'node "<플러그인-설치-경로>/com.github.copilot/hooks/scripts/guardModernizeDelegation.mjs"'
+   # assessment-coordinator의 PreToolUse
+   windows: 'node "<플러그인-설치-경로>/com.github.copilot/hooks/scripts/guardModernizeDelegation.mjs" --assessment'
+   ```
+
+3. 같은 두 파일에서 `sendTelemetry.ps1`을 실행하는 모든 Windows 항목을 `-Command` 대신 `-File`로 호출합니다. `assessment-coordinator`에는 기존 `-AgentName assessment-coordinator` 인자를 유지합니다.
+
+   ```yaml
+   # modernize의 텔레메트리 훅
+   windows: 'powershell -NoProfile -ExecutionPolicy Bypass -NonInteractive -File "<플러그인-설치-경로>/com.github.copilot/hooks/scripts/sendTelemetry.ps1"'
+   # assessment-coordinator의 텔레메트리 훅
+   windows: 'powershell -NoProfile -ExecutionPolicy Bypass -NonInteractive -File "<플러그인-설치-경로>/com.github.copilot/hooks/scripts/sendTelemetry.ps1" -AgentName assessment-coordinator'
+   ```
+
+4. Copilot app을 완전히 종료했다가 다시 실행하고 `modernize` 모드에서 읽기 전용 사전 확인을 재시도합니다. 실패하면 새 로그의 실행 명령이 수정본인지 확인하고 중단합니다. 훅을 끄거나 전체 자동 승인으로 우회하지 않습니다.
+
+이 사례에서는 수정한 명령의 직접 실행과 보호 훅의 허용/거부 동작을 확인했습니다. 그러나 실행 중인 앱의 실제 에이전트 호출은 수정 전 명령을 계속 사용해 실패했습니다. **앱 재시작 후 실제 모드에서의 복구와 평가 완료는 미검증**입니다. 명령 단독 실행 성공을 평가 성공으로 보고하지 않습니다.
+
+이 조치는 설치 경로를 고정한 로컬 수정이며 플러그인 업데이트나 재설치로 덮어써질 수 있습니다. 다른 에이전트의 같은 오류는 해당 파일을 별도로 확인합니다. 개인 설치 경로나 로컬 수정본을 워크숍 저장소에 커밋하지 않습니다.
 
 ## Java 로컬 실행
 

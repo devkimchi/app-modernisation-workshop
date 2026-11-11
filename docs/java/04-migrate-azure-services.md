@@ -1,4 +1,4 @@
-# Java 4. Azure 서비스로 의존성 이전하기
+# 4. Azure 서비스로 의존성 이전하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 업그레이드](03-upgrade.md) | [다음: azd 준비](05-prepare-azd.md) | [문제 해결](08-troubleshooting.md)
 

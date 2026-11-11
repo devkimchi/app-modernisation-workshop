@@ -1,4 +1,4 @@
-# Java 6. azd로 ACA에 배포하기
+# 6. azd로 ACA에 배포하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](08-troubleshooting.md)
 

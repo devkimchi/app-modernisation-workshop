@@ -1,4 +1,4 @@
-# Java 준비: 저장소 생성부터 샘플 다운로드까지
+# 준비: 저장소 생성부터 샘플 다운로드까지
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](08-troubleshooting.md)
 
@@ -74,7 +74,7 @@ bash scripts/install-prerequisites.sh --track java --update
 | 대상 | 설치와 업데이트 |
 | --- | --- |
 | Node.js 22 이상 | nvm으로 설치합니다. 업데이트 시 현재 주 버전의 최신 정식 버전을 추가하며, 없거나 22 미만이면 22.x를 선택합니다. |
-| JDK 8, 21, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 주 버전의 최신 버전을 추가합니다. |
+| JDK 8, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 주 버전의 최신 버전을 추가합니다. |
 | Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치하고 업데이트합니다. |
 
 설치한 Node.js를 현재 터미널에서도 사용하려면 스크립트가 출력한 초기화 명령과 `nvm use` 명령을 실행하세요.

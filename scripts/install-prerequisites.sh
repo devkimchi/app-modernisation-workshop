@@ -624,7 +624,7 @@ install_java_sdks() (
     # SDKMAN 설치 함수가 참조하는 응답을 지정해 기존 기본 JDK를 유지한다.
     sdkman_auto_answer=false
     sdkman_colour_enable=false
-    for major in 8 21 25; do
+    for major in 8 25; do
         found=0
         for candidate in "$SDKMAN_DIR"/candidates/java/*; do
             [[ "${candidate##*/}" != current ]] || continue

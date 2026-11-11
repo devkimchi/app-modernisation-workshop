@@ -9,6 +9,7 @@
 *.sh text eol=lf
 *.bash text eol=lf
 *.ps1 text eol=lf
+java/mvnw text eol=lf
 
 # Windows command scripts use CRLF.
 *.bat text eol=crlf

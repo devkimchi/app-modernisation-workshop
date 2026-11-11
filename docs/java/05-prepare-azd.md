@@ -1,4 +1,4 @@
-# Java 5. azd 배포 산출물 준비하기
+# 5. azd 배포 산출물 준비하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
@@ -69,7 +69,7 @@ services:
       platform: linux/amd64
 ```
 
-`language: java`의 자동 JAR 탐색과 혼용하지 않습니다. 두 이미지의 런타임이 Java 21로 남거나 동일 JAR을 실행하는지 확인합니다. 이미지 태그는 `latest` 재사용 대신 이번 빌드를 식별할 수 있는 고유 값으로 만들고 배포 후 digest를 기록합니다.
+`language: java`의 자동 JAR 탐색과 혼용하지 않습니다. 두 이미지의 런타임이 Java 25이고, 각각 해당 모듈의 JAR을 실행하는지 확인합니다. 이미지 태그는 `latest` 재사용 대신 이번 빌드를 식별할 수 있는 고유 값으로 만들고 배포 후 digest를 기록합니다.
 
 `azd`가 서비스와 리소스를 찾을 수 있어야 합니다. Bicep과 `azure.yaml`의 서비스 이름, 태그, 리소스 이름을 대조합니다. `azd provision`의 임시 bootstrap 이미지가 필요하면 신뢰하는 이미지와 교체 흐름을 명시하고, 실제 서비스가 배포되었다고 오인하지 않도록 합니다.
 

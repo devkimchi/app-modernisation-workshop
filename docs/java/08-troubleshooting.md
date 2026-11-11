@@ -152,9 +152,41 @@ powershell -ExecutionPolicy Bypass -NonInteractive -Command "& node (Join-Path $
 
 4. Copilot app을 완전히 종료했다가 다시 실행하고 `modernize` 모드에서 읽기 전용 사전 확인을 재시도합니다. 실패하면 새 로그의 실행 명령이 수정본인지 확인하고 중단합니다. 훅을 끄거나 전체 자동 승인으로 우회하지 않습니다.
 
-이 사례에서는 수정한 명령의 직접 실행과 보호 훅의 허용/거부 동작을 확인했습니다. 그러나 실행 중인 앱의 실제 에이전트 호출은 수정 전 명령을 계속 사용해 실패했습니다. **앱 재시작 후 실제 모드에서의 복구와 평가 완료는 미검증**입니다. 명령 단독 실행 성공을 평가 성공으로 보고하지 않습니다.
+처음에는 수정한 명령의 직접 실행만 성공했고, 실행 중인 앱은 수정 전 명령을 계속 사용해 실패했습니다. 이후 사전 확인과 평가 코디네이터 호출은 통과했지만, 아래의 별도 오류로 평가는 완료되지 않았습니다. 명령 단독 실행 성공을 평가 성공으로 보고하지 않습니다.
 
 이 조치는 설치 경로를 고정한 로컬 수정이며 플러그인 업데이트나 재설치로 덮어써질 수 있습니다. 다른 에이전트의 같은 오류는 해당 파일을 별도로 확인합니다. 개인 설치 경로나 로컬 수정본을 워크숍 저장소에 커밋하지 않습니다.
+
+### 훅의 정책 거부와 WSL 평가 명령 오류
+
+`Denied by preToolUse hook: ...`는 훅 실행 오류와 구분합니다. 훅이 정상 실행된 뒤 정책으로 거부한 결과일 수 있습니다. 2026년 11월 11일 평가 기록에서 다음 문제를 확인했고, 11월 12일 로컬 플러그인 설치본을 수정했습니다. Java 앱이나 `pom.xml`의 문제는 아닙니다.
+
+| 증상 | 진단 | 수정 |
+| --- | --- | --- |
+| `update_todo`가 라우터 정책으로 거부됨 | 허용 목록에는 `todo`만 있고 실제 도구명의 별칭이 없었습니다. | `guardModernizeDelegation.mjs`에 `update_todo` → `todo` 정규화를 추가했습니다. 라우터의 직접 명령 실행 금지는 유지합니다. |
+| 단일 평가가 배치 작업으로 거부됨 | 위임문 전체의 `batch`나 `repos.json` 검색이 금지 사항과 진단 설명까지 작업 의도로 판정했습니다. | 전역/에이전트 훅이 같은 판정 함수를 사용합니다. 명시적인 `workspace-mode: batch`와 요청 필드를 확인하며, 기존 문장형 호출은 요청 부분의 배치 실행 지시만 검사합니다. |
+| `--coverage-source default`가 거부됨 | 중첩된 `bash -c '...'`의 닫는 따옴표까지 읽어 `default'`로 해석했습니다. | 지원하는 Bash 래퍼와 PowerShell here-string에서 스크립트를 분리한 뒤 리터럴 옵션을 검사합니다. 중복/누락/잘못된 값과 승인 없는 `full` 확대는 계속 거부합니다. 명령 끝 공백 추가에 의존하지 않습니다. |
+| AppCAT에서 `SyntaxError`와 ELF 내용이 출력됨 | 에이전트가 Linux 실행 파일을 `node appcat ...`으로 호출했습니다. | AppCAT은 직접 실행하고 Node는 `.mjs` 등 JavaScript에만 사용하도록 평가 지침을 수정했습니다. |
+| 산출물이 앱 루트 밖에 생성됨 | WSL의 실제 작업 위치는 `java`였지만, 전달된 `$PWD` 값은 상위 폴더였습니다. 추가 진단의 Bash 인용도 PowerShell에서 깨졌습니다. | Bash 스크립트를 표준입력으로 전달하고 CRLF를 제거합니다. 실제 작업 경로를 확인한 후 명시적인 앱 경로를 `--workspace-path`로 전달하도록 수정했습니다. |
+| `report artifact does not exist`, 종료 코드 `2` | 외부 통신 조건이 해소되지 않아 분석/보고서 생성 전에 멈춘 상태에서 최종 검증을 실행했습니다. | 필요한 사용자 결정은 `NEEDS_INPUT`으로 상위 에이전트에 반환하고 확인 후 재개하도록 수정했습니다. 미생성 보고서를 성공 처리하지 않습니다. |
+
+수정 파일은 **플러그인 설치 루트 기준**입니다.
+
+- `com.github.copilot/hooks/scripts/guardModernizeDelegation.mjs`: 도구명, 작업 모드와 평가 옵션 판정.
+- `com.github.copilot/hooks/scripts/guardModernizeDelegation.regression.test.mjs`: 설치본에서 직접 실행할 수 있는 회귀 테스트 추가.
+- `com.github.copilot/agents/modernize.agent.md`: 명시적인 작업 모드 전달, 평가 범위 선택과 외부 통신 사전 확인.
+- `com.github.copilot/agents/assessment-coordinator.agent.md`: WSL 실행 지침, AppCAT 직접 실행, `NEEDS_INPUT` 반환/재개 절차.
+
+사용자 프롬프트를 고쳐 `batch` 단어를 피하는 것은 근본 해결이 아닙니다. 상세 구조/API/설정/업무 흐름 문서가 필요하면 `issue-only`와 `full`의 차이를 안내하고 사용자의 선택을 받습니다. 명시적 선택 없이 기본 범위를 확대하지 않습니다. 외부 서비스 사용 전 안내 요청도 전면 금지나 자동 승인으로 바꾸지 않습니다.
+
+**검증 범위:** 새 회귀 테스트 8개에서 훅의 허용/거부와 JSON 실행 경로를 확인했습니다. Ubuntu WSL2에서는 앱을 실행하지 않고 Bash 표준입력 전달과 작업 경로 일치를 확인했습니다. PowerShell/Bash 경계의 모든 인용 형식을 지원하는 범용 셸 파서는 아니며, 동적인 평가 옵션 대신 리터럴 값을 사용합니다.
+
+로컬 플러그인 설치 경로를 치환한 뒤 Windows PowerShell에서 회귀 테스트를 실행할 수 있습니다.
+
+```powershell
+node --test "<플러그인-설치-경로>/com.github.copilot/hooks/scripts/guardModernizeDelegation.regression.test.mjs"
+```
+
+기존 `guardModernizeDelegation.test.mjs`는 설치본에 `scripts/render-agent-platform.js`가 없어 `MODULE_NOT_FOUND`로 실행되지 않았습니다. 이를 통과로 표시하지 않았고, 테스트를 위해 도구를 설치하거나 렌더러를 임의로 대체하지 않았습니다. **이번 수정 후 Copilot app의 실제 모드에서 전체 평가와 외부 통신은 재검증하지 않았습니다.** 앱을 완전히 종료했다가 다시 실행해 확인하며, 이전 실행이 잘못 생성한 메타데이터는 소유 범위를 확인하지 않고 삭제하지 않습니다.
 
 ## Java 로컬 실행
 

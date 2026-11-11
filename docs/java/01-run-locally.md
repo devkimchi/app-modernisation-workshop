@@ -79,10 +79,11 @@ bash scripts/startapp.sh
 ```bash
 # zsh/bash
 tail -n 100 logs/worker.log
-tail -n 100 logs/web.log
+grep -n -F 'HikariPool-1 - Start completed' logs/web.log
+grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
 ```
 
-worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다. 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다. 로그의 시각과 이후 오류도 함께 살펴봅니다.
+worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다. 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다. 검색 결과의 시각과 주변 내용을 확인해 이후 PostgreSQL 연결 오류가 있는지 살펴봅니다. 오류 검색 결과가 없더라도 현재 연결이 정상이라고 단정하지 않습니다.
 
 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 

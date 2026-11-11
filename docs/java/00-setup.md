@@ -17,7 +17,7 @@ Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사�
 - **Windows 사용자**: [WSL](https://learn.microsoft.com/windows/wsl/install)
 - **Windows 사용자**: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
 
-## 1. 템플릿으로 저장소 만들고 클론하기
+## 템플릿으로 저장소 만들고 클론하기
 
 1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 또는 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭하세요.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
@@ -34,7 +34,7 @@ cd <저장소-이름>
 >
 > 템플릿 저장소를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
 
-## 2. 필수 도구 설치여부 확인하기
+## 필수 도구 설치여부 확인하기
 
 ### 도구 설치 여부 점검
 
@@ -57,7 +57,7 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track java
 | `PASS` | 해당 검사 통과. 실제 앱 실행이나 배포 성공을 뜻하지 않음 |
 | `FAIL` | 부족한 도구나 설정을 보완한 뒤 다시 점검 |
 | `WARN` | 오류 내용과 검사 제한 확인 |
-| `MANUAL` | 직접 확인. Copilot 플러그인은 3단계에서 설치 |
+| `MANUAL` | 직접 확인. Copilot 플러그인은 [플러그인 설치](#copilot-app에-플러그인-설치하기)에서 설치 |
 | `INFO` | 참고 정보 |
 
 ### 도구 설치와 업데이트
@@ -94,7 +94,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update
 - **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드와 선택한 WSL 배포판의 통합을 켭니다. Windows와 WSL의 CLI가 같은 엔진에 연결된다고 가정하지 마세요.
 - **Copilot 사용 권한**: 앱 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
 
-## 3. Copilot app에 플러그인 설치하기
+## Copilot app에 플러그인 설치하기
 
 1. Copilot app에서 GitHub 계정으로 로그인합니다.
 2. **Customize**의 마켓플레이스 추가 기능(앱 버전에 따라 Settings > Plugins)에서 `microsoft/github-copilot-modernization`을 추가합니다.
@@ -103,7 +103,7 @@ powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update
 
 목록이 갱신되지 않으면 새 세션이나 앱 재시작을 시도합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
 
-## 4. 샘플 다운로드하기
+## 샘플 다운로드하기
 
 ```bash
 # zsh/bash

@@ -77,6 +77,8 @@ bash scripts/install-prerequisites.sh --track java --update
 | JDK 8, 21, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 주 버전의 최신 버전을 추가합니다. |
 | Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치하고 업데이트합니다. |
 
+이 워크숍은 Java 8에서 Java 25로 업그레이드합니다. 현재 도우미의 설치와 사전 점검 대상에는 JDK 21도 포함되지만, 업그레이드 과정에서 경유할 필요는 없습니다.
+
 설치한 Node.js를 현재 터미널에서도 사용하려면 스크립트가 출력한 초기화 명령과 `nvm use` 명령을 실행하세요.
 
 ### Windows 호스트 도구 설치

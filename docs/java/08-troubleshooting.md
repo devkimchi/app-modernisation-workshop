@@ -80,7 +80,7 @@ az provider show --namespace "<미등록-공급자>" --query registrationState -
 
 SDKMAN 자체 설치가 실패하면 [공식 설치 안내](https://sdkman.io/install/)와 오류에 표시된 선행 도구를 확인합니다. 기존 설치 경로는 내용을 확인하고 필요한 파일을 보존한 뒤 직접 옮기거나 정리하세요. 도우미는 기존 경로를 덮어쓰지 않습니다.
 
-Temurin을 제공하지 않는 OS/아키텍처에서는 같은 Bash에서 목록을 확인하고 다른 배포판의 **정식 JDK 8, 21, 25**를 선택합니다.
+Temurin을 제공하지 않는 OS/아키텍처에서는 같은 Bash에서 목록을 확인하고 다른 배포판의 **정식 JDK 8과 25**를 선택합니다.
 
 ```bash
 source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
@@ -89,7 +89,7 @@ sdk list java
 sdk install java <목록에서-선택한-식별자>
 ```
 
-필요한 버전마다 설치를 반복합니다. JRE와 EA 버전은 제외하고, 식별자의 `+빌드번호`도 그대로 사용하세요. 수동 설치 중 기본 JDK 변경 질문은 직접 결정합니다. 앱 루트에서 `source ../scripts/use-java.sh --jdk 8`, `source ../scripts/use-java.sh --jdk 21` 또는 `source ../scripts/use-java.sh --jdk 25`를 실행하면 설치된 SDKMAN JDK를 현재 셸에서 선택하고 Java/Javac 버전을 표시합니다. Maven 검증은 앱 루트에서 별도로 실행합니다.
+필요한 버전마다 설치를 반복합니다. JRE와 EA 버전은 제외하고, 식별자의 `+빌드번호`도 그대로 사용하세요. 수동 설치 중 기본 JDK 변경 질문은 직접 결정합니다. 앱 루트에서 `source ../scripts/use-java.sh --jdk 8` 또는 `source ../scripts/use-java.sh --jdk 25`를 실행하면 설치된 SDKMAN JDK를 현재 셸에서 선택하고 Java/Javac 버전을 표시합니다. Maven 검증은 앱 루트에서 별도로 실행합니다.
 
 ### WSL 배포판 지정
 

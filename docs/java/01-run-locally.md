@@ -177,4 +177,4 @@ git config user.email "you@example.com"
 - 이미지 업로드와 썸네일 생성
 - 원본 앱 상태 커밋
 
-확인을 마쳤다면 [평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.
+확인을 마쳤다면 [실습 2: 평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

@@ -123,7 +123,58 @@ pwsh -File ./scripts/download-sample.ps1 -Track java -WslDistribution Ubuntu-24.
 | Java 버전이 되돌아감 | SDKMAN `sdk use`는 현재 셸에 적용됩니다. 매 터미널/에이전트 실행 프로세스의 `java -version`과 Wrapper JDK를 확인합니다. |
 | PostgreSQL/RabbitMQ 아직 준비 안 됨 | `pg_isready`, `rabbitmq-diagnostics`, 해당 컨테이너 로그를 확인합니다. 원본의 10초 대기는 readiness 보장이 아닙니다. |
 | Java 포트/컨테이너 이름 충돌 | 현재 PID/컨테이너의 소유 프로젝트를 먼저 확인합니다. 다른 앱을 종료하거나 원본 start 스크립트를 반복 실행하지 않습니다. |
+| Windows에서 `http://localhost:8080` 연결 실패 | 아래 [Windows에서 localhost 연결 확인](#windows에서-localhost8080에-연결할-수-없음)을 따릅니다. |
 | Podman인데 Java 원본이 docker 호출 | 아래 [루프백 수동 실행](#루프백-수동-실행)의 서비스/Maven 실행 경로를 사용합니다. |
+
+### Windows에서 localhost:8080에 연결할 수 없음
+
+먼저 WSL2 Bash에서 웹 앱이 8080 포트를 열고 HTTP 응답을 주는지 확인합니다.
+
+```bash
+ss -ltn | grep ':8080'
+curl -I http://127.0.0.1:8080/
+```
+
+앱 루트 주소의 `302` 응답은 `/storage`로 이동하는 정상 응답입니다. 리스너가 없거나 HTTP 요청이 실패하면 앱 시작 로그를 확인합니다. `startapp.sh`를 사용했다면 워크숍 루트에서 `java/logs/web.log`를 확인하고, DB 연결 오류 등 앱 시작 실패부터 해결합니다.
+
+WSL에서는 응답하지만 Windows에서 접속할 수 없다면 PowerShell에서 IPv4 루프백 주소로 확인합니다.
+
+```powershell
+curl.exe -4 -I http://127.0.0.1:8080/
+```
+
+기본 WSL2 NAT 모드에서는 Windows에서 WSL 앱으로 `localhost` 연결을 사용할 수 있고, `localhostForwarding`도 기본 활성화되어 있습니다. PowerShell에서 `wsl --version`으로 WSL 버전을 확인하고, 오래된 버전이면 `wsl --update`로 업데이트합니다. 사용자 홈의 `.wslconfig`에 `localhostForwarding=false`가 있으면 `true`로 바꿉니다. 기존 설정을 확인하거나 수정할 때는 다음 명령으로 파일을 엽니다.
+
+```powershell
+notepad.exe "$HOME/.wslconfig"
+```
+
+설정 파일에 `[wsl2]` 섹션이 이미 있으면 중복해서 만들지 말고 그 안에 추가합니다. 파일이 없거나 해당 설정이 없다면 기본값이 활성화이므로 새로 추가하지 않아도 됩니다.
+
+```ini
+[wsl2]
+localhostForwarding=true
+```
+
+설정을 바꿨거나 WSL을 업데이트했다면 PowerShell에서 WSL을 종료하고 다시 시작합니다.
+
+```powershell
+wsl --shutdown
+```
+
+`wsl --shutdown`은 WSL에서 실행 중인 프로세스도 종료하므로, 배포판을 다시 연 뒤 PostgreSQL과 RabbitMQ 상태를 확인하고 웹 앱을 다시 시작합니다. 기존 컨테이너가 있으면 `startapp.sh`를 반복 실행하지 말고 소유 프로젝트와 실행 상태를 먼저 확인합니다.
+
+계속 연결할 수 없다면 Windows 11 22H2 이상에서 미러링 네트워킹을 사용할 수 있습니다. `.wslconfig`의 `[wsl2]` 섹션에 `networkingMode=mirrored`를 설정하고 `wsl --shutdown` 후 WSL을 다시 시작합니다. 네트워킹 모드 변경은 WSL의 네트워크 동작에 영향을 줍니다. 자세한 내용은 [WSL 네트워킹 안내](https://learn.microsoft.com/windows/wsl/networking)를 참고하세요.
+
+설정을 바꾸기 전 임시로 접속하려면 PowerShell에서 WSL IP를 확인하고 해당 주소로 엽니다. WSL을 다시 시작하면 IP가 바뀔 수 있습니다.
+
+```powershell
+wsl.exe hostname -I
+```
+
+```text
+http://<WSL-IP>:8080
+```
 
 ### 루프백 수동 실행
 

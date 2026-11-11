@@ -4,9 +4,9 @@
 
 ## 목표와 사전 준비
 
-업그레이드에 앞서 Java 8 원본 앱의 동작을 확인한 뒤, 이후 변경한 앱과 비교합니다. 사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있는지 확인합니다.
+업그레이드에 앞서 Java 8 원본 앱의 동작을 확인합니다. 이후 변경한 앱과 동작을 비교합니다. 사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있는지 확인합니다.
 
-워크숍 자료 루트에서 기본 다운로드 위치를 사용했다면 다음 명령으로 앱 루트(`java`)로 이동합니다.
+기본 위치로 다운로드했다면 워크숍 루트에서 다음 명령으로 앱 루트(`java`)로 이동합니다.
 
 ```bash
 # zsh/bash
@@ -24,7 +24,7 @@ cd java
 source ../scripts/use-java.sh --jdk 8
 ```
 
-이어서 앱 루트에서 Maven Wrapper와 전체 검증을 별도로 실행합니다.
+이어서 앱 루트에서 Maven Wrapper 버전을 확인하고 전체 검증을 실행합니다.
 
 ```bash
 # zsh/bash
@@ -54,7 +54,7 @@ bash scripts/startapp.sh
 
 > [!CAUTION]
 >
-> `http://localhost:8080`으로 접속이 안될 수 있습니다. 이 경우에는 아래 명령어를 통해 IP주소를 직접 알아낸 후 접속해 보세요.
+> `http://localhost:8080`으로 접속할 수 없다면 아래 명령으로 IP 주소를 확인한 뒤 해당 주소로 접속해 보세요.
 >
 > ```bash
 > hostname -I
@@ -69,14 +69,14 @@ bash scripts/startapp.sh
 - 테스트 이미지를 업로드하고 업로드 결과와 썸네일이 화면에 나타나는지 확인합니다.
   - 웹 앱은 원본을 로컬 `storage` 폴더에 저장하고 RabbitMQ에 썸네일 생성 메시지를 보냅니다.
 - RabbitMQ 관리 화면(`http://localhost:15672`)에서 큐 상태를 확인합니다.
-  - 마찬가지로 `http://localhost:15672`로 접속할 수 없다면, 앞서 구한 IP주소로 직접 접속합니다.
+  - `http://localhost:15672`로 접속할 수 없다면 앞서 확인한 IP 주소로 접속합니다.
   - `guest`/`guest`로 로그인하고 **Queues and Streams**에서 `image-processing` 큐의 Ready, Unacked와 Consumers를 확인합니다.
   - WSL IP로 접속하면 기본 `guest` 계정의 로그인이 제한될 수 있습니다.
   - Ready가 0이어도 처리 성공을 단정하지 말고 worker 로그와 썸네일도 확인합니다.
 - worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다.
   - worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
 - 앱 로그에서 PostgreSQL 연결을 확인합니다.
-  - `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않으므로, 파일이 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다.
+  - `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않습니다. 파일이 `storage` 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다.
   - AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
 
 `startapp.sh`로 실행했다면 이미지 업로드 후 앱 루트에서 로그를 확인합니다.
@@ -89,7 +89,7 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 ```
 
 - worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다.
-- 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다.
+- 웹 앱 로그에서 `HikariPool-1 - Start completed` 메시지로 시작 시 PostgreSQL 연결을 확인합니다.
 - 검색 결과의 시각과 주변 내용을 확인해 이후 PostgreSQL 연결 오류가 있는지 살펴봅니다. 오류 검색 결과가 없더라도 현재 연결이 정상이라고 단정하지 않습니다.
 
 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
@@ -124,7 +124,7 @@ git diff --cached
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
-Git 사용자 이름이나 이메일이 설정되지 않아 커밋할 수 없다면, 아래 명령으로 이 저장소에 사용할 이름과 이메일을 설정합니다. 이 설정은 이 저장소에만 적용되며, 스크립트가 대신 설정하지 않습니다.
+Git 사용자 이름이나 이메일이 설정되지 않아 커밋할 수 없다면 아래 명령으로 이 저장소에 사용할 이름과 이메일을 설정합니다. 이 설정은 이 저장소에만 적용되며, 스크립트가 대신 설정하지 않습니다.
 
 ```bash
 # zsh/bash

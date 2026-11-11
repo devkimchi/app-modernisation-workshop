@@ -1,4 +1,4 @@
-# Java 7. 리소스와 로컬 실행 정리하기
+# 7. 리소스와 로컬 실행 정리하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 

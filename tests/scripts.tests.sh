@@ -248,7 +248,7 @@ assert 'machine lookup failure warns' grep -q 'WARN.*podman-machine' <<< "$machi
 export SDKMAN_DIR="$TEMPORARY/sdkman"
 mkdir -p "$SDKMAN_DIR/bin"
 printf 'sdk() { echo "SDKMAN fixture"; }\n' > "$SDKMAN_DIR/bin/sdkman-init.sh"
-for v in 8 21 25; do
+for v in 8 25; do
     mkdir -p "$SDKMAN_DIR/candidates/java/$v-test/bin"
     if [[ "$v" == 8 ]]; then version=1.8.0_400; else version="$v"; fi
     printf '#!/usr/bin/env bash\nprintf '\''openjdk version "%s"\\n'\'' >&2\n' "$version" > "$SDKMAN_DIR/candidates/java/$v-test/bin/java"
@@ -257,7 +257,7 @@ for v in 8 21 25; do
 done
 CHECK_FAILURES=0
 check_java_sdks
-assert 'all SDKMAN majors' test "$CHECK_FAILURES" = 0
+assert 'JDK 8 and 25 alone satisfy SDKMAN prerequisites' test "$CHECK_FAILURES" = 0
 mv "$SDKMAN_DIR/candidates/java/25-test" "$TEMPORARY/moved-jdk"
 CHECK_FAILURES=0
 check_java_sdks
@@ -267,7 +267,7 @@ java_selector_fixture="$TEMPORARY/java-selector"
 mkdir -p "$java_selector_fixture/bin" "$java_selector_fixture/app"
 touch "$java_selector_fixture/app/mvnw"
 printf '%s\n' 'sdk() { [[ "$1" == use && "$2" == java ]] || return 1; printf "%s\n" "$3" > "$SDKMAN_DIR/selected"; export JAVA_HOME="$SDKMAN_DIR/candidates/java/$3"; PATH="$JAVA_HOME/bin:$PATH"; }' > "$java_selector_fixture/bin/sdkman-init.sh"
-for v in 8 21 25; do
+for v in 8 25; do
     identifier="$v.0-test"
     mkdir -p "$java_selector_fixture/candidates/java/$identifier/bin"
     if [[ "$v" == 8 ]]; then version=1.8.0_400; else version="$v.0.1"; fi
@@ -278,21 +278,22 @@ done
 sequence_output=$(SDKMAN_DIR="$java_selector_fixture" bash -c '
     cd "$2" &&
     source "$1" --jdk 8 &&
-    source "$1" --jdk 21 &&
     source "$1" --jdk 25
 ' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1)
-for major in 8 21 25; do
+for major in 8 25; do
     assert "select and verify JDK $major" grep -q "SDKMAN JDK $major 선택: $major.0-test" <<< "$sequence_output"
 done
 assert 'baseline reports Java version check' grep -q '\[INFO\] java -version' <<< "$sequence_output"
 assert 'baseline reports compiler version check' grep -q '\[INFO\] javac -version' <<< "$sequence_output"
 assert 'show selected Java version output' grep -q 'openjdk version "25.0.1"' <<< "$sequence_output"
 assert 'show selected compiler version output' grep -q 'javac 25.0.1' <<< "$sequence_output"
-if SDKMAN_DIR="$java_selector_fixture" bash -c 'source "$1" --jdk 17' _ "$ROOT/scripts/use-java.sh" >/dev/null 2>&1; then
-    printf '%s\n' 'FAILED: reject unsupported JDK major' >&2; exit 1
-else
-    PASSED=$((PASSED + 1))
-fi
+for major in 17 21; do
+    SDKMAN_DIR="$java_selector_fixture" bash -c '
+        cd "$2" || exit 1
+        if source "$1" --jdk "$3"; then exit 1; else test "$?" = 2; fi
+    ' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" "$major" >/dev/null 2>&1
+    assert "unsupported JDK $major does not change selection" test "$(cat "$java_selector_fixture/selected")" = 25.0-test
+done
 if bash "$ROOT/scripts/use-java.sh" --jdk 8 >/dev/null 2>&1; then
     printf '%s\n' 'FAILED: require sourcing to change current shell' >&2; exit 1
 else

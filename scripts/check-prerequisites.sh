@@ -137,7 +137,7 @@ check_container() {
 }
 
 check_java_sdks() {
-    local sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate output compiler major compiler_major found8=0 found21=0 found25=0
+    local sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate output compiler major compiler_major found8=0 found25=0
     if [[ ! -r "$sdk_dir/bin/sdkman-init.sh" ]]; then
         check_result FAIL sdkman 'SDKMAN 초기화 파일이 없습니다. docs/java/00-setup.md를 확인하세요.'
         return
@@ -163,14 +163,12 @@ check_java_sdks() {
         [[ -n "$major" && "$major" == "$compiler_major" && "$compiler" != *-ea* ]] || continue
         case "$major" in
             8) found8=1 ;;
-            21) found21=1 ;;
             25) found25=1 ;;
             *) continue ;;
         esac
         check_result PASS "jdk-$major" "SDKMAN 후보 ${candidate##*/}의 java와 javac를 확인했습니다."
     done
     (( found8 == 1 )) || check_result FAIL jdk-8 'SDKMAN으로 설치한 JDK 8이 필요합니다.'
-    (( found21 == 1 )) || check_result FAIL jdk-21 'SDKMAN으로 설치한 JDK 21이 필요합니다.'
     (( found25 == 1 )) || check_result FAIL jdk-25 'SDKMAN으로 설치한 JDK 25가 필요합니다.'
 }
 

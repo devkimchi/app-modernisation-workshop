@@ -261,10 +261,12 @@ java_output=$(
     confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
     install_java_sdks "$test_dir"
 )
-for major in 8 21 25; do
+for major in 8 25; do
     assert "JDK $major installed" grep -q "sdk-install: $major\\." <<< "$java_output"
     assert "JDK $major approval" grep -q "approval: JDK $major:" <<< "$java_output"
 done
+assert 'JDK 21 is not installed or prompted' test "${java_output#*JDK 21:}" = "$java_output"
+assert 'JDK 21 absent after installation' test ! -e "$test_dir/candidates/java/21.0.9-tem"
 java_skip=$(
     confirm_install() { printf 'UNEXPECTED APPROVAL\n'; return 1; }
     install_java_sdks "$test_dir"
@@ -302,7 +304,7 @@ java_build_output=$(
     confirm_install() { return 0; }
     install_java_sdks "$test_dir/empty"
 )
-for identifier in 8.0.512.0+9-tem 21.0.13.0+9-tem 25.0.5.0+8-tem; do
+for identifier in 8.0.512.0+9-tem 25.0.5.0+8-tem; do
     assert "build identifier $identifier installed" grep -Fxq "sdk-install: $identifier" <<< "$java_build_output"
 done
 if [[ "$java_build_output" == *'sdk-install: 25.0.6-ea-tem'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
@@ -416,10 +418,12 @@ missing_path_update=$(
 )
 assert 'update also handles nvm Node absent from initial PATH' grep -q 'node-setup-update=1' <<< "$missing_path_update"
 
-unordered=$'vendor | 21.0.9+99-tem\n | 21.0.10+2-tem\n | 21.0.10+11-tem\n | 21.0.11-ea-tem\n | 21.0.10+3-tem\n | 21.0.99-zulu'
-assert 'latest JDK ordering uses version and numeric build, excludes EA/vendor' test "$(latest_temurin_identifier 21 <<< "$unordered")" = 21.0.10+11-tem
+unordered=$'vendor | 25.0.9+99-tem\n | 25.0.10+2-tem\n | 25.0.10+11-tem\n | 25.0.11-ea-tem\n | 25.0.10+3-tem\n | 25.0.99-zulu'
+assert 'latest JDK ordering uses version and numeric build, excludes EA/vendor' test "$(latest_temurin_identifier 25 <<< "$unordered")" = 25.0.10+11-tem
 assert 'JDK extra numeric components retained' test "$(latest_temurin_identifier 25 <<< $' | 25.0.1+99-tem\n | 25.0.1.1+2-tem\n | 25.0.1.1+10-tem')" = 25.0.1.1+10-tem
 assert 'Java 8 update sorted numerically' test "$(latest_temurin_identifier 8 <<< $' | 8.0.99-tem\n | 8.0.512+9-tem\n | 8.0.512+10-tem\n | 8.0.513-ea-tem')" = 8.0.512+10-tem
+mkdir -p "$test_dir/candidates/java/21.0.9-tem"
+printf 'preserve\n' > "$test_dir/candidates/java/21.0.9-tem/existing"
 ln -s 21.0.9-tem "$test_dir/candidates/java/current"
 default_java=$(readlink "$test_dir/candidates/java/current")
 java_updated=$(
@@ -427,12 +431,14 @@ java_updated=$(
     confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
     install_java_sdks "$test_dir" 1
 )
-for major in 8 21 25; do
+for major in 8 25; do
     assert "JDK $major update separately approved" grep -q "approval: JDK $major:" <<< "$java_updated"
-    assert "JDK $major previous version retained" test -d "$test_dir/candidates/java/$([[ "$major" == 8 ]] && printf 8.0.472-tem || { [[ "$major" == 21 ]] && printf 21.0.9-tem || printf 25.0.1-tem; })"
+    assert "JDK $major previous version retained" test -d "$test_dir/candidates/java/$([[ "$major" == 8 ]] && printf 8.0.472-tem || printf 25.0.1-tem)"
 done
 assert 'default JDK link preserved' test "$(readlink "$test_dir/candidates/java/current")" = "$default_java"
-assert 'wrong JDK patch rejected' test "$(jdk_matches_identifier "$test_dir/candidates/java/21.0.9-tem" 21.0.13-tem && printf accepted || printf rejected)" = rejected
+assert 'existing JDK 21 preserved' test "$(cat "$test_dir/candidates/java/21.0.9-tem/existing")" = preserve
+assert 'JDK 21 never updated' test "${java_updated#*sdk-install: 21.}" = "$java_updated"
+assert 'wrong JDK patch rejected' test "$(jdk_matches_identifier "$test_dir/candidates/java/25.0.1-tem" 25.0.5-tem && printf accepted || printf rejected)" = rejected
 java_latest=$(
     MOCK_BUILD_IDENTIFIERS=1
     confirm_install() { printf 'UNEXPECTED APPROVAL\n'; return 1; }
@@ -440,7 +446,7 @@ java_latest=$(
 )
 assert 'latest JDKs not reinstalled' test "${java_latest#*sdk-install:}" = "$java_latest"
 assert 'latest JDKs not prompted' test "${java_latest#*UNEXPECTED}" = "$java_latest"
-broken_latest="$test_dir/candidates/java/21.0.13.0+9-tem/bin/javac"
+broken_latest="$test_dir/candidates/java/25.0.5.0+8-tem/bin/javac"
 cp "$broken_latest" "$test_dir/saved-javac"
 printf '#!/usr/bin/env bash\nexit 1\n' > "$broken_latest"
 java_broken_latest=$(
@@ -455,7 +461,7 @@ mkdir -p "$test_dir/update-empty/bin"
 cp "$test_dir/bin/sdkman-init.sh" "$test_dir/update-empty/bin/sdkman-init.sh"
 java_update_declined=$(confirm_install() { return 1; }; install_java_sdks "$test_dir/update-empty" 1)
 assert 'JDK update decline does not install' test "${java_update_declined#*sdk-install:}" = "$java_update_declined"
-for setting in MOCK_LIST_FAILURE=1 MOCK_NO_CANDIDATE=1 MOCK_JDK_FAILURE=1 MOCK_JDK_ACTUAL=21.0.1; do
+for setting in MOCK_LIST_FAILURE=1 MOCK_NO_CANDIDATE=1 MOCK_JDK_FAILURE=1 MOCK_JDK_ACTUAL=25.0.1; do
     java_update_failed=$(
         export "$setting"
         confirm_install() { return 0; }

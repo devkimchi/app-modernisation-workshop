@@ -1,10 +1,23 @@
-# Java 1. 원본 앱을 로컬에서 실행하기
+# 1. 원본 앱을 로컬에서 실행하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](00-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 사전 준비
+## 목표
 
-업그레이드에 앞서 Java 8 원본 앱의 동작을 확인합니다. 이후 변경한 앱과 동작을 비교합니다. 사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있는지 확인합니다.
+Java 8 원본 앱을 로컬에서 빌드하고 실행해 이미지 업로드와 비동기 썸네일 생성이 정상 동작하는지 확인합니다. 이 결과를 업그레이드 후 동작을 비교하는 기준으로 삼습니다.
+
+## 사전 준비
+
+사전 점검과 샘플 다운로드를 완료하고, 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있는지 확인합니다.
+
+### 실습 셸과 작업 경로
+
+Windows 사용자는 Windows 터미널에서 `wsl`을 실행해 WSL 셸에 들어갑니다. WSL 셸에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
+
+```powershell
+# PowerShell
+wsl
+```
 
 기본 위치로 다운로드했다면 워크숍 루트에서 다음 명령으로 앱 루트(`java`)로 이동합니다.
 
@@ -96,6 +109,8 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 >
 > 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 
+## 원본 앱 상태 커밋
+
 기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.
 
 ```bash
@@ -134,8 +149,14 @@ git config user.name "Your Name"
 git config user.email "you@example.com"
 ```
 
-## 실행 확인 및 문제 해결
+## 완료 및 다음 단계
 
-다음 단계로 넘어가기 전에 Java 8 빌드가 성공하는지, 웹 앱과 worker가 실행되는지, DB와 큐에 연결되는지, 업로드한 이미지의 썸네일이 생성되는지 확인합니다. 원본 앱의 현재 상태도 앞서 안내한 대로 커밋했는지 확인합니다.
+다음 항목을 모두 확인하면 이 실습을 완료한 것입니다.
+
+- Java 8 빌드 성공
+- 웹 앱과 worker 실행
+- PostgreSQL과 RabbitMQ 연결
+- 이미지 업로드와 썸네일 생성
+- 원본 앱 상태 커밋
 
 확인을 마쳤다면 [평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

@@ -68,6 +68,9 @@ bash scripts/startapp.sh
 
 - 테스트 이미지를 업로드하고 업로드 결과와 썸네일이 화면에 나타나는지 확인합니다. 웹 앱은 원본을 로컬 `storage` 폴더에 저장하고 RabbitMQ에 썸네일 생성 메시지를 보냅니다.
 - RabbitMQ 관리 화면(`http://localhost:15672`)에서 큐 상태를 확인합니다.
+  `guest`/`guest`로 로그인하고 **Queues and Streams**에서 `image-processing` 큐의 Ready, Unacked와 Consumers를 확인합니다.
+  WSL IP로 접속하면 기본 `guest` 계정의 로그인이 제한될 수 있습니다.
+  Ready가 0이어도 처리 성공을 단정하지 말고 worker 로그와 썸네일도 확인합니다.
 - worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다. worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
 - 앱 로그에서 PostgreSQL 연결을 확인합니다. `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않으므로, 파일이 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다. AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
 

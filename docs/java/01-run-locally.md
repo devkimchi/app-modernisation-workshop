@@ -108,6 +108,8 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 >
 > 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 
+## 원본 앱 상태 커밋
+
 기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.
 
 ```bash

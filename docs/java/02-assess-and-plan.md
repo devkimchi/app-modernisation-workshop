@@ -19,19 +19,23 @@ Agent picker에서 **`modernize`** 를 선택합니다.
 ### Windows용
 
 ```text
-평가 대상은 워크숍 루트 아래의 java/ 폴더다.
-이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있다.
+평가 대상은 워크숍 루트 아래의 `java` 폴더야.
+이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있어.
+
 GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가만 수행해 줘.
-원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했다.
-지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 마.
+
+원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했어.
+지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 말아줘.
 평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은 먼저 알려 줘.
 
-Copilot app은 Windows에서 사용한다. Java 명령은 WSL2 배포판 <배포판>의 <앱의-WSL-경로>에서
-Bash와 SDKMAN을 사용해 실행해 줘. Windows JDK나 다른 배포판을 쓰지 마.
+Copilot app은 Windows 환경에서 사용하고 있어.
+Java 명령은 WSL2의 <앱의-WSL-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
+Windows JDK나 다른 배포판을 쓰지 말아줘.
 
 web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 환경 설정과 비밀정보 관리 방식, 테스트 현황, 업그레이드 위험 요소와
 예상 작업을 근거가 되는 파일과 함께 설명해 줘.
+
 평가하지 못한 항목은 성공으로 표시하지 말고 그 이유를 남겨 줘.
 평가 결과를 제시한 뒤 멈춰 줘.
 ```
@@ -39,22 +43,36 @@ web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 ### macOS용
 
 ```text
-평가 대상은 워크숍 루트 아래의 java/ 폴더다.
-이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있다.
+평가 대상은 워크숍 루트 아래의 `java` 폴더야.
+이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있어.
+
 GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가만 수행해 줘.
-원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했다.
-지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 마.
+
+원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했어.
+지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 말아줘.
 평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은 먼저 알려 줘.
 
-Copilot app은 macOS에서 사용한다. Java 명령은 평가 대상 앱 루트인
-<앱의-macOS-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
+Copilot app은 macOS 환경에서 사용하고 있어.
+Java 명령은 평가 대상 앱 루트인 <앱의-macOS-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
 
 web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 환경 설정과 비밀정보 관리 방식, 테스트 현황, 업그레이드 위험 요소와
 예상 작업을 근거가 되는 파일과 함께 설명해 줘.
+
 평가하지 못한 항목은 성공으로 표시하지 말고 그 이유를 남겨 줘.
 평가 결과를 제시한 뒤 멈춰 줘.
 ```
+
+> [!CAUTION]
+>
+> Copilot app에서 `modernize` 에이전트로 평가하는 중 오류가 발생하면,
+> 터미널에서 워크숍 루트로 이동한 뒤 Copilot CLI를 실행하고 같은 평가 프롬프트를 입력하세요.
+>
+> ```bash
+> copilot --yolo
+> ```
+>
+> `--yolo`는 도구 실행 승인 확인을 생략하므로 신뢰할 수 있는 작업 폴더에서만 사용하세요.
 
 ### 평가 결과 확인
 
@@ -64,8 +82,12 @@ web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 
 평가 결과를 검토한 뒤 같은 에이전트에 다음과 같이 요청합니다.
 
+> [!NOTE]
+>
+> 앞서 Copilot app에서 `modernize` 에이전트 실행에 실패했다면 계속해서 Copilot CLI를 이용해 진행합니다.
+
 ```text
-평가 결과를 바탕으로 다음 제약 조건을 .github/modernize/rulebook/workshop.md에
+평가 결과를 바탕으로 다음 제약 조건을 `.github/modernize/rulebook/workshop.md`에
 기록하고 실행 계획을 만들어 줘. 지금은 계획까지만 작성하고 멈춰 줘.
 
 - Java 8에서 정식 JDK 25로 업그레이드한다.

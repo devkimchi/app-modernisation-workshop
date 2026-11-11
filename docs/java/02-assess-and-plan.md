@@ -69,7 +69,7 @@ web과 worker의 역할, DB, 큐와 파일에 대한 의존성, 화면과 API,
 > 터미널에서 워크숍 루트로 이동한 뒤 Copilot CLI를 실행하고 같은 평가 프롬프트를 입력하세요.
 >
 > ```bash
-> copilot --yolo
+> copilot --yolo --agent github-copilot-modernization:modernize
 > ```
 
 ### 평가 결과 확인

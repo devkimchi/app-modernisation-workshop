@@ -58,6 +58,18 @@ bash scripts/startapp.sh
 - worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다.
 - 앱 로그에서 PostgreSQL 연결을 확인합니다.
 
+> [!CAUTION]
+>
+> `http://localhost:8080`으로 접속이 안될 수 있습니다. 이 경우에는 아래 명령어를 통해 IP주소를 직접 알아낸 후 접속해 보세요.
+>
+> ```bash
+> hostname -I
+> ```
+>
+> `http://<IP주소>:8080`
+>
+> 자세한 해결 방법은 [문제 해결 문서의 "Windows에서 localhost:8080에 연결할 수 없음" 절](08-troubleshooting.md#windows에서-localhost8080에-연결할-수-없음)을 참고하세요.
+
 웹 앱은 업로드한 원본 파일을 로컬 `storage` 폴더에 저장한 뒤 RabbitMQ에 썸네일 생성 메시지를 보냅니다. worker가 메시지를 처리하지 않으면 원본 파일은 저장되어도 썸네일이 생성되지 않을 수 있습니다. 업로드 완료 메시지만으로 처리가 끝났다고 판단하지 마세요.
 
 `dev` 프로필로 실행하면 이미지 메타데이터를 PostgreSQL에 저장하지 않습니다. 파일이 `storage` 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다. PostgreSQL 연결 여부는 앱 로그에서 확인합니다. AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.

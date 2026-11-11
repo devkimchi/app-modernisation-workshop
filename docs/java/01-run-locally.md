@@ -66,13 +66,18 @@ bash scripts/startapp.sh
 
 이어서 다음 항목을 확인합니다.
 
-- 테스트 이미지를 업로드하고 업로드 결과와 썸네일이 화면에 나타나는지 확인합니다. 웹 앱은 원본을 로컬 `storage` 폴더에 저장하고 RabbitMQ에 썸네일 생성 메시지를 보냅니다.
+- 테스트 이미지를 업로드하고 업로드 결과와 썸네일이 화면에 나타나는지 확인합니다.
+  - 웹 앱은 원본을 로컬 `storage` 폴더에 저장하고 RabbitMQ에 썸네일 생성 메시지를 보냅니다.
 - RabbitMQ 관리 화면(`http://localhost:15672`)에서 큐 상태를 확인합니다.
-  `guest`/`guest`로 로그인하고 **Queues and Streams**에서 `image-processing` 큐의 Ready, Unacked와 Consumers를 확인합니다.
-  WSL IP로 접속하면 기본 `guest` 계정의 로그인이 제한될 수 있습니다.
-  Ready가 0이어도 처리 성공을 단정하지 말고 worker 로그와 썸네일도 확인합니다.
-- worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다. worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
-- 앱 로그에서 PostgreSQL 연결을 확인합니다. `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않으므로, 파일이 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다. AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
+  - 마찬가지로 `http://localhost:15672`로 접속할 수 없다면, 앞서 구한 IP주소로 직접 접속합니다.
+  - `guest`/`guest`로 로그인하고 **Queues and Streams**에서 `image-processing` 큐의 Ready, Unacked와 Consumers를 확인합니다.
+  - WSL IP로 접속하면 기본 `guest` 계정의 로그인이 제한될 수 있습니다.
+  - Ready가 0이어도 처리 성공을 단정하지 말고 worker 로그와 썸네일도 확인합니다.
+- worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다.
+  - worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
+- 앱 로그에서 PostgreSQL 연결을 확인합니다.
+  - `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않으므로, 파일이 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다.
+  - AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
 
 `startapp.sh`로 실행했다면 이미지 업로드 후 앱 루트에서 로그를 확인합니다.
 
@@ -83,7 +88,9 @@ grep -n -F 'HikariPool-1 - Start completed' logs/web.log
 grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
 ```
 
-worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다. 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다. 검색 결과의 시각과 주변 내용을 확인해 이후 PostgreSQL 연결 오류가 있는지 살펴봅니다. 오류 검색 결과가 없더라도 현재 연결이 정상이라고 단정하지 않습니다.
+- worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다.
+- 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다.
+- 검색 결과의 시각과 주변 내용을 확인해 이후 PostgreSQL 연결 오류가 있는지 살펴봅니다. 오류 검색 결과가 없더라도 현재 연결이 정상이라고 단정하지 않습니다.
 
 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 

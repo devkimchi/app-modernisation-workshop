@@ -14,11 +14,12 @@
 
 이 단계에서는 앱 소스를 변경하지 않고 평가 보고서만 작성합니다.
 
-Copilot app에서 **앱 루트**를 엽니다. Agent picker에서 **`modernize`** 를 선택합니다. 먼저 평가만 수행하고 변경 범위를 검토한 뒤 계획을 작성합니다. "앱을 모두 현대화해 줘"처럼 범위가 넓은 요청으로 바로 작업을 시작하지 않습니다.
+Copilot app에서 워크숍 저장소를 연 상태로 Agent picker에서 **`modernize`** 를 선택하고, 평가 대상을 워크숍 루트 아래의 `java/`로 지정합니다. 먼저 평가만 수행하고 변경 범위를 검토한 뒤 계획을 작성합니다. "앱을 모두 현대화해 줘"처럼 범위가 넓은 요청으로 바로 작업을 시작하지 않습니다.
 
-아래 프롬프트의 환경 정보를 실제 값으로 바꿉니다.
+아래 프롬프트의 환경 정보를 실제 값으로 바꿉니다. 샘플을 다른 위치에 다운로드했다면 평가 대상 경로도 바꿉니다.
 
 ```text
+평가 대상은 워크숍 루트 아래의 java/ 폴더다.
 이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있다.
 GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가만 수행해 줘.
 원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했다.
@@ -27,7 +28,7 @@ GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가�
 
 Windows에서는 WSL2 배포판 <배포판>의 <앱의-WSL-경로>에서
 Bash와 SDKMAN을 사용해 Java 명령을 실행해 줘. Windows JDK나 다른 배포판을 쓰지 마.
-macOS에서는 현재 앱 루트에서 Bash와 SDKMAN을 사용해 줘.
+macOS에서는 평가 대상 앱 루트에서 Bash와 SDKMAN을 사용해 줘.
 
 web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 환경 설정과 비밀정보 관리 방식, 테스트 현황, 업그레이드 위험 요소와

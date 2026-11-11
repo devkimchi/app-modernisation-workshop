@@ -33,7 +33,7 @@ bash ./mvnw -version && bash ./mvnw clean verify
 
 > [!IMPORTANT]
 >
-> 검증에 실패하면 원인을 해결할 때까지 현대화를 시작하지 않습니다.
+> 검증에 실패하면 원인을 해결할 때까지 현대화를 시작하지 않습니다. Copilot app에서 문제를 먼저 해결하세요.
 
 ## 로컬 서비스와 앱 실행
 

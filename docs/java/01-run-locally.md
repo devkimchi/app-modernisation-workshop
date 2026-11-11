@@ -148,8 +148,14 @@ git config user.name "Your Name"
 git config user.email "you@example.com"
 ```
 
-## 실행 확인 및 문제 해결
+## 완료 및 다음 단계
 
-다음 단계로 넘어가기 전에 Java 8 빌드가 성공하는지, 웹 앱과 worker가 실행되는지, DB와 큐에 연결되는지, 업로드한 이미지의 썸네일이 생성되는지 확인합니다. 원본 앱의 현재 상태도 앞서 안내한 대로 커밋했는지 확인합니다.
+다음 항목을 모두 확인하면 이 실습을 완료한 것입니다.
+
+- Java 8 빌드 성공
+- 웹 앱과 worker 실행
+- PostgreSQL과 RabbitMQ 연결
+- 이미지 업로드와 썸네일 생성
+- 원본 앱 상태 커밋
 
 확인을 마쳤다면 [평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

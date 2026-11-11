@@ -71,8 +71,6 @@ web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 > ```bash
 > copilot --yolo
 > ```
->
-> `--yolo`는 도구 실행 승인 확인을 생략하므로 신뢰할 수 있는 작업 폴더에서만 사용하세요.
 
 ### 평가 결과 확인
 
@@ -80,11 +78,11 @@ web과 worker의 역할, DB, 큐, 파일에 대한 의존성, 화면과 API,
 
 ## 제약 조건 기록과 계획 요청
 
-평가 결과를 검토한 뒤 같은 에이전트에 다음과 같이 요청합니다.
-
 > [!NOTE]
 >
 > 앞서 Copilot app에서 `modernize` 에이전트 실행에 실패했다면 계속해서 Copilot CLI를 이용해 진행합니다.
+
+평가 결과를 검토한 뒤 같은 에이전트에 다음과 같이 요청합니다.
 
 ```text
 평가 결과를 바탕으로 다음 제약 조건을 `.github/modernize/rulebook/workshop.md`에

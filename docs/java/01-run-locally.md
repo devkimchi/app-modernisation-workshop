@@ -71,6 +71,16 @@ bash scripts/startapp.sh
 - worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다. worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
 - 앱 로그에서 PostgreSQL 연결을 확인합니다. `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않으므로, 파일이 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다. AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
 
+`startapp.sh`로 실행했다면 이미지 업로드 후 앱 루트에서 로그를 확인합니다.
+
+```bash
+# zsh/bash
+tail -n 100 logs/worker.log
+tail -n 100 logs/web.log
+```
+
+worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다. 웹 앱 로그에서는 `HikariPool-1 - Start completed`로 시작 시 PostgreSQL 연결을 확인합니다. 로그의 시각과 이후 오류도 함께 살펴봅니다.
+
 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 
 기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.

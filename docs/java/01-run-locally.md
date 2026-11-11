@@ -15,6 +15,7 @@ Java 8 원본 앱을 로컬에서 빌드하고 실행해 이미지 업로드와 
 Windows 사용자는 Windows 터미널에서 `wsl`을 실행해 WSL 셸에 들어갑니다. WSL 셸에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
 
 ```powershell
+# PowerShell
 wsl
 ```
 

@@ -12,14 +12,17 @@ Java 8 원본 앱을 로컬에서 빌드하고 실행해 이미지 업로드와 
 
 ### 실습 셸과 작업 경로
 
-Windows 사용자는 Windows 터미널에서 `wsl`을 실행해 WSL 셸에 들어갑니다. WSL 셸에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
+> [!NOTE]
+> **Windows 사용자**
+>
+> Windows 터미널에서 아래 명령으로 WSL 셸에 접속합니다.
+>
+> ```powershell
+> # PowerShell
+> wsl
+> ```
 
-```powershell
-# PowerShell
-wsl
-```
-
-기본 위치로 다운로드했다면 워크숍 루트에서 다음 명령으로 앱 루트(`java`)로 이동합니다.
+Windows에서는 WSL 셸, macOS에서는 터미널에서 워크숍 루트로 이동합니다. 기본 위치로 다운로드했다면 다음 명령으로 앱 루트(`java`)로 이동합니다.
 
 ```bash
 # zsh/bash

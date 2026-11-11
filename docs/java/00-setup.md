@@ -64,14 +64,17 @@ powershell.exe -File ./scripts/check-prerequisites.ps1 -Track java
 
 누락된 도구를 설치하고, 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `--update`를 생략하세요.
 
-Windows 사용자는 Windows 터미널에서 WSL 셸에 접속합니다. Windows 호스트용 PowerShell 설치 스크립트와 아래 Bash 스크립트는 별도로 실행해야 합니다.
+> [!NOTE]
+> **Windows 사용자**
+>
+> Windows 터미널에서 아래 명령으로 WSL 셸에 접속합니다. Windows 호스트용 PowerShell 설치 스크립트와 아래 Bash 스크립트는 별도로 실행해야 합니다.
+>
+> ```powershell
+> # PowerShell
+> wsl
+> ```
 
-```powershell
-# PowerShell
-wsl
-```
-
-WSL 셸에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
+Windows에서는 WSL 셸, macOS에서는 터미널에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
 
 ```bash
 # zsh/bash

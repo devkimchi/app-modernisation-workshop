@@ -42,15 +42,15 @@ web/worker를 로컬 PostgreSQL/RabbitMQ와 실행하고 기준 동작을 다시
 참가자 Bash에서도 직접 확인합니다.
 
 ```bash
-source "${SDKMAN_DIR:-$HOME/.sdkman}/bin/sdkman-init.sh"
-sdk use java <설치한-JDK-25-식별자>
-java -version
-javac -version
+source ../scripts/use-java.sh --jdk 25
+```
+
+스크립트가 현재 셸에서 Java 25를 선택하고 Java/Javac 버전을 표시합니다. Maven Wrapper와 전체 검증은 앱 루트에서 별도로 실행합니다. 에이전트가 SDKMAN을 다른 프로세스에서 전환해도 현재 터미널의 JDK는 자동으로 바뀌지 않습니다. 생성/수정한 로컬 실행 명령에 따라 web과 worker를 다시 실행하고 실습 1의 입력을 재사용합니다. 원본 Docker 스크립트는 이미 존재하는 컨테이너를 재생성하려 하므로 무조건 반복 실행하지 않습니다.
+
+```bash
 bash ./mvnw -version
 bash ./mvnw clean verify
 ```
-
-에이전트가 SDKMAN을 다른 프로세스에서 전환해도 현재 터미널의 JDK는 자동으로 바뀌지 않습니다. 생성/수정한 로컬 실행 명령에 따라 web과 worker를 다시 실행하고 실습 1의 입력을 재사용합니다. 원본 Docker 스크립트는 이미 존재하는 컨테이너를 재생성하려 하므로 무조건 반복 실행하지 않습니다.
 
 ```bash
 git status --short

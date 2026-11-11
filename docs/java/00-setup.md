@@ -1,4 +1,4 @@
-# Java 준비: 저장소 생성부터 샘플 다운로드까지
+# 준비: 저장소 생성부터 샘플 다운로드까지
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [다음: 원본 실행](01-run-locally.md) | [문제 해결](08-troubleshooting.md)
 

@@ -1,4 +1,4 @@
-# Java 문제 해결
+# 문제 해결
 
 [전체 목차](../../README.md) | [Java 목차](README.md)
 

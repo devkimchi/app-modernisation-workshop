@@ -1,4 +1,4 @@
-# Java 1. 원본 앱을 로컬에서 실행하기
+# 1. 원본 앱을 로컬에서 실행하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](00-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](08-troubleshooting.md)
 

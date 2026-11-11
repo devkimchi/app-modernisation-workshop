@@ -1,4 +1,4 @@
-# Java 2. 평가하고 계획 승인하기
+# 2. 평가하고 계획 승인하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [문제 해결](08-troubleshooting.md)
 

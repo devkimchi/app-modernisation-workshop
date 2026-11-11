@@ -1,4 +1,4 @@
-# Java 3. JDK 21을 거쳐 JDK 25로 업그레이드하기
+# 3. JDK 21을 거쳐 JDK 25로 업그레이드하기
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](08-troubleshooting.md)
 

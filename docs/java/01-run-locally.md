@@ -112,6 +112,21 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 >
 > 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 
+## 로컬 앱 종료
+
+동작 확인을 마쳤다면 `startapp.sh`로 시작한 앱을 **앱 루트(`java`)** 에서 다음 명령으로 종료합니다.
+
+> [!CAUTION]
+>
+> `stopapp.sh`는 PID 파일에 기록된 웹 앱과 worker를 강제 종료하고, `assets-postgres`와 `assets-rabbitmq` 컨테이너를 정지한 뒤 삭제합니다. 실행 전에 PID 파일과 `ps`로 앱 경로와 PID를 대조하고, 현재 Docker 엔진의 두 컨테이너가 이 실습에서 생성한 것인지 확인하세요. 컨테이너 삭제로 DB와 큐의 데이터가 손실될 수 있으므로 필요한 데이터는 먼저 보존합니다.
+
+```bash
+# zsh/bash
+bash scripts/stopapp.sh
+```
+
+스크립트의 완료 메시지만으로 종료 성공을 판단하지 말고, 해당 앱 프로세스와 두 컨테이너가 남아 있지 않은지 확인합니다. 자세한 확인 방법은 [로컬 정리](07-cleanup.md#로컬-정리)를 참고하세요.
+
 ## 원본 앱 상태 커밋
 
 기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.

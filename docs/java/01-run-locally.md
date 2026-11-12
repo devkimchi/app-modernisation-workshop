@@ -12,14 +12,17 @@ Java 8 원본 앱을 로컬에서 빌드하고 실행해 이미지 업로드와 
 
 ### 실습 셸과 작업 경로
 
-Windows 사용자는 Windows 터미널에서 `wsl`을 실행해 WSL 셸에 들어갑니다. WSL 셸에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
+> [!NOTE]
+> **Windows 사용자**
+>
+> Windows 터미널에서 아래 명령으로 WSL 셸에 접속합니다.
+>
+> ```powershell
+> # PowerShell
+> wsl
+> ```
 
-```powershell
-# PowerShell
-wsl
-```
-
-기본 위치로 다운로드했다면 워크숍 루트에서 다음 명령으로 앱 루트(`java`)로 이동합니다.
+Windows에서는 WSL 셸, macOS에서는 터미널에서 워크숍 루트로 이동합니다. 기본 위치로 다운로드했다면 다음 명령으로 앱 루트(`java`)로 이동합니다.
 
 ```bash
 # zsh/bash
@@ -109,6 +112,15 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 >
 > 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
 
+## 로컬 앱 종료
+
+동작 확인을 마쳤다면 `startapp.sh`로 시작한 앱을 **앱 루트(`java`)** 에서 다음 명령으로 종료합니다.
+
+```bash
+# zsh/bash
+bash scripts/stopapp.sh
+```
+
 ## 원본 앱 상태 커밋
 
 기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.
@@ -159,4 +171,4 @@ git config user.email "you@example.com"
 - 이미지 업로드와 썸네일 생성
 - 원본 앱 상태 커밋
 
-확인을 마쳤다면 [평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.
+확인을 마쳤다면 [실습 2: 평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

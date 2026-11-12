@@ -106,3 +106,7 @@ $RECYCLE.BIN/
 /.venv/
 /venv/
 __pycache__/
+
+# azd local state and generated VM script payload
+/.azure/
+/infra/.generated/

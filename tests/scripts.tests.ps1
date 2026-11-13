@@ -157,9 +157,9 @@ try {
     New-Results
     Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*subscription-id*' }).Count -eq 1) 'subscription identity requires confirmation'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq 'Subscription name: Subscription name / Subscription ID: subscription-id' }).Count -eq 1) 'subscription format'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq 'Subscription name (subscription-id)' }).Count -eq 1) 'subscription format'
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -notlike '*11111111-2222-3333-4444-555555555555*' -and $_.Message -like '*Subscription name*' }).Count -eq 1) 'subscription excludes tenant ID'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq 'Tenant name: Example tenant / Tenant ID: 11111111-2222-3333-4444-555555555555' }).Count -eq 1) 'tenant name and ID require confirmation'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq 'Example tenant (11111111-2222-3333-4444-555555555555)' }).Count -eq 1) 'tenant name and ID require confirmation'
     $script:TenantFails=$true
     New-Results
     Test-CommonTools docker dotnet
@@ -208,6 +208,32 @@ try {
             Assert-True (@($script:CheckResults | Where-Object Id -eq 'jdk-25').Count -eq 1) 'native JDK check reached'
             $script:NativeMissing=$true
             Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'native Java common failure propagated'
+        }
+        & {
+            $Track='java'; $Help=$false
+            $originalRuntime = $env:AZD_CONTAINER_RUNTIME
+            $messages = [Collections.Generic.List[string]]::new()
+            function Write-Host { param([string]$Object); $messages.Add($Object) }
+            function Test-CommonTools {}
+            function Test-JavaTools {}
+            foreach ($case in @(
+                @{ Engine=''; Configured=''; Remind=$false },
+                @{ Engine='docker'; Configured='docker'; Remind=$false },
+                @{ Engine='podman'; Configured=''; Remind=$true },
+                @{ Engine=''; Configured='podman'; Remind=$false }
+            )) {
+                $ContainerEngine = $case.Engine
+                $env:AZD_CONTAINER_RUNTIME = $case.Configured
+                $messages.Clear()
+                Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'runtime reminder preserves successful checks'
+                $reminders = @($messages | Where-Object { $_ -like '*AZD_CONTAINER_RUNTIME*' })
+                Assert-True ($reminders.Count -eq [int]$case.Remind) "runtime reminder: engine=$ContainerEngine configured=$($case.Configured)"
+                if ($case.Remind) {
+                    Assert-True ($reminders[0] -ceq 'Before running azd in this shell, set $env:AZD_CONTAINER_RUNTIME = ''podman''.') 'Podman reminder uses PowerShell syntax'
+                }
+                Assert-True ($env:AZD_CONTAINER_RUNTIME -ceq $case.Configured) 'runtime reminder does not change the caller environment'
+            }
+            $env:AZD_CONTAINER_RUNTIME = $originalRuntime
         }
         . (Join-Path $root 'scripts\check-prerequisites.ps1')
         $env:ProgramFiles = Join-Path $temporary 'program-files'

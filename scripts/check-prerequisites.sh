@@ -73,7 +73,7 @@ check_azure_identity() {
         check_result WARN azure-subscription 'Could not parse the current subscription ID and name. Verify the target subscription manually.'
         return
     fi
-    check_result MANUAL azure-subscription "Subscription name: $subscription_name / Subscription ID: $subscription_id"
+    check_result MANUAL azure-subscription "$subscription_name ($subscription_id)"
     probe az account show --query tenantId --output tsv
     tenant_id="$PROBE_TEXT"
     if (( PROBE_CODE != 0 )) || [[ ! "$tenant_id" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]; then
@@ -88,7 +88,7 @@ check_azure_identity() {
     endpoint="${PROBE_TEXT%/}"
     probe az rest --method get --url "$endpoint/tenants?api-version=2022-12-01" --query "value[?tenantId=='$tenant_id'].displayName | [0]" --output tsv --only-show-errors
     if (( PROBE_CODE == 0 )) && [[ -n "$PROBE_TEXT" && "$PROBE_TEXT" != None && "$PROBE_TEXT" != null ]]; then
-        check_result MANUAL azure-tenant "Tenant name: $PROBE_TEXT / Tenant ID: $tenant_id"
+        check_result MANUAL azure-tenant "$PROBE_TEXT ($tenant_id)"
     else
         check_result WARN azure-tenant "Tenant ID: $tenant_id. Could not retrieve the tenant name. Check permissions, network access, and the Azure portal."
     fi
@@ -289,7 +289,9 @@ prerequisite_main() {
     if [[ -n "$previous_dynamic" ]]; then export AZURE_EXTENSION_USE_DYNAMIC_INSTALL="$previous_dynamic"
     else unset AZURE_EXTENSION_USE_DYNAMIC_INSTALL; fi
     printf 'Required failures: %s. MANUAL items were not checked automatically.\n' "$CHECK_FAILURES"
-    printf 'Before running azd, run export AZD_CONTAINER_RUNTIME=%s in the current shell.\n' "$engine"
+    if [[ "$engine" == podman && "${AZD_CONTAINER_RUNTIME:-}" != podman ]]; then
+        printf 'Before running azd, run export AZD_CONTAINER_RUNTIME=%s in the current shell.\n' "$engine"
+    fi
     (( CHECK_FAILURES == 0 ))
 }
 

@@ -71,6 +71,33 @@ for platform in Darwin Linux; do
         assert 'Linux checks glibc before common tools' grep -q 'fixture-glibc' <<< "$platform_output"
     fi
 done
+for runtime_case in default docker podman-unconfigured podman-configured; do
+    runtime_output=$(
+        unset AZD_CONTAINER_RUNTIME
+        uname() { printf 'Linux\n'; }
+        check_glibc() { :; }
+        check_common() { :; }
+        check_java_sdks() { :; }
+        case "$runtime_case" in
+            default) prerequisite_main --track java ;;
+            docker) export AZD_CONTAINER_RUNTIME=docker; prerequisite_main --track java --container-engine docker ;;
+            podman-unconfigured) prerequisite_main --track java --container-engine podman ;;
+            podman-configured) export AZD_CONTAINER_RUNTIME=podman; prerequisite_main --track java ;;
+        esac
+        if [[ "$runtime_case" == default || "$runtime_case" == podman-unconfigured ]]; then
+            [[ -z "${AZD_CONTAINER_RUNTIME:-}" ]]
+        elif [[ "$runtime_case" == docker ]]; then
+            [[ "$AZD_CONTAINER_RUNTIME" == docker ]]
+        else
+            [[ "$AZD_CONTAINER_RUNTIME" == podman ]]
+        fi
+    )
+    if [[ "$runtime_case" == podman-unconfigured ]]; then
+        assert 'unconfigured Podman reminder uses Bash syntax' grep -Fxq 'Before running azd, run export AZD_CONTAINER_RUNTIME=podman in the current shell.' <<< "$runtime_output"
+    else
+        assert "$runtime_case needs no runtime reminder" test "${runtime_output#*AZD_CONTAINER_RUNTIME}" = "$runtime_output"
+    fi
+done
 for entry in prerequisite_main install_prerequisite_main download_main; do
     source "$ROOT/scripts/install-prerequisites.sh"
     unsupported=$(
@@ -154,8 +181,8 @@ common_output=$(
     check_common docker
 )
 assert 'Azure identity shown for manual confirmation' grep -q 'MANUAL.*azure-subscription.*subscription-id' <<< "$common_output"
-assert 'Azure subscription format' grep -Fxq '[MANUAL] [Linux Bash] azure-subscription: Subscription name: Subscription name / Subscription ID: subscription-id' <<< "$common_output"
-assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [Linux Bash] azure-tenant: Tenant name: Example tenant / Tenant ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
+assert 'Azure subscription format' grep -Fxq '[MANUAL] [Linux Bash] azure-subscription: Subscription name (subscription-id)' <<< "$common_output"
+assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [Linux Bash] azure-tenant: Example tenant (11111111-2222-3333-4444-555555555555)' <<< "$common_output"
 if grep 'azure-subscription' <<< "$common_output" | grep -q '11111111-2222-3333-4444-555555555555'; then exit 1; else PASSED=$((PASSED + 1)); fi
 assert 'Azure CLI path identified' grep -q 'PASS.*Linux Bash.*az.*usr/bin/az' <<< "$common_output"
 assert 'Java PostgreSQL provider checked' grep -q 'PASS.*Microsoft.DBforPostgreSQL' <<< "$common_output"

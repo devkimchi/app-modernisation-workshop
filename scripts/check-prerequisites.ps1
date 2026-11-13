@@ -66,7 +66,7 @@ function Show-AzureIdentity {
         Add-Check WARN 'azure-subscription' 'Could not parse the current subscription ID and name. Manually verify the target subscription.'
         return
     }
-    Add-Check MANUAL 'azure-subscription' "Subscription name: $($subscription[1]) / Subscription ID: $($subscription[0])"
+    Add-Check MANUAL 'azure-subscription' "$($subscription[1]) ($($subscription[0]))"
     $tenant = Invoke-ToolProbe az @('account', 'show', '--query', 'tenantId', '--output', 'tsv')
     $tenantId = [guid]::Empty
     if ($tenant.Code -ne 0 -or -not [guid]::TryParse($tenant.Text, [ref]$tenantId)) {
@@ -81,7 +81,7 @@ function Show-AzureIdentity {
     $url = $cloud.Text.TrimEnd('/') + '/tenants?api-version=2022-12-01'
     $name = Invoke-ToolProbe az @('rest', '--method', 'get', '--url', $url, '--query', "value[?tenantId=='$tenantId'].displayName | [0]", '--output', 'tsv', '--only-show-errors')
     if ($name.Code -eq 0 -and $name.Text -and $name.Text -notin @('None', 'null')) {
-        Add-Check MANUAL 'azure-tenant' "Tenant name: $($name.Text) / Tenant ID: $tenantId"
+        Add-Check MANUAL 'azure-tenant' "$($name.Text) ($tenantId)"
     }
     else { Add-Check WARN 'azure-tenant' "Tenant ID: $tenantId. Could not query the tenant name. Check permissions, network access, and Azure Portal." }
 }
@@ -262,7 +262,10 @@ function Invoke-PrerequisiteMain {
     }
     finally { $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = $previous }
     $failures = @($script:CheckResults | Where-Object Status -eq 'FAIL').Count
-    Write-Host "Required checks failed: $failures. MANUAL items have not been verified automatically. Set AZD_CONTAINER_RUNTIME=$engine in the current shell before running azd."
+    Write-Host "Required checks failed: $failures. MANUAL items have not been verified automatically."
+    if ($engine -eq 'podman' -and $env:AZD_CONTAINER_RUNTIME -ne 'podman') {
+        Write-Host 'Before running azd in this shell, set $env:AZD_CONTAINER_RUNTIME = ''podman''.'
+    }
     if ($failures -gt 0) { return 1 }
     return 0
 }

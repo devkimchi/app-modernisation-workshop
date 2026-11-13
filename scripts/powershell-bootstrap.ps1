@@ -1,4 +1,24 @@
 ﻿# Keep this helper compatible with Windows PowerShell 5.1.
+function Test-WorkshopOutputTerminal {
+    return -not [Console]::IsOutputRedirected
+}
+
+function Write-WorkshopMessage {
+    param([string]$Message)
+    $options = @{}
+    if (-not $env:NO_COLOR -and -not $env:CI -and $env:TERM -ne 'dumb' -and
+        (Test-WorkshopOutputTerminal) -and $Message -match '^\[(PASS|FAIL|WARN|MANUAL|INFO)\]') {
+        $options.ForegroundColor = switch ($Matches[1]) {
+            'PASS' { 'Green' }
+            'FAIL' { 'Red' }
+            'WARN' { 'Yellow' }
+            'MANUAL' { 'Cyan' }
+            'INFO' { 'Blue' }
+        }
+    }
+    Write-Host $Message @options
+}
+
 function Test-WorkshopPowerShellExecutable {
     param([string]$Path)
     try {
@@ -45,9 +65,9 @@ function Get-WorkshopHostPrerequisites {
 
 function Write-WorkshopHostGuidance {
     param($State)
-    Write-Host '[FAIL] PowerShell 7 is required on Windows. No workshop actions were performed.'
+    Write-WorkshopMessage '[FAIL] PowerShell 7 is required on Windows. No workshop actions were performed.'
     $powerShellStatus = if ($State.PowerShell) { 'PASS' } else { 'FAIL' }
-    Write-Host "[$powerShellStatus] PowerShell 7"
+    Write-WorkshopMessage "[$powerShellStatus] PowerShell 7"
     Write-Host 'PowerShell 7: https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows'
     Write-Host 'Manual installation: winget install --id Microsoft.PowerShell --exact --source winget'
     Write-Host 'Installer: ./scripts/install-prerequisites.ps1 -Track java|dotnet'
@@ -68,28 +88,28 @@ function Confirm-WorkshopPowerShellInstall {
 
 function Install-WorkshopPowerShell {
     if (-not (Test-WorkshopBootstrapInteractive)) {
-        Write-Host '[FAIL] Noninteractive/CI sessions cannot install PowerShell 7.'
+        Write-WorkshopMessage '[FAIL] Noninteractive/CI sessions cannot install PowerShell 7.'
         return
     }
     if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Host '[FAIL] winget is unavailable. Install PowerShell 7 manually.'
+        Write-WorkshopMessage '[FAIL] winget is unavailable. Install PowerShell 7 manually.'
         return
     }
     if (-not (Confirm-WorkshopPowerShellInstall)) { return }
     try {
         & winget install --id Microsoft.PowerShell --exact --source winget | Out-Host
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "[FAIL] PowerShell 7 installation failed (exit code $LASTEXITCODE)."
+            Write-WorkshopMessage "[FAIL] PowerShell 7 installation failed (exit code $LASTEXITCODE)."
             return
         }
     }
     catch {
-        Write-Host "[FAIL] PowerShell 7 installation failed: $($_.Exception.Message)"
+        Write-WorkshopMessage "[FAIL] PowerShell 7 installation failed: $($_.Exception.Message)"
         return
     }
     $executable = Find-WorkshopPowerShell
     if (-not $executable) {
-        Write-Host '[FAIL] Installed PowerShell 7 could not be located or started. Open a new terminal and retry.'
+        Write-WorkshopMessage '[FAIL] Installed PowerShell 7 could not be located or started. Open a new terminal and retry.'
     }
     return $executable
 }

@@ -94,9 +94,9 @@ function Invoke-SampleDownload {
         $null = Assert-SafeDestination $targetPath $WorkshopRoot
         if (Test-Path -LiteralPath $targetPath) { [IO.Directory]::Delete($targetPath, $false) }
         [IO.Directory]::Move($payload, $targetPath)
-        Write-Host "[PASS] Sample downloaded: $targetPath"
-        Write-Host "[PASS] Upstream commit: $head / No Git repository created in the app directory"
-        if (-not $licensePresent) { Write-Host '[WARN] No upstream license file was found. Do not assume permission to redistribute.' }
+        Write-WorkshopMessage "[PASS] Sample downloaded: $targetPath"
+        Write-WorkshopMessage "[PASS] Upstream commit: $head / No Git repository created in the app directory"
+        if (-not $licensePresent) { Write-WorkshopMessage '[WARN] No upstream license file was found. Do not assume permission to redistribute.' }
     }
     finally {
         if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction Stop }
@@ -108,8 +108,8 @@ function Invoke-DownloadMain {
         Write-Host './scripts/download-sample.ps1 -Track java|dotnet [-Destination PATH] [-ContainerEngine docker|podman]'
         return 0
     }
-    if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
-    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell entrypoints are Windows-only. For the Java track, run ./scripts/download-sample.sh.'; return 1 }
+    if ($Track -cnotin @('java', 'dotnet')) { Write-WorkshopMessage '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
+    if (-not $IsWindows) { Write-WorkshopMessage '[FAIL] PowerShell entrypoints are Windows-only. For the Java track, run ./scripts/download-sample.sh.'; return 1 }
     $definition = Get-SampleDefinition $Track
     $workshop = Split-Path $script:DownloadScripts -Parent
     $savedHelp = $Help
@@ -120,14 +120,14 @@ function Invoke-DownloadMain {
         $engine = Resolve-ContainerEngine $ContainerEngine
         $null = Assert-SafeDestination $destinationPath $workshop
     }
-    catch { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
+    catch { Write-WorkshopMessage "[FAIL] $($_.Exception.Message)"; return 2 }
     & pwsh -NoLogo -NoProfile -File (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track $Track -ContainerEngine $engine | Out-Host
-    if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] Prerequisite checks did not pass. Nothing was downloaded.'; return 1 }
+    if ($LASTEXITCODE -ne 0) { Write-WorkshopMessage '[FAIL] Prerequisite checks did not pass. Nothing was downloaded.'; return 1 }
     try {
         Invoke-SampleDownload $destinationPath $definition $workshop
         return 0
     }
-    catch { Write-Host "[FAIL] Download failed: $($_.Exception.Message)"; return 1 }
+    catch { Write-WorkshopMessage "[FAIL] Download failed: $($_.Exception.Message)"; return 1 }
 }
 
 if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-DownloadMain) }

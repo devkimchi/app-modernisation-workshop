@@ -11,14 +11,14 @@ function Get-WorkshopReleaseVersion {
 
 function Get-WorkshopNvmConfiguration {
     $probe = Invoke-ToolProbe nvm @('config', 'get', 'root', 'mode', 'auto_install', 'enabled', '--json')
-    if ($probe.Code -ne 0) { Write-Host '[FAIL] Could not query nvm-windows 2 configuration.'; return }
+    if ($probe.Code -ne 0) { Write-WorkshopMessage '[FAIL] Could not query nvm-windows 2 configuration.'; return }
     try { $config = $probe.Text | ConvertFrom-Json -ErrorAction Stop }
-    catch [ArgumentException] { Write-Host '[FAIL] Invalid nvm-windows 2 configuration JSON.'; return }
+    catch [ArgumentException] { Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 configuration JSON.'; return }
     if ($config.root -isnot [string] -or -not [IO.Path]::IsPathFullyQualified($config.root) -or
         -not (Split-Path $config.root.TrimEnd('\') -Parent) -or
         $config.mode -cnotin @('shim', 'link') -or $config.enabled -isnot [bool] -or
         $config.auto_install -isnot [bool] -or -not $config.enabled -or $config.auto_install) {
-        Write-Host '[MANUAL] Check nvm-windows 2 root/mode/enabled settings. This script will not continue with auto_install=true, to prevent installation without individual consent.'
+        Write-WorkshopMessage '[MANUAL] Check nvm-windows 2 root/mode/enabled settings. This script will not continue with auto_install=true, to prevent installation without individual consent.'
         return
     }
     return $config
@@ -26,17 +26,17 @@ function Get-WorkshopNvmConfiguration {
 
 function Get-WorkshopNvmSelection {
     $list = Invoke-ToolProbe nvm @('list', '--json')
-    if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-Host '[FAIL] Could not list installed nvm-windows 2 versions.'; return }
+    if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-WorkshopMessage '[FAIL] Could not list installed nvm-windows 2 versions.'; return }
     try { $versions = @($list.Text | ConvertFrom-Json -ErrorAction Stop) }
-    catch [ArgumentException] { Write-Host '[FAIL] Invalid nvm-windows 2 version list JSON.'; return }
+    catch [ArgumentException] { Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 version list JSON.'; return }
     foreach ($entry in $versions) {
         if (-not (Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$entry.version })) -or
             $entry.installed -isnot [bool] -or $entry.default -isnot [bool]) {
-            Write-Host '[FAIL] Invalid nvm-windows 2 version list format.'; return
+            Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 version list format.'; return
         }
     }
     $defaults = @($versions | Where-Object { $_.installed -eq $true -and $_.default -eq $true })
-    if ($defaults.Count -gt 1) { Write-Host '[FAIL] Multiple default nvm-windows 2 versions were found.'; return }
+    if ($defaults.Count -gt 1) { Write-WorkshopMessage '[FAIL] Multiple default nvm-windows 2 versions were found.'; return }
     return [pscustomobject]@{ Version = if ($defaults.Count) {
         Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$defaults[0].version })
     } else { $null } }
@@ -114,24 +114,24 @@ function Install-WorkshopNode {
         $defaultLink = if ($env:ProgramFiles) { Join-Path $env:ProgramFiles 'nodejs' }
         if ($node -or $env:NVM_HOME -or $env:NVM_SYMLINK -or
             ($defaultLink -and (Test-Path -LiteralPath $defaultLink))) {
-            Write-Host '[MANUAL] Existing Node.js/NVM paths will be preserved. Identify the original installer and prepare the switch to nvm-windows manually.'
+            Write-WorkshopMessage '[MANUAL] Existing Node.js/NVM paths will be preserved. Identify the original installer and prepare the switch to nvm-windows manually.'
             return $false
         }
         if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-            Write-Host '[MANUAL] winget must already be installed to install nvm-windows.'
+            Write-WorkshopMessage '[MANUAL] winget must already be installed to install nvm-windows.'
             return $false
         }
         if (-not (Confirm-ToolInstall 'Install AuthorSoftware.NVMWindows through winget. Network access, administrator approval, and a review of the terms may be required.')) { return $false }
         & winget install --id AuthorSoftware.NVMWindows --exact --source winget | Out-Host
-        if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] nvm-windows installation failed.'; return $false }
+        if ($LASTEXITCODE -ne 0) { Write-WorkshopMessage '[FAIL] nvm-windows installation failed.'; return $false }
         Update-ProcessPath
     }
     if (-not (Test-WorkshopNvmOwnership $node.Source)) {
-        Write-Host '[MANUAL] Could not establish ownership of the nvm-windows configuration or active Node.js installation. No paths will be deleted or overwritten.'
+        Write-WorkshopMessage '[MANUAL] Could not establish ownership of the nvm-windows configuration or active Node.js installation. No paths will be deleted or overwritten.'
         return $false
     }
     $nvmVersion = Get-WorkshopReleaseVersion (Invoke-ToolProbe nvm @('version'))
-    if (-not $nvmVersion -or $nvmVersion.Major -notin @(1, 2)) { Write-Host '[FAIL] Could not verify a supported nvm-windows version.'; return $false }
+    if (-not $nvmVersion -or $nvmVersion.Major -notin @(1, 2)) { Write-WorkshopMessage '[FAIL] Could not verify a supported nvm-windows version.'; return $false }
     $root = $env:NVM_HOME
     $hasActive = [bool]$node
     if ($nvmVersion -and $nvmVersion.Major -eq 2) {
@@ -141,15 +141,15 @@ function Install-WorkshopNode {
         $selection = Get-WorkshopNvmSelection
         if (-not $selection) { return $false }
         $hasActive = $null -ne $selection.Version
-        if ($hasActive -and -not $node) { Write-Host '[MANUAL] The nvm-windows Node.js executable directory is not in PATH. Rerun in a new terminal.'; return $false }
+        if ($hasActive -and -not $node) { Write-WorkshopMessage '[MANUAL] The nvm-windows Node.js executable directory is not in PATH. Rerun in a new terminal.'; return $false }
     }
-    if (-not $root) { Write-Host '[FAIL] Could not verify the nvm-windows installation root.'; return $false }
+    if (-not $root) { Write-WorkshopMessage '[FAIL] Could not verify the nvm-windows installation root.'; return $false }
     $currentProbe = if ($node) { Invoke-ToolProbe node @('--version') }
     $current = if ($currentProbe) { Get-WorkshopReleaseVersion $currentProbe }
-    if ($node -and -not $current -and ($hasActive -or $currentProbe.Code -eq 0)) { Write-Host '[FAIL] Could not verify a stable Node.js version.'; return $false }
+    if ($node -and -not $current -and ($hasActive -or $currentProbe.Code -eq 0)) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js version.'; return $false }
     $hasActive = [bool]$current
     if ($current -and -not $Update) {
-        Write-Host "[INFO] Keeping Node.js $current (no -Update)."
+        Write-WorkshopMessage "[INFO] Keeping Node.js $current (no -Update)."
         return $current.Major -ge 22
     }
     $major = if ($current -and $current.Major -ge 22) { $current.Major } else { 22 }
@@ -157,24 +157,24 @@ function Install-WorkshopNode {
         return ($current -and $current.Major -ge 22)
     }
     try { $latest = Get-WorkshopNodeRelease $major }
-    catch { Write-Host "[FAIL] Could not query Node.js releases: $($_.Exception.Message)"; return $false }
-    if (-not $latest -or $latest.Major -ne $major) { Write-Host '[FAIL] Could not verify a stable Node.js release.'; return $false }
-    if ($current -and $current -ge $latest) { Write-Host "[PASS] Keeping Node.js $current (no downgrade)."; return $true }
+    catch { Write-WorkshopMessage "[FAIL] Could not query Node.js releases: $($_.Exception.Message)"; return $false }
+    if (-not $latest -or $latest.Major -ne $major) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js release.'; return $false }
+    if ($current -and $current -ge $latest) { Write-WorkshopMessage "[PASS] Keeping Node.js $current (no downgrade)."; return $true }
     $installedNode = Join-Path $root "v$latest\node.exe"
     if (-not (Test-Path -LiteralPath $installedNode -PathType Leaf)) {
         $install = Invoke-ToolProbe nvm @('install', "$latest")
-        if ($install.Code -ne 0) { Write-Host "[FAIL] nvm install failed: $($install.Text)"; return $false }
+        if ($install.Code -ne 0) { Write-WorkshopMessage "[FAIL] nvm install failed: $($install.Text)"; return $false }
     }
     $probe = Invoke-ToolProbe $installedNode @('--version')
-    if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-Host '[FAIL] Installed Node.js version verification failed.'; return $false }
+    if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-WorkshopMessage '[FAIL] Installed Node.js version verification failed.'; return $false }
     if (-not (Confirm-ToolInstall "Run nvm use $latest`: change the shared Windows Node.js selection (shim/link). This affects subsequent terminals, but not running Node.js processes. Administrator approval may be required.")) {
-        Write-Host "[INFO] Activation skipped. If needed, run nvm use $latest manually and verify the result."
+        Write-WorkshopMessage "[INFO] Activation skipped. If needed, run nvm use $latest manually and verify the result."
         return ($current -and $current.Major -ge 22)
     }
     # Recheck immediately before a link change; never take over a new collision.
     $liveNode = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not (Test-WorkshopNvmOwnership $liveNode.Source)) {
-        Write-Host '[MANUAL] nvm-windows management settings changed. Activation will not proceed.'
+        Write-WorkshopMessage '[MANUAL] nvm-windows management settings changed. Activation will not proceed.'
         return $false
     }
     if ($nvmVersion.Major -eq 2) {
@@ -182,13 +182,13 @@ function Install-WorkshopNode {
         $liveSelection = Get-WorkshopNvmSelection
         if (-not $liveConfig -or -not $liveSelection -or $liveConfig.root -ine $root -or
             $liveConfig.mode -cne $config.mode -or $liveSelection.Version -ne $selection.Version) {
-            Write-Host '[MANUAL] nvm-windows 2 configuration or default selection changed. Activation will not proceed.'
+            Write-WorkshopMessage '[MANUAL] nvm-windows 2 configuration or default selection changed. Activation will not proceed.'
             return $false
         }
     }
     $liveVersion = if ($liveNode -and $hasActive) { Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version')) }
     if ($liveVersion -ne $current) {
-        Write-Host '[MANUAL] Detected a Node.js path conflict or active version change. Activation will not proceed.'
+        Write-WorkshopMessage '[MANUAL] Detected a Node.js path conflict or active version change. Activation will not proceed.'
         return $false
     }
     $useArguments = @('use', "$latest")
@@ -199,10 +199,10 @@ function Install-WorkshopNode {
     if ($use.Code -ne 0 -or -not $activeNode -or
         -not (Test-WorkshopNvmOwnership $activeNode.Source) -or
         (Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version'))) -ne $latest) {
-        Write-Host '[FAIL] Could not verify nvm activation or the running Node.js version. Check PATH and nvm list in a new terminal.'
+        Write-WorkshopMessage '[FAIL] Could not verify nvm activation or the running Node.js version. Check PATH and nvm list in a new terminal.'
         return $false
     }
-    Write-Host "[PASS] [Windows host] nvm Node.js $latest"
+    Write-WorkshopMessage "[PASS] [Windows host] nvm Node.js $latest"
     return $true
 }
 
@@ -232,14 +232,15 @@ $ErrorActionPreference = 'Stop'
 try {
     Wait-Process -Id __PID__ -ErrorAction SilentlyContinue
     & '__WINGET__' upgrade --id Microsoft.PowerShell --exact --source winget --version '__VERSION__' --disable-interactivity | Out-Host
-    if ($LASTEXITCODE -in @(1641, 3010)) { Write-Host '[WARN] Restart Windows manually, then verify pwsh --version.'; exit 1 }
+    if ($LASTEXITCODE -in @(1641, 3010)) { Write-WorkshopMessage '[WARN] Restart Windows manually, then verify pwsh --version.'; exit 1 }
     if ($LASTEXITCODE -ne 0) { throw "winget failed: $LASTEXITCODE" }
     $actual = & '__EXE__' -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString()'
     if ($LASTEXITCODE -ne 0 -or "$actual".Trim() -ne '__VERSION__') { throw 'Installed PowerShell version verification failed.' }
-    Write-Host '[PASS] PowerShell __VERSION__ updated. Open a new terminal.'
+    Write-WorkshopMessage '[PASS] PowerShell __VERSION__ updated. Open a new terminal.'
 }
-catch { Write-Host "[FAIL] $($_.Exception.Message) Update was not verified; check the original installer manually."; exit 1 }
+catch { Write-WorkshopMessage "[FAIL] $($_.Exception.Message) Update was not verified; check the original installer manually."; exit 1 }
 '@
+    $worker = "function Test-WorkshopOutputTerminal {`n${function:Test-WorkshopOutputTerminal}`n}`nfunction Write-WorkshopMessage {`n${function:Write-WorkshopMessage}`n}`n" + $worker
     $worker = $worker.Replace('__PID__', "$PID").Replace('__WINGET__', $winget.Replace("'", "''")).
         Replace('__EXE__', $Executable.Replace("'", "''")).Replace('__VERSION__', "$Version")
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($worker))
@@ -253,7 +254,7 @@ function Update-WorkshopWindowsHost {
     if (-not (Test-WorkshopBootstrapInteractive)) { return 1 }
     $managed = Get-WorkshopManagedPowerShell
     if (-not $managed) {
-        Write-Host '[MANUAL] Could not verify that the running PowerShell 7 is managed by winget/MSI. Skipping automatic update; use the original installer. Required tool checks will continue.'
+        Write-WorkshopMessage '[MANUAL] Could not verify that the running PowerShell 7 is managed by winget/MSI. Skipping automatic update; use the original installer. Required tool checks will continue.'
         return 0
     }
     $show = Invoke-ToolProbe winget @('show', '--id', 'Microsoft.PowerShell', '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
@@ -261,14 +262,14 @@ function Update-WorkshopWindowsHost {
     $versions = @([regex]::Matches($show.Text, '(?m)^\s*(7\.\d+\.\d+)\s*$') |
         ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
     if ($show.Code -ne 0 -or -not $versions.Count) {
-        Write-Host '[FAIL] Could not query the latest stable PowerShell 7 version from winget.'
+        Write-WorkshopMessage '[FAIL] Could not query the latest stable PowerShell 7 version from winget.'
         return 1
     }
     $latest = $versions[0]
     if ($latest -gt $managed.Version -and (Confirm-ToolInstall "Schedule a winget Microsoft.PowerShell update from $($managed.Version) to $latest in a separate Windows PowerShell process. Network access and administrator approval may be required. The update runs after the current pwsh exits; a new terminal is required.")) {
         try { Start-WorkshopPowerShellUpdate $managed.Path $latest }
-        catch { Write-Host "[FAIL] Could not start the PowerShell update process: $($_.Exception.Message)"; return 1 }
-        Write-Host '[WARN] PowerShell update scheduled (not yet successful). It runs only after this pwsh exits. Check the worker process PASS/FAIL result and rerun in a new terminal.'
+        catch { Write-WorkshopMessage "[FAIL] Could not start the PowerShell update process: $($_.Exception.Message)"; return 1 }
+        Write-WorkshopMessage '[WARN] PowerShell update scheduled (not yet successful). It runs only after this pwsh exits. Check the worker process PASS/FAIL result and rerun in a new terminal.'
         return 3010
     }
     return 0

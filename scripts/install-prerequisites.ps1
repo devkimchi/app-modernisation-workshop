@@ -162,14 +162,14 @@ function Install-WorkshopDotnetSdk {
             ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
     }
     if ($installed.Count -and -not $Update) {
-        Write-Host '[INFO] A stable .NET 10 SDK is installed. No update will run without -Update.'
+        Write-WorkshopMessage '[INFO] A stable .NET 10 SDK is installed. No update will run without -Update.'
         return $true
     }
     if (-not $installed.Count) {
-        Write-Host "[INFO] Could not verify a stable .NET 10 SDK (exit code $($sdks.Code)): $($sdks.Text)"
+        Write-WorkshopMessage "[INFO] Could not verify a stable .NET 10 SDK (exit code $($sdks.Code)): $($sdks.Text)"
     }
     if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Host '[WARN] Automatic .NET 10 SDK installation requires winget. Official installation guide: https://dotnet.microsoft.com/download/dotnet/10.0'
+        Write-WorkshopMessage '[WARN] Automatic .NET 10 SDK installation requires winget. Official installation guide: https://dotnet.microsoft.com/download/dotnet/10.0'
         return $true
     }
     $arguments = @('install', '--id', 'Microsoft.DotNet.SDK.10', '--exact', '--source', 'winget')
@@ -179,55 +179,55 @@ function Install-WorkshopDotnetSdk {
         $versions = @([regex]::Matches($show.Text, '(?m)^\s*(10\.\d+\.\d+)\s*$') |
             ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
         if ($show.Code -ne 0 -or -not $versions.Count) {
-            Write-Host "[FAIL] Could not query the latest stable .NET 10 SDK version from winget (exit code $($show.Code)): $($show.Text)"
+            Write-WorkshopMessage "[FAIL] Could not query the latest stable .NET 10 SDK version from winget (exit code $($show.Code)): $($show.Text)"
             return $false
         }
         $target = $versions[0]
         if ($installed.Count -and $installed[0] -ge $target) {
-            Write-Host "[PASS] Keeping .NET SDK $($installed[0]) (no downgrade)."
+            Write-WorkshopMessage "[PASS] Keeping .NET SDK $($installed[0]) (no downgrade)."
             return $true
         }
         $arguments += @('--version', "$target")
     }
     if (-not (Confirm-ToolInstall ".NET 10 SDK $target`: install or update winget package Microsoft.DotNet.SDK.10 on the Windows host. Other SDK major versions and global.json will not change. The installer may replace older patches in the same feature band. Network access and administrator approval may be required. Review the terms shown by winget.")) {
-        Write-Host '[INFO] Skipping .NET 10 SDK installation or update.'
+        Write-WorkshopMessage '[INFO] Skipping .NET 10 SDK installation or update.'
         return $true
     }
     & winget @arguments | Out-Host
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[FAIL] .NET 10 SDK installation failed (exit code $LASTEXITCODE)."
+        Write-WorkshopMessage "[FAIL] .NET 10 SDK installation failed (exit code $LASTEXITCODE)."
         return $false
     }
     Update-ProcessPath
     $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
     if ($sdks.Code -ne 0 -or $sdks.Text -notmatch '(?m)^10\.\d+\.\d+\s+\[') {
-        Write-Host "[FAIL] Could not verify a stable .NET 10 SDK after installation (exit code $($sdks.Code)): $($sdks.Text). Check PATH and the installation."
+        Write-WorkshopMessage "[FAIL] Could not verify a stable .NET 10 SDK after installation (exit code $($sdks.Code)): $($sdks.Text). Check PATH and the installation."
         return $false
     }
     if ($target -and "$($sdks.Text)`n" -notmatch "(?m)^$([regex]::Escape($target.ToString()))\s+\[") {
-        Write-Host "[FAIL] Could not verify installation of the requested .NET SDK $target`: $($sdks.Text)"
+        Write-WorkshopMessage "[FAIL] Could not verify installation of the requested .NET SDK $target`: $($sdks.Text)"
         return $false
     }
-    Write-Host '[PASS] Verified a stable .NET 10 SDK installation.'
+    Write-WorkshopMessage '[PASS] Verified a stable .NET 10 SDK installation.'
     return $true
 }
 
 function Install-WorkshopJava {
     param([int]$Major, [switch]$Update)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
-    if ($Major -notin @(8, 25)) { Write-Host '[FAIL] Supported JDK versions are 8 and 25.'; return $false }
+    if ($Major -notin @(8, 25)) { Write-WorkshopMessage '[FAIL] Supported JDK versions are 8 and 25.'; return $false }
     $existing = Find-WorkshopJava -Major $Major
     if ($existing -and -not $Update) {
-        Write-Host "[INFO] Keeping Temurin JDK $Major`: $($existing.Home)"
+        Write-WorkshopMessage "[INFO] Keeping Temurin JDK $Major`: $($existing.Home)"
         return $true
     }
     if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Host '[WARN] Automatic Temurin installation requires winget. Install manually from https://adoptium.net/temurin/releases/'
+        Write-WorkshopMessage '[WARN] Automatic Temurin installation requires winget. Install manually from https://adoptium.net/temurin/releases/'
         return $true
     }
     $package = "EclipseAdoptium.Temurin.$Major.JDK"
     if (-not (Confirm-ToolInstall "Temurin JDK $Major`: install or update winget package $package. Administrator approval is required. ADDLOCAL=FeatureMain leaves system PATH, JAVA_HOME, and file associations unchanged.")) {
-        Write-Host "[INFO] Skipping Temurin JDK $Major installation or update."
+        Write-WorkshopMessage "[INFO] Skipping Temurin JDK $Major installation or update."
         return $true
     }
     $verb = if ($existing) { 'upgrade' } else { 'install' }
@@ -235,14 +235,14 @@ function Install-WorkshopJava {
     $code = $LASTEXITCODE
     # WinGet reports this status when an installed package is already current.
     if ($code -ne 0 -and -not ($existing -and $code -eq -1978335189)) {
-        Write-Host "[FAIL] Temurin JDK $Major installation failed (exit code $code)."
+        Write-WorkshopMessage "[FAIL] Temurin JDK $Major installation failed (exit code $code)."
         return $false
     }
     if (-not (Find-WorkshopJava -Major $Major)) {
-        Write-Host "[FAIL] Could not verify java and javac for Temurin JDK $Major after installation."
+        Write-WorkshopMessage "[FAIL] Could not verify java and javac for Temurin JDK $Major after installation."
         return $false
     }
-    Write-Host "[PASS] Verified the Temurin JDK $Major installation."
+    Write-WorkshopMessage "[PASS] Verified the Temurin JDK $Major installation."
     return $true
 }
 
@@ -268,17 +268,17 @@ function Install-WindowsTools {
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($existing) {
-            Write-Host "[INFO] $($tool.Name): found in PATH ($($existing.Source)). No installation or update will run."
+            Write-WorkshopMessage "[INFO] $($tool.Name): found in PATH ($($existing.Source)). No installation or update will run."
             continue
         }
         if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-            Write-Host "[WARN] Automatic $($tool.Name) installation requires Windows Package Manager (winget)."
+            Write-WorkshopMessage "[WARN] Automatic $($tool.Name) installation requires Windows Package Manager (winget)."
             continue
         }
         if (Confirm-ToolInstall "$($tool.Name): install winget package $($tool.Package) on the Windows host. Network access and administrator approval may be required. Review the terms shown by winget.") {
             & winget install --id $tool.Package --exact --source winget | Out-Host
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "[FAIL] $($tool.Name) installation failed (exit code $LASTEXITCODE)."
+                Write-WorkshopMessage "[FAIL] $($tool.Name) installation failed (exit code $LASTEXITCODE)."
                 $failed = $true
             }
             else { Update-ProcessPath }
@@ -292,12 +292,12 @@ function Invoke-InstallPrerequisiteMain {
         Write-Host './scripts/install-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman] [-Update]'
         return 0
     }
-    if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
-    if (-not $IsWindows) { Write-Host '[FAIL] This installer is Windows-only. For the Java track, run ./scripts/install-prerequisites.sh.'; return 1 }
+    if ($Track -cnotin @('java', 'dotnet')) { Write-WorkshopMessage '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
+    if (-not $IsWindows) { Write-WorkshopMessage '[FAIL] This installer is Windows-only. For the Java track, run ./scripts/install-prerequisites.sh.'; return 1 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
-    catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
+    catch [ArgumentException] { Write-WorkshopMessage "[FAIL] $($_.Exception.Message)"; return 2 }
     if (-not (Test-WorkshopBootstrapInteractive)) {
-        Write-Host '[FAIL] Installation requires an interactive terminal. Nothing will be installed in a noninteractive session.'
+        Write-WorkshopMessage '[FAIL] Installation requires an interactive terminal. Nothing will be installed in a noninteractive session.'
         return 1
     }
     $hostResult = 0
@@ -309,7 +309,7 @@ function Invoke-InstallPrerequisiteMain {
     $installed = Install-WindowsTools $Track
     if ($hostResult -ne 0) { $installed = $false }
     if (-not $installed) {
-        Write-Host '[FAIL] Installation or update did not complete. Resolve the issues above and rerun. Further tool execution will be skipped.'
+        Write-WorkshopMessage '[FAIL] Installation or update did not complete. Resolve the issues above and rerun. Further tool execution will be skipped.'
         return 1
     }
     $prepared = Initialize-AzureEnvironment -SelectedTrack $Track

@@ -5,6 +5,7 @@ if [ -z "${BASH_VERSION:-}" ]; then
     return 2 2>/dev/null || exit 2
 fi
 
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/terminal-output.sh"
 DOWNLOAD_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 sample_definition() {
@@ -17,15 +18,15 @@ sample_definition() {
             SAMPLE_REPOSITORY=https://github.com/Azure-Samples/dotnet-migration-copilot-samples.git
             SAMPLE_COMMIT=7c1bf47b7e2627fe5a1c764716638815d35e0282
             SAMPLE_SUBDIRECTORY=ContosoUniversity ;;
-        *) printf '%s\n' '[FAIL] Unknown track.' >&2; return 2 ;;
+        *) workshop_status_printf '%s\n' '[FAIL] Unknown track.' >&2; return 2 ;;
     esac
 }
 
 safe_destination() {
     local path="$1" workshop="$2" current component entry full=''
-    if [[ "$path" == *$'\n'* || "$path" == *$'\r'* ]]; then printf '%s\n' '[FAIL] Paths must not contain line breaks.' >&2; return 2; fi
+    if [[ "$path" == *$'\n'* || "$path" == *$'\r'* ]]; then workshop_status_printf '%s\n' '[FAIL] Paths must not contain line breaks.' >&2; return 2; fi
     if [[ "$path" == //* || "$path" == *\\* || "$path" =~ ^[[:alpha:]]: ]]; then
-        printf '%s\n' '[FAIL] Use a standard POSIX path in Bash.' >&2; return 2
+        workshop_status_printf '%s\n' '[FAIL] Use a standard POSIX path in Bash.' >&2; return 2
     fi
     [[ "$path" == /* ]] || path="$PWD/$path"
     local -a parts
@@ -36,26 +37,26 @@ safe_destination() {
             ..) full="${full%/*}" ;;
             *) full="$full/$component" ;;
         esac
-        if [[ -L "${full:-/}" ]]; then printf '%s\n' '[FAIL] Destinations reached through symbolic links are not supported.' >&2; return 2; fi
+        if [[ -L "${full:-/}" ]]; then workshop_status_printf '%s\n' '[FAIL] Destinations reached through symbolic links are not supported.' >&2; return 2; fi
     done
     full="${full:-/}"
     if [[ "$full" == / || "$full" == "$HOME" || "$full" == "$workshop" || "$full" -ef "$HOME" || "$full" -ef "$workshop" ]]; then
-        printf '%s\n' '[FAIL] The home directory, filesystem root, or workshop root cannot be a destination.' >&2; return 2
+        workshop_status_printf '%s\n' '[FAIL] The home directory, filesystem root, or workshop root cannot be a destination.' >&2; return 2
     fi
     current="$full"
     while [[ -n "$current" ]]; do
         for component in docs scripts tests; do
-            if [[ "$current" -ef "$workshop/$component" ]]; then printf '%s\n' '[FAIL] Workshop resource directories cannot be destinations.' >&2; return 2; fi
+            if [[ "$current" -ef "$workshop/$component" ]]; then workshop_status_printf '%s\n' '[FAIL] Workshop resource directories cannot be destinations.' >&2; return 2; fi
         done
         current="${current%/*}"
     done
     for current in docs scripts tests; do
-        case "$full/" in "$workshop/$current/"*) printf '%s\n' '[FAIL] Workshop resource directories cannot be destinations.' >&2; return 2 ;; esac
+        case "$full/" in "$workshop/$current/"*) workshop_status_printf '%s\n' '[FAIL] Workshop resource directories cannot be destinations.' >&2; return 2 ;; esac
     done
     if [[ -e "$full" ]]; then
-        if [[ ! -d "$full" || ! -r "$full" || ! -x "$full" ]]; then printf '%s\n' '[FAIL] The destination is not a readable directory.' >&2; return 2; fi
+        if [[ ! -d "$full" || ! -r "$full" || ! -x "$full" ]]; then workshop_status_printf '%s\n' '[FAIL] The destination is not a readable directory.' >&2; return 2; fi
         for entry in "$full"/* "$full"/.[!.]* "$full"/..?*; do
-            if [[ -e "$entry" || -L "$entry" ]]; then printf '%s\n' '[FAIL] The destination is not empty. Existing files will not be overwritten.' >&2; return 2; fi
+            if [[ -e "$entry" || -L "$entry" ]]; then workshop_status_printf '%s\n' '[FAIL] The destination is not empty. Existing files will not be overwritten.' >&2; return 2; fi
         done
     fi
     printf '%s\n' "$full"
@@ -71,28 +72,28 @@ download_sample() (
     staging="$parent/.workshop-download.$$.$RANDOM"
     (umask 077; mkdir -- "$staging")
     # Bash 3.2는 EXIT trap 전에 함수의 지역 변수를 해제할 수 있다.
-    printf -v cleanup 'result=$?; trap - EXIT; rm -rf -- %q || result=1; if (( result != 0 )); then printf "[FAIL] Download failed. Check the destination state and retry with an empty path: %%s\\n" %q >&2; fi; exit "$result"' "$staging" "$target"
+    printf -v cleanup 'result=$?; trap - EXIT; rm -rf -- %q || result=1; if (( result != 0 )); then workshop_status_printf "[FAIL] Download failed. Check the destination state and retry with an empty path: %%s\\n" %q >&2; fi; exit "$result"' "$staging" "$target"
     trap "$cleanup" EXIT
     git init --quiet "$staging/checkout"
     git -C "$staging/checkout" remote add origin "$repository"
     git -C "$staging/checkout" fetch --quiet --depth 1 origin "$commit"
     git -C "$staging/checkout" -c advice.detachedHead=false -c core.autocrlf=false checkout --quiet --detach FETCH_HEAD
-    [[ "$(git -C "$staging/checkout" rev-parse HEAD)" == "$commit" ]] || { printf '%s\n' '[FAIL] Commit verification failed.' >&2; exit 1; }
+    [[ "$(git -C "$staging/checkout" rev-parse HEAD)" == "$commit" ]] || { workshop_status_printf '%s\n' '[FAIL] Commit verification failed.' >&2; exit 1; }
     source="$staging/checkout/$subdirectory"
     if [[ "$track" == java ]]; then
         for required in pom.xml web worker mvnw .mvn/wrapper/maven-wrapper.properties; do
-            [[ -e "$source/$required" ]] || { printf '[FAIL] Required path not found: %s\n' "$required" >&2; exit 1; }
+            [[ -e "$source/$required" ]] || { workshop_status_printf '[FAIL] Required path not found: %s\n' "$required" >&2; exit 1; }
         done
     else
         for required in ContosoUniversity.sln ContosoUniversity.csproj packages.config; do
-            [[ -f "$source/$required" ]] || { printf '[FAIL] Required path not found: %s\n' "$required" >&2; exit 1; }
+            [[ -f "$source/$required" ]] || { workshop_status_printf '[FAIL] Required path not found: %s\n' "$required" >&2; exit 1; }
         done
     fi
     payload="$staging/payload"
     mkdir "$payload"
     cp -Rp "$source/." "$payload/"
     if [[ -e "$payload/upstream-source.json" || -L "$payload/upstream-source.json" ]]; then
-        printf '%s\n' '[FAIL] The source already contains upstream-source.json. Stopping without overwriting it.' >&2; exit 1
+        workshop_status_printf '%s\n' '[FAIL] The source already contains upstream-source.json. Stopping without overwriting it.' >&2; exit 1
     fi
     for notice in "$staging/checkout/"*; do
         [[ -f "$notice" ]] || continue
@@ -100,7 +101,7 @@ download_sample() (
         normalized=$(printf '%s' "$name" | LC_ALL=C tr '[:lower:]' '[:upper:]')
         [[ "$normalized" =~ ^(LICENSE|LICENCE|NOTICE|COPYING|COPYRIGHT)([._-].*)?$ ]] || continue
         if [[ -e "$payload/UPSTREAM-$name" || -L "$payload/UPSTREAM-$name" ]]; then
-            printf '[FAIL] Source file conflicts with a license notice preservation path: %s\n' "$name" >&2; exit 1
+            workshop_status_printf '[FAIL] Source file conflicts with a license notice preservation path: %s\n' "$name" >&2; exit 1
         fi
         cp -p "$notice" "$payload/UPSTREAM-$name"
         [[ ! "$normalized" =~ ^(LICENSE|LICENCE|COPYING)([._-].*)?$ ]] || license=true
@@ -117,8 +118,9 @@ download_sample() (
     # mkdir reserves the destination; cp will never merge into another writer's directory.
     mkdir -- "$target"
     cp -Rp "$payload/." "$target/"
-    printf '[PASS] Sample downloaded: %s\n[PASS] Source commit: %s / No Git repository created in the app directory\n' "$target" "$commit"
-    if [[ "$license" == false ]]; then printf '%s\n' '[WARN] No source license file was found. Do not assume redistribution rights.'; fi
+    workshop_status_printf '[PASS] Sample downloaded: %s\n' "$target"
+    workshop_status_printf '[PASS] Source commit: %s / No Git repository created in the app directory\n' "$commit"
+    if [[ "$license" == false ]]; then workshop_status_printf '%s\n' '[WARN] No source license file was found. Do not assume redistribution rights.'; fi
 )
 
 download_main() {
@@ -126,29 +128,29 @@ download_main() {
     while (( $# )); do
         case "$1" in
             --track|--container-engine|--destination)
-                if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then printf '[FAIL] A value is required for %s.\n' "$1" >&2; return 2; fi
+                if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then workshop_status_printf '[FAIL] A value is required for %s.\n' "$1" >&2; return 2; fi
                 case "$1" in --track) track="$2" ;; --container-engine) requested="$2" ;; --destination) destination="$2" ;; esac
                 shift 2 ;;
             --help|-h) printf '%s\n' './scripts/download-sample.sh --track java [--destination PATH] [--container-engine docker|podman]'; return 0 ;;
-            *) printf '[FAIL] Unknown argument: %s\n' "$1" >&2; return 2 ;;
+            *) workshop_status_printf '[FAIL] Unknown argument: %s\n' "$1" >&2; return 2 ;;
         esac
     done
     sample_definition "$track" || return $?
     source "$DOWNLOAD_SCRIPTS/check-prerequisites.sh"
     engine=$(resolve_engine "$requested") || return $?
     if [[ "$track" == dotnet ]]; then
-        printf '%s\n' '[FAIL] For .NET, run ./scripts/download-sample.ps1 -Track dotnet in Windows PowerShell.'
+        workshop_status_printf '%s\n' '[FAIL] For .NET, run ./scripts/download-sample.ps1 -Track dotnet in Windows PowerShell.'
         return 1
     fi
     os=$(uname -s)
     case "$os" in
         Darwin|Linux) ;;
-        *) printf '%s\n' '[FAIL] Run this on macOS or Linux. In Windows PowerShell, run ./scripts/download-sample.ps1 -Track java.'; return 1 ;;
+        *) workshop_status_printf '%s\n' '[FAIL] Run this on macOS or Linux. In Windows PowerShell, run ./scripts/download-sample.ps1 -Track java.'; return 1 ;;
     esac
     workshop="$(cd "$DOWNLOAD_SCRIPTS/.." && pwd -P)"
     destination=$(safe_destination "${destination:-$workshop/$track}" "$workshop") || return $?
     bash "$DOWNLOAD_SCRIPTS/check-prerequisites.sh" --track java --container-engine "$engine" || {
-        printf '%s\n' '[FAIL] Prerequisite checks did not pass; the sample was not downloaded.' >&2; return 1;
+        workshop_status_printf '%s\n' '[FAIL] Prerequisite checks did not pass; the sample was not downloaded.' >&2; return 1;
     }
     download_sample "$destination" "$SAMPLE_REPOSITORY" "$SAMPLE_COMMIT" "$SAMPLE_SUBDIRECTORY" "$track" "$workshop"
 }

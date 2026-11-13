@@ -105,7 +105,7 @@ function Invoke-OriginalMain {
         }
         finally { Pop-Location }
     }
-    catch { Write-Host "[FAIL] $($_.Exception.Message)"; return 1 }
+    catch { Write-WorkshopMessage "[FAIL] $($_.Exception.Message)"; return 1 }
 }
 
 if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-OriginalMain) }

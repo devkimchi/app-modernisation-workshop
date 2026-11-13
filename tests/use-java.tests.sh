@@ -49,7 +49,9 @@ for shell in bash zsh; do
                 source "$1" --jdk "$major" || exit 1
                 test "$JAVA_HOME" = "$SDKMAN_DIR/candidates/java/$major.0-test" || exit 1
                 case "$PATH" in "$JAVA_HOME/bin:"*) ;; *) exit 1 ;; esac
-                if typeset -f _workshop_use_java >/dev/null || typeset -f _workshop_show_versions >/dev/null; then exit 1; fi
+                if typeset -f _workshop_use_java >/dev/null || typeset -f _workshop_show_versions >/dev/null ||
+                    typeset -f workshop_status_printf >/dev/null || typeset -f workshop_status_color_enabled >/dev/null ||
+                    typeset -f workshop_status_color_allowed >/dev/null; then exit 1; fi
                 test -z "${_workshop_use_java_status+x}" || exit 1
             done
             if [ -n "${ZSH_VERSION:-}" ]; then test "$EXPECTED_NOMATCH" = "$options[nomatch]" || exit 1; fi
@@ -72,7 +74,9 @@ for shell in bash zsh; do
             esac
             if source "$1" --jdk "$major"; then exit 1; else result=$?; fi
             if [ "$3" = invalid ]; then test "$result" = 2 || exit 1; else test "$result" = 1 || exit 1; fi
-            if typeset -f _workshop_use_java >/dev/null || typeset -f _workshop_show_versions >/dev/null; then exit 1; fi
+            if typeset -f _workshop_use_java >/dev/null || typeset -f _workshop_show_versions >/dev/null ||
+                typeset -f workshop_status_printf >/dev/null || typeset -f workshop_status_color_enabled >/dev/null ||
+                typeset -f workshop_status_color_allowed >/dev/null; then exit 1; fi
             test -z "${_workshop_use_java_status+x}" || exit 1
             printf "caller survived\n"
         ' _ "$ROOT/scripts/use-java.sh" "$fixture" "$scenario"

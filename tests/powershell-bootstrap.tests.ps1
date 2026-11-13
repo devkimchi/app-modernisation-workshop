@@ -13,6 +13,8 @@ $fixture = Join-Path $root ('.test-output\bootstrap-' + [guid]::NewGuid().ToStri
 $encoding = [Text.UTF8Encoding]::new($true)
 $savedCI = $env:CI
 $savedEngine = $env:AZD_CONTAINER_RUNTIME
+$savedNoColor = $env:NO_COLOR
+$savedTerm = $env:TERM
 try {
     $env:AZD_CONTAINER_RUNTIME = ''
     $null = [IO.Directory]::CreateDirectory($fixture)
@@ -21,6 +23,43 @@ try {
         Assert-Bootstrap ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) "UTF-8 BOM: $($file.Name)"
         Assert-Bootstrap (-not [IO.File]::ReadAllText($file.FullName).Contains("`r")) "LF: $($file.Name)"
     }
+
+    & {
+        $env:CI = ''; $env:NO_COLOR = ''; $env:TERM = 'xterm'
+        $rendered = [Collections.Generic.List[object]]::new()
+        $terminal = $true
+        function Test-WorkshopOutputTerminal { return $terminal }
+        function Write-Host {
+            param($Object, $ForegroundColor)
+            $rendered.Add([pscustomobject]@{ Text=$Object; Color=$ForegroundColor })
+        }
+        foreach ($case in @(
+            @{ Status='PASS'; Color='Green' },
+            @{ Status='FAIL'; Color='Red' },
+            @{ Status='WARN'; Color='Yellow' },
+            @{ Status='MANUAL'; Color='Cyan' },
+            @{ Status='INFO'; Color='Blue' }
+        )) {
+            $message = "[$($case.Status)] fixture message"
+            Write-WorkshopMessage $message
+            Assert-Bootstrap ($rendered[-1].Text -ceq $message -and $rendered[-1].Color -ceq $case.Color) "colored $($case.Status) preserves text"
+        }
+        foreach ($setting in @('NO_COLOR', 'CI', 'TERM', 'redirected')) {
+            $env:NO_COLOR = ''; $env:CI = ''; $env:TERM = 'xterm'; $terminal = $true
+            switch ($setting) {
+                'NO_COLOR' { $env:NO_COLOR = '1' }
+                'CI' { $env:CI = 'true' }
+                'TERM' { $env:TERM = 'dumb' }
+                'redirected' { $terminal = $false }
+            }
+            Write-WorkshopMessage '[FAIL] fixture message'
+            Assert-Bootstrap ($rendered[-1].Text -ceq '[FAIL] fixture message' -and -not $rendered[-1].Color) "$setting keeps plain output"
+        }
+        $env:NO_COLOR = ''; $env:CI = ''; $env:TERM = 'xterm'; $terminal = $true
+        Write-WorkshopMessage 'Untagged message'
+        Assert-Bootstrap ($rendered[-1].Text -ceq 'Untagged message' -and -not $rendered[-1].Color) 'untagged messages keep default color'
+    }
+    $env:CI = $savedCI; $env:NO_COLOR = $savedNoColor; $env:TERM = $savedTerm
 
     & {
         function Get-Command { [CmdletBinding()]param($Name, $CommandType, [switch]$All) }
@@ -239,5 +278,7 @@ if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-InstallPrerequisiteMain
 finally {
     $env:CI = $savedCI
     $env:AZD_CONTAINER_RUNTIME = $savedEngine
+    $env:NO_COLOR = $savedNoColor
+    $env:TERM = $savedTerm
     Remove-Item -LiteralPath $fixture -Recurse -Force
 }

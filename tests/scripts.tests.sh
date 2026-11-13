@@ -71,27 +71,29 @@ for platform in Darwin Linux; do
         assert 'Linux checks glibc before common tools' grep -q 'fixture-glibc' <<< "$platform_output"
     fi
 done
+runtime_output_for_case() {
+    local case_name="$1"
+    unset AZD_CONTAINER_RUNTIME
+    uname() { printf 'Linux\n'; }
+    check_glibc() { :; }
+    check_common() { :; }
+    check_java_sdks() { :; }
+    case "$case_name" in
+        default) prerequisite_main --track java ;;
+        docker) export AZD_CONTAINER_RUNTIME=docker; prerequisite_main --track java --container-engine docker ;;
+        podman-unconfigured) prerequisite_main --track java --container-engine podman ;;
+        podman-configured) export AZD_CONTAINER_RUNTIME=podman; prerequisite_main --track java ;;
+    esac
+    if [[ "$case_name" == default || "$case_name" == podman-unconfigured ]]; then
+        [[ -z "${AZD_CONTAINER_RUNTIME:-}" ]]
+    elif [[ "$case_name" == docker ]]; then
+        [[ "$AZD_CONTAINER_RUNTIME" == docker ]]
+    else
+        [[ "$AZD_CONTAINER_RUNTIME" == podman ]]
+    fi
+}
 for runtime_case in default docker podman-unconfigured podman-configured; do
-    runtime_output=$(
-        unset AZD_CONTAINER_RUNTIME
-        uname() { printf 'Linux\n'; }
-        check_glibc() { :; }
-        check_common() { :; }
-        check_java_sdks() { :; }
-        case "$runtime_case" in
-            default) prerequisite_main --track java ;;
-            docker) export AZD_CONTAINER_RUNTIME=docker; prerequisite_main --track java --container-engine docker ;;
-            podman-unconfigured) prerequisite_main --track java --container-engine podman ;;
-            podman-configured) export AZD_CONTAINER_RUNTIME=podman; prerequisite_main --track java ;;
-        esac
-        if [[ "$runtime_case" == default || "$runtime_case" == podman-unconfigured ]]; then
-            [[ -z "${AZD_CONTAINER_RUNTIME:-}" ]]
-        elif [[ "$runtime_case" == docker ]]; then
-            [[ "$AZD_CONTAINER_RUNTIME" == docker ]]
-        else
-            [[ "$AZD_CONTAINER_RUNTIME" == podman ]]
-        fi
-    )
+    runtime_output=$(runtime_output_for_case "$runtime_case")
     if [[ "$runtime_case" == podman-unconfigured ]]; then
         assert 'unconfigured Podman reminder uses Bash syntax' grep -Fxq 'Before running azd, run export AZD_CONTAINER_RUNTIME=podman in the current shell.' <<< "$runtime_output"
     else

@@ -46,7 +46,7 @@ Run these suites on macOS and Linux. On macOS, use `/bin/bash tests/<suite>.test
 
 Keep `.sh` files compatible with Bash 3.2 and Bash 5, with LF line endings and BSD/GNU-compatible commands. Guard OS-specific commands. `use-java.sh` must also source correctly in Zsh without leaking helper functions or changing caller options.
 
-Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only `use-java.sh` uses `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
+Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only `use-java.sh` and `terminal-output.sh` use `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
 
 ### Results and limits
 

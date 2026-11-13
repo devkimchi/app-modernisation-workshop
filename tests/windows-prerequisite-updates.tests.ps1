@@ -400,12 +400,16 @@ function fixture-pwsh { `$global:LASTEXITCODE=0; '$actual' }
                 Replace("& 'C:\PowerShell\7\pwsh.exe'", 'fixture-pwsh')
             $file = Join-Path $fixture "$case.ps1"
             [IO.File]::WriteAllText($file, $preamble + "`n" + $mocked, [Text.UTF8Encoding]::new($true))
-            $output = & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -NonInteractive -File $file 2>&1 | Out-String
-            if ($case -eq 'success') {
-                Assert-True ($LASTEXITCODE -eq 0 -and $output.Contains('[PASS] PowerShell 7.5.1')) 'mocked worker verifies successful update'
-            }
-            else {
-                Assert-True ($LASTEXITCODE -eq 1 -and -not $output.Contains('[PASS]')) "mocked worker $case never reports success"
+            foreach ($shell in @((Join-Path $PSHOME 'pwsh.exe'), $script:WorkerPath)) {
+                $output = & $shell -NoProfile -NonInteractive -File $file 2>&1 | Out-String
+                if ($case -eq 'success') {
+                    Assert-True ($LASTEXITCODE -eq 0 -and $output.Contains('[PASS] PowerShell 7.5.1')) "mocked worker verifies successful update: $shell"
+                }
+                else {
+                    $status = if ($case -eq 'restart') { '[WARN]' } else { '[FAIL]' }
+                    Assert-True ($LASTEXITCODE -eq 1 -and $output.Contains($status) -and -not $output.Contains('[PASS]')) "mocked worker $case reports its status without success: $shell"
+                }
+                Assert-True (-not $output.Contains([string][char]27)) "redirected worker $case output stays plain: $shell"
             }
         }
     }

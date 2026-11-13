@@ -20,7 +20,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
     $remaining = @($env:PATH -split ';' | Where-Object { $_ -and $_.TrimEnd('\', '/') -ine $oldBin -and $_.TrimEnd('\', '/') -ine $newBin })
     $env:JAVA_HOME = $jdk.Home
     $env:PATH = (@($newBin) + $remaining) -join ';'
-    Write-Host "[PASS] Selected Temurin JDK $Major`: $($jdk.Home)"
+    Write-WorkshopMessage "[PASS] Selected Temurin JDK $Major`: $($jdk.Home)"
     Write-Host $jdk.RuntimeVersion
     Write-Host $jdk.CompilerVersion
 } $Jdk $PSScriptRoot

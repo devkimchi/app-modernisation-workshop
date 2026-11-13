@@ -5,15 +5,16 @@ if [ -z "${BASH_VERSION:-}" ]; then
     return 2 2>/dev/null || exit 2
 fi
 
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/terminal-output.sh"
 WORKSHOP_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 resolve_engine() {
     local requested="${1:-}" configured="${AZD_CONTAINER_RUNTIME:-}" value
     for value in "$requested" "$configured"; do
-        case "$value" in ''|docker|podman) ;; *) printf '%s\n' '[FAIL] The engine must be docker or podman.' >&2; return 2 ;; esac
+        case "$value" in ''|docker|podman) ;; *) workshop_status_printf '%s\n' '[FAIL] The engine must be docker or podman.' >&2; return 2 ;; esac
     done
     if [[ -n "$requested" && -n "$configured" && "$requested" != "$configured" ]]; then
-        printf '%s\n' '[FAIL] The engine argument does not match AZD_CONTAINER_RUNTIME.' >&2
+        workshop_status_printf '%s\n' '[FAIL] The engine argument does not match AZD_CONTAINER_RUNTIME.' >&2
         return 2
     fi
     printf '%s\n' "${requested:-${configured:-docker}}"
@@ -27,7 +28,7 @@ probe() {
 }
 
 check_result() {
-    printf '[%s] [%s] %s: %s\n' "$1" "${4:-${CHECK_CONTEXT:-Bash}}" "$2" "$3"
+    workshop_status_printf '[%s] [%s] %s: %s\n' "$1" "${4:-${CHECK_CONTEXT:-Bash}}" "$2" "$3"
     if [[ "$1" == FAIL ]]; then CHECK_FAILURES=$((CHECK_FAILURES + 1)); fi
 }
 
@@ -257,23 +258,23 @@ prerequisite_main() {
     while (( $# )); do
         case "$1" in
             --track|--container-engine)
-                if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then printf '%s\n' "[FAIL] A value is required for $1." >&2; return 2; fi
+                if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then workshop_status_printf '%s\n' "[FAIL] A value is required for $1." >&2; return 2; fi
                 if [[ "$1" == --track ]]; then track="$2"; else requested="$2"; fi
                 shift 2 ;;
             --help|-h) printf '%s\n' './scripts/check-prerequisites.sh --track java [--container-engine docker|podman]'; return 0 ;;
-            *) printf '[FAIL] Unknown argument: %s\n' "$1" >&2; return 2 ;;
+            *) workshop_status_printf '[FAIL] Unknown argument: %s\n' "$1" >&2; return 2 ;;
         esac
     done
-    case "$track" in java|dotnet) ;; *) printf '%s\n' '[FAIL] Specify --track java or --track dotnet.' >&2; return 2 ;; esac
+    case "$track" in java|dotnet) ;; *) workshop_status_printf '%s\n' '[FAIL] Specify --track java or --track dotnet.' >&2; return 2 ;; esac
     engine=$(resolve_engine "$requested") || return $?
     os=$(uname -s)
     if [[ "$track" == dotnet ]]; then
-        printf '%s\n' '[FAIL] For .NET, run ./scripts/check-prerequisites.ps1 -Track dotnet in Windows PowerShell.'
+        workshop_status_printf '%s\n' '[FAIL] For .NET, run ./scripts/check-prerequisites.ps1 -Track dotnet in Windows PowerShell.'
         return 1
     fi
     case "$os" in
         Darwin|Linux) ;;
-        *) printf '%s\n' '[FAIL] Run this on macOS or Linux. In Windows PowerShell, run ./scripts/check-prerequisites.ps1 -Track java.'; return 1 ;;
+        *) workshop_status_printf '%s\n' '[FAIL] Run this on macOS or Linux. In Windows PowerShell, run ./scripts/check-prerequisites.ps1 -Track java.'; return 1 ;;
     esac
     CHECK_FAILURES=0
     if [[ "$os" == Darwin ]]; then CHECK_CONTEXT='macOS Bash'

@@ -9,6 +9,35 @@ mkdir -p "$ROOT/.test-output"
 fixture="$ROOT/.test-output/portability.$$.$RANDOM"
 (umask 077; mkdir "$fixture")
 trap 'rm -rf -- "$fixture"' EXIT
+source "$ROOT/scripts/terminal-output.sh"
+
+status_output=$(workshop_status_printf '[PASS] status text\n')
+[[ "$status_output" == '[PASS] status text' ]]
+for entry in 'PASS 32' 'FAIL 31' 'WARN 33' 'MANUAL 36' 'INFO 34'; do
+    status="${entry%% *}"
+    color="${entry#* }"
+    status_output=$(workshop_status_color_enabled() { return 0; }; workshop_status_printf "[$status] status text\n")
+    printf -v expected '\033[%sm[%s]\033[0m status text' "$color" "$status"
+    [[ "$status_output" == "$expected" ]] || {
+        printf 'FAIL: colored %s status\n' "$status" >&2; exit 1;
+    }
+done
+if ! NO_COLOR= TERM=xterm CI= workshop_status_color_allowed; then exit 1; fi
+if NO_COLOR=1 TERM=xterm CI= workshop_status_color_allowed; then exit 1; fi
+if NO_COLOR= TERM=dumb CI= workshop_status_color_allowed; then exit 1; fi
+if NO_COLOR= TERM=xterm CI=1 workshop_status_color_allowed; then exit 1; fi
+NO_COLOR= TERM=xterm CI= workshop_status_color_allowed
+status_output=$(workshop_status_printf '[WARN] redirected status\n' 2>"$fixture/stderr")
+[[ "$status_output" == '[WARN] redirected status' ]] || { printf 'FAIL: redirected status text: %q\n' "$status_output"; exit 1; }
+[[ ! -s "$fixture/stderr" ]] || { printf 'FAIL: redirected status wrote stderr: %s\n' "$(cat "$fixture/stderr")"; exit 1; }
+workshop_status_printf '[FAIL] stderr status\n' 2>"$fixture/stderr" >&2
+[[ "$(cat "$fixture/stderr")" == '[FAIL] stderr status' ]]
+source "$ROOT/scripts/check-prerequisites.sh"
+CHECK_FAILURES=0
+check_result FAIL fixture 'unchanged message' > "$fixture/check-result"
+check_output=$(cat "$fixture/check-result")
+[[ "$check_output" == '[FAIL] [Bash] fixture: unchanged message' && "$CHECK_FAILURES" == 1 ]]
+unset -f workshop_status_printf workshop_status_color_enabled workshop_status_color_allowed
 
 # portability-patterns-begin
 cat > "$fixture/forbidden" <<'PATTERNS'
@@ -58,9 +87,14 @@ for script in "$ROOT"/scripts/*.sh "$ROOT"/tests/*.sh; do
             ;;
     esac
     expected=100755
-    [[ "$relative" != scripts/use-java.sh ]] || expected=100644
-    mode=$(git -C "$ROOT" ls-files -s -- "$relative")
-    mode="${mode%% *}"
+    case "$relative" in scripts/use-java.sh|scripts/terminal-output.sh) expected=100644 ;; esac
+    if git -C "$ROOT" ls-files --error-unmatch -- "$relative" >/dev/null 2>&1; then
+        mode=$(git -C "$ROOT" ls-files -s -- "$relative")
+        mode="${mode%% *}"
+    else
+        [[ ! -x "$script" ]] || { printf 'FAIL: New source-only file is executable: %s\n' "$relative" >&2; exit 1; }
+        mode=$expected
+    fi
     [[ "$mode" == "$expected" ]] || { printf 'FAIL: Git mode %s expected %s: %s\n' "$mode" "$expected" "$relative" >&2; exit 1; }
 done
 zsh -n "$ROOT/scripts/use-java.sh"

@@ -45,7 +45,7 @@ function Add-Check {
     param([string]$Status, [string]$Id, [string]$Message)
     $script:CheckResults.Add([pscustomobject]@{ Status = $Status; Id = $Id; Message = $Message })
     $context = if ($script:CheckContext) { $script:CheckContext } else { 'PowerShell' }
-    Write-Host "[$Status] [$context] ${Id}: $Message"
+    Write-WorkshopMessage "[$Status] [$context] ${Id}: $Message"
 }
 
 function Test-AzureProvider {
@@ -245,11 +245,11 @@ function Invoke-PrerequisiteMain {
         Write-Host './scripts/check-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman]'
         return 0
     }
-    if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
+    if ($Track -cnotin @('java', 'dotnet')) { Write-WorkshopMessage '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
-    catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
+    catch [ArgumentException] { Write-WorkshopMessage "[FAIL] $($_.Exception.Message)"; return 2 }
     $script:CheckResults = [Collections.Generic.List[object]]::new()
-    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell entrypoints are Windows-only. For the Java track, run ./scripts/check-prerequisites.sh.'; return 1 }
+    if (-not $IsWindows) { Write-WorkshopMessage '[FAIL] PowerShell entrypoints are Windows-only. For the Java track, run ./scripts/check-prerequisites.sh.'; return 1 }
     $script:CheckContext = 'Windows host'
     if ($PSVersionTable.PSVersion.Major -ge 7) { Add-Check PASS pwsh "PowerShell $($PSVersionTable.PSVersion)" }
     else { Add-Check FAIL pwsh 'PowerShell 7 is required.' }

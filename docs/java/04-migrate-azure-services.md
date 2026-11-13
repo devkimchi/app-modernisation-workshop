@@ -4,7 +4,7 @@
 
 ## 목표와 시작 조건
 
-JDK 25 빌드와 로컬 기준 동작이 통과한 **앱 루트**, Copilot app의 **`modernize`**에서 진행합니다. 이 단계는 코드와 테스트 준비이며 **Azure 리소스를 아직 만들지 않습니다**. 실제 Azure 연결 검증은 실습 6에서 합니다.
+JDK 25 빌드와 로컬 기준 동작이 통과한 **앱 루트**, Copilot app 터미널에서 Modernize CLI로 진행합니다. 이 단계는 코드와 테스트 준비이며 **Azure 리소스를 아직 만들지 않습니다**. 실제 Azure 연결 검증은 실습 6에서 합니다.
 
 | 기존 의존성 | 목표 | 보존할 동작 |
 | --- | --- | --- |
@@ -14,10 +14,13 @@ JDK 25 빌드와 로컬 기준 동작이 통과한 **앱 루트**, Copilot app�
 
 원본 `dev` 업로드 경로에는 DB 메타데이터 행 생성이 없으므로 로컬 기준선에 이를 추가해 해석하지 않습니다. `dev` 외 S3 구현의 메타데이터 로직은 코드에서 평가해 Azure 이전 범위에 포함합니다.
 
-## 코드 이전 프롬프트
+## 코드 이전 계획
+
+다음 입력을 앱 루트의 `ws04-azure-code-input.txt`에 UTF-8로 저장합니다. 평가 보고서와 앞 단계의 실제 결과 경로를 추가합니다.
 
 ```text
-승인한 계획 중 Azure 서비스 이전 코드와 테스트만 실행해 줘.
+.github/skills/java-aca-workshop/SKILL.md와 실제 업그레이드 결과를 읽고
+Azure 서비스 이전 코드와 테스트만 계획해 줘. 지금은 실행하지 마.
 JDK 25와 현재 Spring Boot 버전을 유지하고 web/worker의 기존 기능을 보존해 줘.
 
 PostgreSQL은 Flexible Server와 TLS로 연결하도록 구성하고
@@ -41,8 +44,47 @@ dev 외 경로의 S3 코드와 설정을 Blob으로 대체하고 그 경로의 D
 
 변경된 환경 변수, 필요 리소스/역할, DB 초기화 절차를 문서화해 줘.
 단위 테스트는 외부 Azure 없이 실행 가능하게 하고 DB/큐/Blob 통합 테스트는
-별도로 준비해 줘. 인프라 생성이나 실제 배포는 하지 말고 결과를 보여 줘.
+별도로 준비하도록 계획해 줘. 인프라 생성, 실제 DB 변경/데이터 이전,
+이미지 게시와 배포는 작업 목록에 넣지 마.
 ```
+
+Windows PowerShell 7:
+
+```powershell
+. ../scripts/use-java.ps1 -Jdk 25
+$goal = Get-Content ./ws04-azure-code-input.txt -Raw -Encoding utf8
+modernize plan create $goal --source . --language java --plan-name ws04-azure-code
+```
+
+macOS와 Linux:
+
+```bash
+source ../scripts/use-java.sh --jdk 25
+goal=$(cat ws04-azure-code-input.txt)
+modernize plan create "$goal" --source . --language java --plan-name ws04-azure-code
+```
+
+실제 `plan.md`와 `tasks.json`에 코드/테스트 작업만 있는지 확인하고 승인합니다. 작업 트리에 무관한 변경과 비밀이 없는지 확인한 뒤 실행 전 커밋을 기록합니다.
+
+Windows:
+
+```powershell
+git status --short
+$before = git rev-parse HEAD
+modernize plan execute "승인한 ws04-azure-code와 워크숍 스킬에 따라 코드와 단위 테스트만 실행해 줘. Azure/DB 변경과 배포는 하지 말고 실제 결과와 미실행 통합 검사를 구분해 줘." --source . --language java --plan-name ws04-azure-code --delegate local
+./mvnw.cmd clean verify
+```
+
+macOS와 Linux:
+
+```bash
+git status --short
+before=$(git rev-parse HEAD)
+modernize plan execute "승인한 ws04-azure-code와 워크숍 스킬에 따라 코드와 단위 테스트만 실행해 줘. Azure/DB 변경과 배포는 하지 말고 실제 결과와 미실행 통합 검사를 구분해 줘." --source . --language java --plan-name ws04-azure-code --delegate local
+./mvnw clean verify
+```
+
+명령별 결과를 확인하고 실패하면 멈춥니다. Copilot app 채팅에 추가 Java 검증을 맡길 때도 같은 실행 셸에 `use-java.ps1` 또는 `use-java.sh`로 JDK 25를 먼저 적용하도록 요청합니다.
 
 ## 참가자 검토
 
@@ -50,11 +92,16 @@ dev 외 경로의 S3 코드와 설정을 Blob으로 대체하고 그 경로의 D
 
 **PostgreSQL의 ARM 역할과 DB 내부 권한은 다릅니다.** Entra 관리자, 관리 ID에 대응하는 DB principal, 필요한 스키마/테이블 권한과 초기 migration 실행 주체가 계획에 있어야 합니다. 일반 DB 사용자는 스키마 변경 권한까지 무조건 갖지 않도록 구분합니다.
 
-```bash
-bash ./mvnw clean verify
-git diff --stat
+```text
+git status --short
+git log --oneline "$before..HEAD"
+git diff --stat "$before..HEAD"
+git diff "$before..HEAD"
 git diff
+git diff --cached
 ```
+
+자동 커밋에 앱 외부 파일, 생성물과 비밀이 포함되지 않았는지도 확인합니다.
 
 외부 연결 없이 통과한 단위 검사와 아직 실행하지 않은 Azure 통합 검사를 분리해 기록합니다. 로컬 `dev` 프로파일을 유지할지, Azure 설정이 필요한 별도 프로파일로 분리할지는 코드와 실행 안내에 명확히 반영합니다. Azure 이전 후에도 원본 `dev` 실행 명령이 그대로 유효하다고 가정하지 않습니다.
 

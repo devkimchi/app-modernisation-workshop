@@ -4,13 +4,16 @@
 
 ## 목표와 시작 조건
 
-Azure 서비스 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`**에서 Dockerfile, `azure.yaml`, Bicep을 생성하고 검토합니다. 이 단계에서는 리소스를 만들지 않습니다. 완성 템플릿을 미리 복사하는 대신 실제 코드와 선택한 엔진에 맞춰 플러그인으로 작성합니다.
+Azure 서비스 코드가 준비된 **앱 루트**, Copilot app 터미널에서 Modernize CLI로 Dockerfile, `azure.yaml`, Bicep을 생성하고 검토합니다. 실제 코드와 선택한 엔진에 맞춰 산출물을 만들되 이 단계에서는 리소스를 만들지 않습니다.
 
-## 배포 산출물 프롬프트
+## 배포 산출물 계획
+
+다음 입력을 앱 루트의 `ws05-azd-assets-input.txt`에 UTF-8로 저장합니다.
 
 ```text
-현재 앱 루트에 Azure Developer CLI 배포 산출물을 생성해 줘.
-배포나 Azure 리소스 생성은 아직 하지 마.
+.github/skills/java-aca-workshop/SKILL.md와 실제 Azure 코드/환경 변수 계약을 읽고
+현재 앱 루트의 Azure Developer CLI 배포 산출물 생성을 계획해 줘.
+지금은 계획만 작성하고 배포나 Azure 리소스 생성은 작업 목록에 넣지 마.
 
 - azure.yaml과 infra/의 Bicep을 만들고 서비스 이름은 web, worker로 정해 줘.
 - 두 서비스는 language: docker, host: containerapp이다.
@@ -37,11 +40,59 @@ Azure 서비스 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`
   ACA의 inbound static IP를 outbound IP로 오인하지 마.
   안정적인 제한 경로가 없으면 VNet/private 연결 등 대안을 제시하고 비용 승인을 기다려 줘.
 - 새 데모 DB만 초기화하며 기존 DB를 삭제하거나 덮어쓰는 hook은 만들지 마.
+  이 계획은 절차 작성까지만 포함하고 실제 DB 사용자/권한/migration은 실행하지 마.
 
 구독/리전/SKU/비용, 권한, 네트워크와 이미지 태그 정책을 설명해 줘.
-템플릿 구문 검증과 단위 빌드를 수행하되 실행하지 않은 통합 항목을 구분해 줘.
-생성한 azd hooks도 모두 보여 주고 프로비저닝 승인 전에 멈춰 줘.
+템플릿 구문 검증과 단위 빌드를 계획하고 미실행 통합 항목을 구분해 줘.
+azd hooks와 호출 스크립트를 모두 검토 대상으로 포함해 줘.
+이미지 게시, 프로비저닝, migration 실행과 배포는 참가자가 별도 승인 후 직접 실행한다.
 ```
+
+Windows PowerShell 7:
+
+```powershell
+. ../scripts/use-java.ps1 -Jdk 25
+$goal = Get-Content ./ws05-azd-assets-input.txt -Raw -Encoding utf8
+modernize plan create $goal --source . --language java --plan-name ws05-azd-assets
+```
+
+macOS와 Linux:
+
+```bash
+source ../scripts/use-java.sh --jdk 25
+goal=$(cat ws05-azd-assets-input.txt)
+modernize plan create "$goal" --source . --language java --plan-name ws05-azd-assets
+```
+
+실제 `plan.md`와 `tasks.json`을 읽고 산출물 작성/로컬 검증만 승인합니다. 무관한 작업 트리 변경과 비밀을 확인한 뒤 기준 커밋을 기록하고 실행합니다.
+
+Windows:
+
+```powershell
+git status --short
+$before = git rev-parse HEAD
+modernize plan execute "승인한 ws05-azd-assets와 워크숍 스킬에 따라 파일 작성과 로컬 검증만 수행해 줘. 프로비저닝, DB 변경, 이미지 게시, 배포와 삭제는 실행하지 마." --source . --language java --plan-name ws05-azd-assets --delegate local
+```
+
+macOS와 Linux:
+
+```bash
+git status --short
+before=$(git rev-parse HEAD)
+modernize plan execute "승인한 ws05-azd-assets와 워크숍 스킬에 따라 파일 작성과 로컬 검증만 수행해 줘. 프로비저닝, DB 변경, 이미지 게시, 배포와 삭제는 실행하지 마." --source . --language java --plan-name ws05-azd-assets --delegate local
+```
+
+실행 후 자동 커밋과 미커밋 변경을 함께 확인합니다.
+
+```text
+git status --short
+git log --oneline "$before..HEAD"
+git diff "$before..HEAD"
+git diff
+git diff --cached
+```
+
+앱 밖의 변경과 비밀이 없는지 확인합니다. 채팅에 Java 검증을 맡길 때도 해당 셸에 JDK 25 도우미를 먼저 적용하도록 요청합니다.
 
 ## azure.yaml 검토 포인트
 
@@ -72,6 +123,8 @@ services:
 `language: java`의 자동 JAR 탐색과 혼용하지 않습니다. 두 이미지의 런타임이 Java 25이고, 각각 해당 모듈의 JAR을 실행하는지 확인합니다. 이미지 태그는 `latest` 재사용 대신 이번 빌드를 식별할 수 있는 고유 값으로 만들고 배포 후 digest를 기록합니다.
 
 `azd`가 서비스와 리소스를 찾을 수 있어야 합니다. Bicep과 `azure.yaml`의 서비스 이름, 태그, 리소스 이름을 대조합니다. `azd provision`의 임시 bootstrap 이미지가 필요하면 신뢰하는 이미지와 교체 흐름을 명시하고, 실제 서비스가 배포되었다고 오인하지 않도록 합니다.
+
+루트/서비스 수준의 **모든 azd hooks와 호출 스크립트**를 읽습니다. 명령 수준 hook은 앱 루트, 서비스 수준 hook은 `project` 경로에서 실행됩니다. 셸과 상대 경로를 확인하고 DB 초기화나 자동 배포를 `postprovision`에 숨기지 않습니다. 오류를 숨기는 `continueOnError: true`를 기본값으로 두지 않습니다. 이미 생성된 산출물을 `azd init --from-code`로 다시 생성하지 않습니다.
 
 ## 비용과 배포 승인
 

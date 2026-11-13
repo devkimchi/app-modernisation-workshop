@@ -19,7 +19,7 @@ git branch --show-current
 git status --short
 ```
 
-이후 위치는 **앱 루트(`java`)**입니다. 앱 실행용 터미널과 Modernize CLI용 터미널은 분리합니다.
+터미널 두 개를 열어 두고 하나는 앱 실행용으로, 다른 하나는 Modernize CLI용으로 사용합니다. 두 터미널 모두 **앱 루트(`java`)**에서 명령을 실행합니다.
 
 ## JDK 8과 빌드 확인
 

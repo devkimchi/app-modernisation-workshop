@@ -99,7 +99,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 > [!NOTE]
 >
 > - Windows에서 JDK를 설치할 때 권한 확인 창이 나타나면 승인합니다. 실습에 사용할 JDK는 제공된 도우미에서 선택합니다.
-> - macOS와 Linux에서는 `nvm use`로 Node.js 버전을 선택합니다.
+> - `nvm use`로 사용할 Node.js 버전을 선택합니다.
 > - Linux에서는 glibc 2.27 이상이 필요합니다. 버전이 2.27 미만이거나 확인할 수 없다면 지원되는 배포판을 사용하세요.
 
 ### 인증과 권한 확인

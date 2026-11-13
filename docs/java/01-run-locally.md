@@ -160,4 +160,10 @@ git config user.email "you@example.com"
 
 ## 완료 및 다음 단계
 
-Java 8 빌드, web/worker 실행, PostgreSQL/RabbitMQ 연결, 업로드/썸네일과 기준선 커밋을 확인했다면 [평가와 계획](02-assess-and-plan.md)으로 이동합니다. 확인하지 못한 항목은 성공으로 표시하지 않습니다.
+- [ ] Java 8 빌드를 마쳤습니다.
+- [ ] web/worker 실행을 확인했습니다.
+- [ ] PostgreSQL/RabbitMQ 연결을 확인했습니다.
+- [ ] 이미지 업로드와 썸네일 생성을 확인했습니다.
+- [ ] 원본 앱의 기준선을 커밋했습니다.
+
+위 항목을 모두 마쳤다면 다음 단계인 [2. 평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

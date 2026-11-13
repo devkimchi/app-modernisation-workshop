@@ -147,4 +147,4 @@ modernize plan execute --help
 - [ ] `az login`, `azd auth login`, `gh auth login`을 실행했습니다.
 - [ ] 샘플의 `java/pom.xml`을 확인했습니다.
 
-다음 단계인 [1. 원본 실행](01-run-locally.md)으로 이동합니다.
+위 체크리스트를 모두 확인했다면 다음 단계인 [1. 원본 실행](01-run-locally.md)으로 이동합니다.

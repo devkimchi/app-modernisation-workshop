@@ -73,6 +73,13 @@ done
 for script in check-prerequisites install-prerequisites download-sample; do
     for shell in sh zsh; do
         interpreter=$(command -v "$shell")
+        if [[ "$shell" == sh && -n "$("$interpreter" -c 'printf "%s" "${BASH_VERSION:-}"')" ]]; then
+            output=$("$interpreter" "$ROOT/scripts/$script.sh" --help)
+            [[ "$output" == "./scripts/$script.sh"* ]] || {
+                printf 'FAIL: Bash-backed sh execution %s\n' "$script"; exit 1;
+            }
+            continue
+        fi
         : > "$fixture/guard-log"
         if output=$(GUARD_LOG="$fixture/guard-log" PATH="$fixture/bin:$PATH" "$interpreter" "$ROOT/scripts/$script.sh" --help 2>&1); then
             printf 'FAIL: %s accepted %s\n' "$script" "$shell"; exit 1

@@ -8,7 +8,7 @@ Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성�
 
 ## 사전 준비
 
-사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
+샘플 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
 
 Copilot app에서 다운로드한 앱 폴더를 열고 **Current checkout**을 사용합니다. Windows는 **This computer**의 PowerShell 7 터미널을 엽니다. 워크숍 루트에서 시작했다면 다음 명령으로 앱 루트에 이동합니다.
 

@@ -54,9 +54,9 @@ source ../scripts/use-java.sh --jdk 8
 직접 명령을 실행하는 대신 Copilot app 채팅에 다음과 같이 빌드를 요청해도 됩니다.
 
 ```text
-이 세션의 java 앱 루트에서 원본 앱을 빌드해 줘.
+이 세션의 `java` 앱 루트에서 원본 앱을 빌드해 줘.
 소스나 런타임은 바꾸지 마.
-JDK 8을 먼저 선택하고 mvnw로 빌드해 줘.
+JDK 8을 먼저 선택하고 `mvnw`로 빌드해 줘.
 같은 셸에서 버전 정보와 clean verify 실행 결과를 기록해 줘.
 빌드 중 문제가 생기면 임의로 수정하지 말고, 수정 전에 별도로 승인을 받아 줘.
 설치가 필요할 때도 별도로 승인을 받아 줘.
@@ -87,6 +87,7 @@ JDK 8을 먼저 선택하고 mvnw로 빌드해 줘.
 macOS와 Linux에서는 앱 루트에 있는 로그 파일을 확인합니다.
 
 ```bash
+# zsh/bash
 tail -n 100 logs/worker.log
 grep -n -F 'HikariPool-1 - Start completed' logs/web.log
 grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
@@ -95,6 +96,7 @@ grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/we
 Windows에서는 시작 스크립트가 연 창에서 로그를 확인합니다. 로그를 파일로 따로 저장한 경우에만 다음 명령의 경로를 해당 파일 경로로 바꿔 실행합니다.
 
 ```powershell
+# PowerShell
 Get-Content "<worker-로그-경로>" -Tail 100
 Select-String -Path "<web-로그-경로>" -SimpleMatch 'HikariPool-1 - Start completed'
 Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection refused|connection timed out' -Context 3,3
@@ -104,41 +106,35 @@ Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection r
 
 ## 로컬 앱 종료
 
-시작 스크립트로 만든 프로세스와 컨테이너인지 확인한 뒤, **앱 루트**에서 해당 종료 스크립트를 실행합니다. 종료 스크립트의 컨테이너 정리 범위를 먼저 읽습니다.
-
-Windows:
-
-```powershell
-./scripts/stopapp.cmd
-```
-
-macOS와 Linux:
+**앱 루트**에서 해당 종료 스크립트를 실행합니다.
 
 ```bash
+# zsh/bash
 ./scripts/stopapp.sh
 ```
 
-Windows의 Web Module과 Worker Module 프로세스가 끝났는지 확인하고 남은 창은 직접 닫습니다. PID 파일이 없거나 종료에 실패했다면 [문제 해결](08-troubleshooting.md)을 따르고 모든 Java 프로세스를 이름으로 종료하지 않습니다.
+```powershell
+# PowerShell
+./scripts/stopapp.cmd
+```
 
 ## 원본 앱 상태 커밋
 
 개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 앱 폴더 안에 별도의 `.git`을 만들지 않습니다. 기존 제외 규칙을 유지하면서 빌드 결과물과 비밀 정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
 
-Windows:
-
-```powershell
-Add-Content ./.gitignore "`n.azure/`nlogs/`npids/`n/storage/`n**/target/`n**/uploads/`n.env`n.env.*"
+```bash
+# zsh/bash
+printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.*\n' >> .gitignore
 ```
 
-macOS와 Linux:
-
-```bash
-printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.*\n' >> .gitignore
+```powershell
+# PowerShell
+Add-Content ./.gitignore "`n.azure/`nlogs/`npids/`n/storage/`n**/target/`n**/uploads/`n.env`n.env.*"
 ```
 
 다음 Git 명령은 두 환경에서 동일하게 실행합니다. 앱 루트에서 `git add .`를 실행한 뒤 커밋에 포함될 변경 사항을 모두 검토합니다.
 
-```text
+```bash
 git status --short
 git add .
 git diff --cached --stat
@@ -147,13 +143,13 @@ git diff --cached
 
 업로드한 파일, 로그, 토큰이나 비밀 정보가 담긴 연결 설정이 있으면 커밋 대상에서 제외하고 다시 검토합니다. 검토를 마친 뒤 문제가 없을 때만 커밋합니다.
 
-```text
+```bash
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
 Git 커밋 작성자 정보가 설정되어 있지 않다면 이 저장소에서만 사용할 이름과 이메일을 설정한 뒤 다시 커밋합니다.
 
-```text
+```bash
 git config user.name "Your Name"
 git config user.email "you@example.com"
 ```

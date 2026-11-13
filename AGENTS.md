@@ -50,7 +50,7 @@ README는 참가자 안내에 집중하고, 유지보수와 개발자용 테스�
 ## 5. 스크립트와 실행 환경
 
 - Bash와 PowerShell에 같은 기능이 있다면 양쪽에 미치는 영향을 확인하되 운영체제별 차이는 유지하세요.
-- Java의 빌드와 실행 환경은 Windows PowerShell 7, macOS와 Linux의 Bash입니다. macOS와 Linux의 대화형 터미널은 Bash 또는 Zsh를 사용합니다.
+- Java의 빌드와 실행에는 Windows에서 PowerShell 7을, macOS와 Linux에서 Bash를 사용합니다. macOS와 Linux의 대화형 터미널은 Bash 또는 Zsh를 사용합니다.
 - `.sh`는 Bash 3.2(macOS 기본)와 Bash 5에서 동일하게 동작해야 합니다. 외부 명령은 BSD와 GNU 모두에서 지원하는 옵션만 사용하세요. `use-java.sh`는 Bash와 Zsh에서 source할 수 있어야 합니다.
 - 참가자 문서는 스크립트를 직접 실행하는 형식으로 쓰세요. 직접 실행하는 `.sh`는 Git 모드 `100755`와 `#!/usr/bin/env bash`를, source 전용 `.sh`는 `100644`를 유지하세요. 복사할 Bash/Zsh 명령 블록에는 주석 줄을 넣지 말고 glob 문자가 있는 인자는 따옴표로 감싸세요.
 - Windows 실행 정책은 현재 창의 `Process` 범위 `RemoteSigned`만 안내하고 시스템과 사용자 범위는 바꾸지 마세요. 조직 정책으로 제한되면 관리자에게 문의하도록 안내하세요.

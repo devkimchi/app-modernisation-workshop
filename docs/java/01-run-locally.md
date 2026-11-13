@@ -120,7 +120,7 @@ Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection r
 
 ## 원본 앱 상태 커밋
 
-개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 앱 폴더 안에 별도의 `.git`을 만들지 않습니다. 기존 제외 규칙을 유지하면서 빌드 결과물과 비밀 정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
+개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 기존 제외 규칙을 유지하면서 빌드 결과물과 비밀 정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
 
 ```bash
 # zsh/bash
@@ -132,7 +132,7 @@ printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.
 Add-Content ./.gitignore "`n.azure/`nlogs/`npids/`n/storage/`n**/target/`n**/uploads/`n.env`n.env.*"
 ```
 
-다음 Git 명령은 두 환경에서 동일하게 실행합니다. 앱 루트에서 `git add .`를 실행한 뒤 커밋에 포함될 변경 사항을 모두 검토합니다.
+앱 루트에서 `git add .`를 실행한 뒤 커밋에 포함될 변경 사항을 모두 검토합니다.
 
 ```bash
 git status --short

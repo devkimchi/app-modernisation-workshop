@@ -8,11 +8,11 @@ Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성�
 
 ## 사전 준비
 
-샘플 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
+샘플 다운로드를 완료하고 **앱 루트**(`java` 디렉토리)에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
 
 앞 단계에서 사용한 Copilot app 세션의 터미널에서 앱 루트로 이동합니다.
 
-```text
+```bash
 cd java
 git rev-parse --show-toplevel
 git branch --show-current

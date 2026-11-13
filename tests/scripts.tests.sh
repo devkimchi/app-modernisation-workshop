@@ -56,6 +56,7 @@ for platform in Darwin Linux; do
     platform_output=$(
         uname() { printf '%s\n' "$platform"; }
         check_homebrew() { check_result PASS fixture-homebrew 'Homebrew check'; }
+        check_glibc() { check_result PASS fixture-glibc 'Linux glibc check'; }
         check_common() { check_result PASS fixture-common 'common checks reached'; }
         check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
         prerequisite_main --track java --container-engine docker
@@ -64,8 +65,10 @@ for platform in Darwin Linux; do
     assert "$platform reaches SDK checks" grep -q 'fixture-sdks' <<< "$platform_output"
     if [[ "$platform" == Darwin ]]; then
         assert 'Homebrew checked before common tools' grep -q 'fixture-homebrew' <<< "$platform_output"
+        assert 'macOS skips glibc check' test "${platform_output#*fixture-glibc}" = "$platform_output"
     else
         assert 'Linux does not use Homebrew' test "${platform_output#*fixture-homebrew}" = "$platform_output"
+        assert 'Linux checks glibc before common tools' grep -q 'fixture-glibc' <<< "$platform_output"
     fi
 done
 for entry in prerequisite_main install_prerequisite_main download_main; do
@@ -158,6 +161,36 @@ assert 'Azure CLI path identified' grep -q 'PASS.*Linux Bash.*az.*usr/bin/az' <<
 assert 'Java PostgreSQL provider checked' grep -q 'PASS.*Microsoft.DBforPostgreSQL' <<< "$common_output"
 assert 'Copilot app requires manual terminal check' grep -q 'MANUAL.*copilot-app:.*터미널 접근' <<< "$common_output"
 assert 'Azure permissions manual check scoped to Azure' grep -Fq '[MANUAL] [Azure (수동 확인)] azure-access:' <<< "$common_output"
+
+for scenario in minimum supported old unavailable unrecognized; do
+    glibc_output=$(
+        probe() {
+            PROBE_CODE=0
+            case "$scenario" in
+                minimum) PROBE_TEXT='glibc 2.27' ;;
+                supported) PROBE_TEXT='glibc 2.39' ;;
+                old) PROBE_TEXT='glibc 2.26' ;;
+                unavailable) PROBE_CODE=127; PROBE_TEXT='' ;;
+                unrecognized) PROBE_TEXT='musl libc (x86_64)' ;;
+            esac
+        }
+        CHECK_FAILURES=0
+        check_glibc
+        printf 'failures=%s\n' "$CHECK_FAILURES"
+    )
+    case "$scenario" in
+        minimum|supported) expected=0 ;;
+        *) expected=1 ;;
+    esac
+    assert "glibc prerequisite $scenario" grep -q "^failures=$expected$" <<< "$glibc_output"
+done
+assert 'unrecognized glibc gives supported-distro guidance' grep -q 'FAIL.*glibc.*확인하지 못했습니다.*지원되는 glibc 기반 Linux' <<< "$glibc_output"
+old_glibc_output=$(
+    probe() { PROBE_CODE=0; PROBE_TEXT='glibc 2.26'; }
+    CHECK_FAILURES=0
+    check_glibc
+)
+assert 'old glibc gives safe remediation' grep -q 'FAIL.*glibc.*2.27 이상.*별도로 설치하지 말고 지원되는' <<< "$old_glibc_output"
 
 missing_output=$(
     CHECK_CONTEXT='Linux Bash'

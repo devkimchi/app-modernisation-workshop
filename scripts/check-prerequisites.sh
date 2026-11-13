@@ -183,6 +183,21 @@ check_homebrew() {
     else check_result FAIL homebrew 'Homebrew가 필요합니다. ./scripts/install-prerequisites.sh --track java를 실행하세요.'; fi
 }
 
+check_glibc() {
+    local version
+    probe getconf GNU_LIBC_VERSION
+    if (( PROBE_CODE != 0 )) || [[ ! "$PROBE_TEXT" =~ ^glibc[[:space:]]+([0-9]+)\.([0-9]+)(\.[0-9]+)?$ ]]; then
+        check_result FAIL glibc 'glibc 버전을 확인하지 못했습니다. Modernize CLI에는 glibc 2.27 이상이 필요합니다. 지원되는 glibc 기반 Linux 배포판을 사용하세요.'
+        return
+    fi
+    version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+    if minimum_version "$version" 2.27.0; then
+        check_result PASS glibc "버전 $PROBE_TEXT (Modernize CLI 최소 2.27)"
+    else
+        check_result FAIL glibc "Modernize CLI에는 glibc 2.27 이상이 필요합니다. 확인된 버전: $PROBE_TEXT. glibc를 별도로 설치하지 말고 지원되는 Linux 배포판을 사용하세요."
+    fi
+}
+
 check_modernize_tools() {
     probe modernize --version
     if (( PROBE_CODE == 0 )); then check_result PASS modernize "$PROBE_TEXT"
@@ -267,6 +282,7 @@ prerequisite_main() {
     printf '%s\n' '다음 결과는 이 Bash의 PATH와 호출된 도구의 설정을 기준으로 합니다.'
     check_result PASS bash "Bash $BASH_VERSION"
     if [[ "$os" == Darwin ]]; then check_homebrew; fi
+    if [[ "$os" == Linux ]]; then check_glibc; fi
     export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
     check_common "$engine"
     check_java_sdks

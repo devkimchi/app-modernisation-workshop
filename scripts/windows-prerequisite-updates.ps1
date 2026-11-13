@@ -206,12 +206,6 @@ function Install-WorkshopNode {
     return $true
 }
 
-function Get-WorkshopWslVersion {
-    $probe = Invoke-ToolProbe (Get-WorkshopWslExecutable) @('--version')
-    $first = ($probe.Text -replace "`0", '' -split '\r?\n')[0]
-    if ($probe.Code -eq 0 -and $first -match ':\s*(\d+\.\d+\.\d+(?:\.\d+)?)\s*$') { return [version]$Matches[1] }
-}
-
 function Get-WorkshopManagedPowerShell {
     $executable = Join-Path $PSHOME 'pwsh.exe'
     $installed = Invoke-ToolProbe winget @('list', '--id', 'Microsoft.PowerShell', '--exact', '--source', 'winget', '--disable-interactivity')
@@ -257,25 +251,9 @@ catch { Write-Host "[FAIL] $($_.Exception.Message) Update was not verified; chec
 
 function Update-WorkshopWindowsHost {
     if (-not (Test-WorkshopBootstrapInteractive)) { return 1 }
-    $failed = $false
-    $before = Get-WorkshopWslVersion
-    if (-not $before) {
-        Write-Host '[MANUAL] WSL --version 확인 불가 (inbox WSL 포함). 원래 설치 방식으로 수동 업데이트하세요. 배포판은 변경하지 않습니다.'
-        $failed = $true
-    }
-    elseif (Confirm-ToolInstall "WSL $before 플랫폼을 wsl.exe --update로 업데이트합니다. 네트워크/관리자 승인이 필요할 수 있습니다. 배포판 업데이트/삭제나 자동 재부팅은 하지 않습니다.") {
-        $result = Invoke-ToolProbe (Get-WorkshopWslExecutable) @('--update')
-        $after = Get-WorkshopWslVersion
-        if ($result.Code -ne 0 -or -not $after -or $after -lt $before -or -not (Test-WorkshopWsl2)) {
-            Write-Host "[FAIL] WSL 업데이트 검증 실패 (종료 코드 $($result.Code)). 필요하면 직접 재부팅 후 점검하세요."
-            $failed = $true
-        }
-        else { Write-Host "[PASS] WSL 플랫폼 $before -> $after (동일 버전이면 최신 상태)." }
-    }
     $managed = Get-WorkshopManagedPowerShell
     if (-not $managed) {
         Write-Host '[MANUAL] 실행 중인 PowerShell 7의 winget/MSI 관리 출처를 확인하지 못해 자동 업데이트를 건너뜁니다. 원래 설치 관리자로 업데이트하세요. 필수 도구 확인은 계속합니다.'
-        if ($failed) { return 1 }
         return 0
     }
     $show = Invoke-ToolProbe winget @('show', '--id', 'Microsoft.PowerShell', '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
@@ -293,6 +271,5 @@ function Update-WorkshopWindowsHost {
         Write-Host '[WARN] PowerShell 업데이트 예약됨 (아직 성공 아님). 이 pwsh가 종료되어야 실행됩니다. 작업 프로세스의 PASS/FAIL을 확인하고 새 터미널에서 다시 실행하세요.'
         return 3010
     }
-    if ($failed) { return 1 }
     return 0
 }

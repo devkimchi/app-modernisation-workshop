@@ -1,6 +1,6 @@
 # GitHub Copilot app으로 앱 현대화하기
 
-GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 핸즈온 워크숍입니다.
+GitHub Copilot app의 터미널에서 Modernize CLI로 앱을 현대화한 뒤, Azure Developer CLI(azd)로 Azure Container Apps에 배포하는 핸즈온 워크숍입니다.
 
 ## 워크숍 구조
 
@@ -20,21 +20,23 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 참가자에게 다음이 필요합니다.
 
 - Azure 구독. 없다면 [Azure 무료 구독](https://aka.ms/azure/free)을 직접 신청합니다. 무료 크레딧의 서비스, 리전, 쿼터 제한과 유료 전환 조건을 확인하세요.
-- GitHub 계정과 유효한 GitHub Copilot 라이선스. 조직 정책에 따라 플러그인 사용이 제한될 수 있습니다.
+- GitHub 계정과 유효한 GitHub Copilot 라이선스. 조직 정책에 따라 Modernize CLI와 모델 사용이 제한될 수 있습니다.
 - 템플릿으로 저장소 만들기 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template_name=app-modernisation-workshop&template_owner=devkimchi)
 
 ## 트랙 선택
 
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
 | --- | --- | --- |
-| 참가자 환경 | Windows + WSL2 또는 macOS | Windows (공통 스크립트용 WSL2 플랫폼 필요) |
+| 참가자 환경 | Windows, macOS 또는 Linux 데스크톱(Ubuntu, Debian 계열 자동 설치 지원) | Windows |
 | 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, .NET Framework 4.8, ASP.NET MVC 5 |
 | 최종 런타임 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
-| 도구 | Modernization의 `modernize` | 업그레이드는 `Upgrade`, Azure 이전은 `modernize` |
+| 도구 | Copilot app 터미널의 Modernize CLI와 azd | Copilot app 터미널의 Modernize CLI와 azd |
 | 서비스 이전 | PostgreSQL, RabbitMQ, 파일(`dev`: 로컬, 그 외: AWS S3) → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
 | 배포 단위 | web + worker, ACA 2개 | 웹 앱, 필요하면 처리기 분리 여부를 계획에서 결정 |
 
 ## 워크숍 진행 순서
+
+평가 후 `ws03-baseline`, `ws03-upgrade`, `ws04-azure-code`, `ws05-azd-assets` 계획을 차례로 만들고 검토한 범위만 실행합니다. Azure 리소스 생성, DB 변경, 배포와 삭제는 참가자가 별도로 승인하고 직접 실행합니다.
 
 | 순서 | Java 트랙 | .NET 트랙 |
 | --- | --- | --- |
@@ -61,7 +63,8 @@ GitHub Copilot app으로 현대화한 뒤 Azure Container Apps로 배포하는 �
 - [Java 앱 현대화: GitHub Copilot modernization](https://learn.microsoft.com/azure/developer/java/migration/migrate-github-copilot-app-modernization-for-java)
 - [.NET 앱 현대화: GitHub Copilot modernization](https://learn.microsoft.com/dotnet/core/porting/github-copilot-app-modernization/overview)
 - [GitHub Copilot app 다운로드](https://gh.io/app)
-- [GitHub Copilot modernization 플러그인](https://github.com/microsoft/github-copilot-modernization)
+- [Modernize CLI](https://github.com/microsoft/modernize-cli)
+- [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview)
 
 ## 라이선스
 

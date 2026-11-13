@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./scripts/download-sample.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
+
 DOWNLOAD_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 sample_definition() {
@@ -20,7 +25,7 @@ safe_destination() {
     local path="$1" workshop="$2" current component entry full=''
     if [[ "$path" == *$'\n'* || "$path" == *$'\r'* ]]; then printf '%s\n' '[FAIL] 경로에 줄바꿈을 사용할 수 없습니다.' >&2; return 2; fi
     if [[ "$path" == //* || "$path" == *\\* || "$path" =~ ^[[:alpha:]]: ]]; then
-        printf '%s\n' '[FAIL] Bash에서는 일반 POSIX 경로를 사용하세요. Windows Git Bash 예: /c/workshops/app' >&2; return 2
+        printf '%s\n' '[FAIL] Bash에서는 일반 POSIX 경로를 사용하세요.' >&2; return 2
     fi
     [[ "$path" == /* ]] || path="$PWD/$path"
     local -a parts
@@ -59,12 +64,15 @@ safe_destination() {
 download_sample() (
     set -e
     local target="$1" repository="$2" commit="$3" subdirectory="$4" track="$5" workshop="$6"
-    local parent staging source required notice name normalized license=false payload
+    local parent staging source required notice name normalized license=false payload cleanup
     target=$(safe_destination "$target" "$workshop")
     parent="${target%/*}"; parent="${parent:-/}"
     mkdir -p -- "$parent"
-    staging=$(mktemp -d "$parent/.workshop-download.XXXXXXXX")
-    trap 'result=$?; trap - EXIT; if [[ -d "$staging" ]]; then rm -rf -- "$staging" || result=1; fi; if (( result != 0 )); then printf "[FAIL] 다운로드 실패. 대상 상태를 확인하고 빈 경로로 다시 시도하세요: %s\n" "$target" >&2; fi; exit "$result"' EXIT
+    staging="$parent/.workshop-download.$$.$RANDOM"
+    (umask 077; mkdir -- "$staging")
+    # Bash 3.2는 EXIT trap 전에 함수의 지역 변수를 해제할 수 있다.
+    printf -v cleanup 'result=$?; trap - EXIT; rm -rf -- %q || result=1; if (( result != 0 )); then printf "[FAIL] 다운로드 실패. 대상 상태를 확인하고 빈 경로로 다시 시도하세요: %%s\\n" %q >&2; fi; exit "$result"' "$staging" "$target"
+    trap "$cleanup" EXIT
     git init --quiet "$staging/checkout"
     git -C "$staging/checkout" remote add origin "$repository"
     git -C "$staging/checkout" fetch --quiet --depth 1 origin "$commit"
@@ -121,22 +129,24 @@ download_main() {
                 if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then printf '[FAIL] %s 값이 필요합니다.\n' "$1" >&2; return 2; fi
                 case "$1" in --track) track="$2" ;; --container-engine) requested="$2" ;; --destination) destination="$2" ;; esac
                 shift 2 ;;
-            --help|-h) printf '%s\n' 'bash scripts/download-sample.sh --track java|dotnet [--destination PATH] [--container-engine docker|podman]'; return 0 ;;
+            --help|-h) printf '%s\n' './scripts/download-sample.sh --track java [--destination PATH] [--container-engine docker|podman]'; return 0 ;;
             *) printf '[FAIL] 알 수 없는 인자: %s\n' "$1" >&2; return 2 ;;
         esac
     done
     sample_definition "$track" || return $?
     source "$DOWNLOAD_SCRIPTS/check-prerequisites.sh"
     engine=$(resolve_engine "$requested") || return $?
+    if [[ "$track" == dotnet ]]; then
+        printf '%s\n' '[FAIL] .NET은 Windows PowerShell에서 ./scripts/download-sample.ps1 -Track dotnet을 실행하세요.'
+        return 1
+    fi
+    os=$(uname -s)
+    case "$os" in
+        Darwin|Linux) ;;
+        *) printf '%s\n' '[FAIL] macOS와 Linux에서 실행하세요. Windows PowerShell에서는 ./scripts/download-sample.ps1 -Track java를 실행하세요.'; return 1 ;;
+    esac
     workshop="$(cd "$DOWNLOAD_SCRIPTS/.." && pwd -P)"
     destination=$(safe_destination "${destination:-$workshop/$track}" "$workshop") || return $?
-    if [[ "$track" == dotnet ]]; then
-        os=$(uname -s)
-        case "$os" in MINGW*|MSYS*) ;; *) printf '%s\n' '[FAIL] .NET Bash 진입점은 Windows Git Bash에서만 지원합니다.'; return 1 ;; esac
-        command -v pwsh >/dev/null 2>&1 || { printf '%s\n' '[FAIL] PowerShell 7이 필요합니다.'; return 1; }
-        MSYS2_ARG_CONV_EXCL='*' pwsh -NoLogo -NoProfile -File "$(cygpath -w "$DOWNLOAD_SCRIPTS/download-sample.ps1")" -Track dotnet -ContainerEngine "$engine" -Destination "$(cygpath -w "$destination")"
-        return $?
-    fi
     bash "$DOWNLOAD_SCRIPTS/check-prerequisites.sh" --track java --container-engine "$engine" || {
         printf '%s\n' '[FAIL] 사전 점검이 통과하지 않아 다운로드하지 않았습니다.' >&2; return 1;
     }

@@ -4,129 +4,146 @@
 
 ## 실행 환경
 
-Windows에서는 **WSL2 Bash**, macOS에서는 **Bash** 또는 **Zsh** 를 사용합니다.
+Windows에서는 **PowerShell**, macOS와 Linux 데스크톱에서는 **Bash 또는 Zsh 터미널**을 사용합니다. Windows PowerShell 5.1에서 준비 스크립트를 직접 실행하면 PowerShell 7에 위임합니다. 앱 실습과 JDK 선택은 PowerShell 7에서 진행합니다.
 
-> [!WARNING]
-> **Windows 사용자**
->
-> Windows의 Copilot app은 프로젝트 파일을 수정하고, Java 빌드와 실행 및 Azure 배포 명령은 WSL에서 수행합니다. 에이전트에게 사용할 WSL 배포판과 프로젝트 경로를 알려 주고 해당 환경에서 명령을 실행하도록 요청하세요. Windows에 설치하거나 로그인한 도구를 WSL에서도 사용할 수 있다고 가정하지 마세요.
+macOS와 Linux의 `.sh`는 직접 실행하면 shebang에 따라 Bash로 실행됩니다. macOS 기본 `/bin/bash` 3.2를 지원하며 Homebrew Bash는 필요하지 않습니다. `use-java.sh`만 현재 Bash 또는 Zsh에서 source합니다.
 
 ### 사전 설치 항목
 
-- [GitHub Copilot app](https://gh.io/app)
-- **Windows 사용자**: [WSL](https://learn.microsoft.com/windows/wsl/install)
-- **Windows 사용자**: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
+- [GitHub Copilot app](https://gh.io/app), [Git](https://git-scm.com/downloads)
+- Windows: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows). 없으면 설치 도우미가 별도 동의를 받아 설치를 제안합니다.
+- macOS: [Homebrew](https://brew.sh). 필수이며 설치 도우미가 설치를 제안합니다. 관리자 승인과 Xcode Command Line Tools 다운로드 시간이 필요할 수 있습니다.
+- Linux: Ubuntu와 Debian 계열의 `apt-get`, `sudo`가 있으면 설치 도우미가 설치를 제안합니다. 다른 배포판은 아래 공식 안내로 직접 설치한 뒤 같은 점검 스크립트를 사용합니다.
 
 ## 템플릿으로 저장소 만들고 클론하기
 
-1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭하세요.
-2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고, **Include all branches**는 선택하지 않습니다.
-3. 저장소를 만든 뒤 GitHub CLI(`gh`)를 사용할 수 있는 터미널에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요. (예: `octocat/app-modernisation-workshop`)
+1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택합니다.
+2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고 **Include all branches**는 선택하지 않습니다.
+3. 저장소 URL을 복사해 아래 값을 바꿔 실행합니다. GitHub CLI를 아직 설치하지 않았다면 Git을 사용합니다.
 
-```bash
-gh repo clone <본인-계정>/<저장소-이름>
-cd <저장소-이름>
-```
-
-복제한 폴더가 **워크숍 루트**입니다. 이후 명령은 이 폴더에서 실행합니다. Windows에서는 WSL에서도 접근할 수 있는 위치를 사용하세요.
-
-> [!NOTE]
->
-> 템플릿 저장소를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
-
-## 필수 도구 설치 여부 확인하기
-
-### 도구 설치 여부 점검
-
-실습에 사용할 필수 도구들이 설치되어 있는지 확인합니다. 아래 명령을 실행하세요.
-
-```bash
-# zsh/bash
-bash scripts/check-prerequisites.sh --track java
-```
+Windows:
 
 ```powershell
-# PowerShell
-powershell.exe -File ./scripts/check-prerequisites.ps1 -Track java
+git clone "https://github.com/<본인-계정>/<저장소-이름>.git"
+Set-Location "<저장소-이름>"
 ```
 
-확인 결과는 다음 표를 참고하세요.
+macOS와 Linux:
+
+```bash
+git clone "https://github.com/<본인-계정>/<저장소-이름>.git"
+cd "<저장소-이름>"
+```
+
+복제한 폴더가 **워크숍 루트**입니다. 템플릿 자체를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
+
+## 필수 도구 점검과 설치
+
+### Windows 실행 정책
+
+첫 스크립트 실행 전에 현재 창의 정책을 확인합니다.
+
+```powershell
+Get-ExecutionPolicy
+```
+
+`Restricted`이면 **현재 창에만** 다음을 적용합니다. 창을 닫으면 원래 정책으로 돌아가므로 새 창에서도 필요하면 다시 적용합니다. 시스템과 사용자 범위의 정책은 바꾸지 않습니다. 조직 정책 때문에 변경할 수 없으면 관리자에게 문의합니다.
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+```
+
+### 설치 여부 점검
+
+**워크숍 루트**에서 운영체제에 맞는 명령 하나를 실행합니다.
+
+Windows:
+
+```powershell
+./scripts/check-prerequisites.ps1 -Track java
+```
+
+macOS와 Linux:
+
+```bash
+./scripts/check-prerequisites.sh --track java
+```
 
 | 결과 | 할 일 |
 | --- | --- |
-| `PASS` | 해당 검사 통과. 실제 앱 실행이나 배포 성공을 뜻하지 않음 |
+| `PASS` | 해당 검사 통과. 앱 실행이나 배포 성공을 뜻하지 않음 |
 | `FAIL` | 부족한 도구나 설정을 보완한 뒤 다시 점검 |
 | `WARN` | 오류 내용과 검사 제한 확인 |
-| `MANUAL` | 직접 확인. Copilot 플러그인은 [플러그인 설치](#copilot-app에-플러그인-설치하기)에서 설치 |
+| `MANUAL` | Copilot 로그인, 라이선스, 조직 정책, 터미널 접근과 Azure 권한을 직접 확인 |
 | `INFO` | 참고 정보 |
 
 ### 도구 설치와 업데이트
 
-누락된 도구를 설치하고, 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `--update`를 생략하세요.
+누락된 도구를 설치하고 업데이트 가능한 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다. CI와 비대화형 환경에서는 설치를 승인하지 않습니다.
 
-> [!NOTE]
-> **Windows 사용자**
->
-> Windows 터미널에서 아래 명령으로 WSL 셸에 접속합니다. Windows 호스트용 PowerShell 설치 스크립트와 아래 Bash 스크립트는 별도로 실행해야 합니다.
->
-> ```powershell
-> # PowerShell
-> wsl
-> ```
+Windows:
 
-Windows에서는 WSL 셸, macOS에서는 터미널에서 워크숍 루트로 이동한 뒤 아래 명령을 실행합니다.
-
-```bash
-# zsh/bash
-bash scripts/install-prerequisites.sh --track java --update
+```powershell
+./scripts/install-prerequisites.ps1 -Track java -Update
 ```
 
-설치하거나 업데이트하는 도구는 다음과 같습니다.
+macOS와 Linux:
+
+```bash
+./scripts/install-prerequisites.sh --track java --update
+```
 
 | 대상 | 설치와 업데이트 |
 | --- | --- |
-| Node.js 22 이상 | nvm으로 설치합니다. 업데이트 시 현재 주 버전의 최신 정식 버전을 추가하며, 없거나 22 미만이면 22.x를 선택합니다. |
-| JDK 8, 25 | SDKMAN으로 정식 Temurin을 설치하고, 업데이트 시 각 주 버전의 최신 버전을 추가합니다. |
-| Azure CLI, azd | WSL은 공식 설치 스크립트, macOS는 Homebrew로 설치하고 업데이트합니다. |
+| [Node.js](https://nodejs.org/) 22 이상 | Windows는 [nvm-windows](https://github.com/nvm-windows/nvm), macOS와 Linux는 [nvm](https://github.com/nvm-sh/nvm). 없거나 22 미만이면 22.x를 설치하고 업데이트 시 현재 메이저의 최신 정식 버전을 추가 |
+| 정식 JDK 8, 25 | Windows는 winget의 [Temurin](https://adoptium.net/installation/windows), macOS와 Linux는 [SDKMAN](https://sdkman.io/install/) |
+| [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), [azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) | Windows는 winget으로 누락된 도구 설치, macOS는 Homebrew, Linux는 공식 설치 경로. Windows의 기존 설치본 업데이트는 원래 설치 관리자로 직접 수행 |
+| [GitHub CLI](https://cli.github.com/) 2.45.0 이상 | Windows는 winget `GitHub.cli`, macOS는 Homebrew, Linux는 공식 apt 저장소 |
+| [Modernize CLI](https://github.com/microsoft/modernize-cli) | Windows는 winget `GitHub.Copilot.modernization.agent`, macOS는 Homebrew cask, Linux는 공식 `install.sh` |
 
-설치한 Node.js를 현재 터미널에서도 사용하려면 스크립트가 출력한 초기화 명령과 `nvm use` 명령을 실행하세요.
+Node.js와 npm은 Modernize CLI의 Java 업그레이드와 배포 도구 서버를 `npx`로 실행하기 위해 준비합니다. 워크숍의 최소 기준은 Node.js 22이며, CLI 실행 파일 설치만으로 Node가 준비되지는 않습니다.
 
-### Windows 호스트 도구 설치
+Windows Temurin 설치는 `EclipseAdoptium.Temurin.8.JDK`, `EclipseAdoptium.Temurin.25.JDK`에 `--custom "ADDLOCAL=FeatureMain"`을 사용해 핵심 기능만 설치합니다. 시스템 `PATH`, `JAVA_HOME`, `.jar` 연결을 바꾸지 않는 구성이나 MSI 설치에는 UAC 승인이 필요합니다. 실습 터미널의 JDK는 별도 도우미로 선택합니다.
 
-Windows에서 필요한 도구를 설치하려면 아래 명령을 실행합니다. 업데이트 가능한 기존 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `-Update`를 생략하세요.
+macOS는 Homebrew를 먼저 준비한 뒤 az, azd, gh와 Modernize CLI를 설치합니다. Modernize는 `brew tap microsoft/modernize https://github.com/microsoft/modernize-cli`와 전체 이름 `brew install --cask microsoft/modernize/modernize`를 사용합니다. tap 전체를 신뢰하는 설정은 요구하지 않습니다. 설치 후 출력된 `brew shellenv` 명령을 로그인 셸 설정(`~/.zprofile` 또는 `~/.bash_profile`)에 직접 반영하고 새 터미널에서 확인합니다. SDKMAN 설치기는 macOS에서 Zsh로 실행합니다.
 
-```powershell
-# PowerShell
-powershell.exe -File ./scripts/install-prerequisites.ps1 -Track java -Update
-```
+macOS와 Linux에서 설치한 Node를 현재 터미널에서도 쓰려면 출력된 nvm 초기화와 `nvm use` 명령을 실행합니다. 설치 스크립트는 부모 셸의 Node 선택을 바꾸지 않습니다. Linux Modernize 설치기는 셸 설정에 `~/.local/bin`을 추가하므로 새 터미널을 열거나 해당 설정 파일을 다시 읽습니다. Linux는 glibc 2.27 이상이 필요합니다.
 
 ### 직접 준비할 항목
 
-- **Azure 권한**: `check-prerequisites` 스크립트 실행 시 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위의 권한을 요청하고 구독 전체 Owner를 무조건 요청하지 마세요.
-- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 시작합니다. Windows Docker Desktop은 Linux containers 모드와 선택한 WSL 배포판의 통합을 켭니다. Windows와 WSL의 CLI가 같은 엔진에 연결된다고 가정하지 마세요.
-- **Copilot 사용 권한**: 앱 로그인, 라이선스와 조직의 플러그인 정책을 확인합니다.
+- **컨테이너 엔진**: Windows와 macOS는 [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 Linux 컨테이너를 실행합니다. Linux는 [Docker Engine](https://docs.docker.com/engine/install/) 또는 [Podman](https://podman.io/docs/installation)을 설치합니다. 도우미는 엔진을 자동 설치하지 않습니다. 대체 엔진은 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 따릅니다.
+- **Azure 권한**: 표시된 구독과 테넌트가 실습 대상인지 확인합니다. 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한은 별도 준비합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위만 요청하고 구독 전체 Owner를 무조건 요청하지 않습니다.
+- **인증**: 로그인, 구독 변경과 공급자 등록은 항목별로 승인합니다. 점검 스크립트는 조회만 수행합니다.
 
-## Copilot app에 플러그인 설치하기
+## Copilot app과 Modernize CLI 준비
 
-1. Copilot app에서 GitHub 계정으로 로그인합니다.
-2. **Customize**의 마켓플레이스 추가 기능(앱 버전에 따라 Settings > Plugins)에서 `microsoft/github-copilot-modernization`을 추가합니다.
-3. 출처를 검토하고 허용한 뒤 `github-copilot-modernization` 플러그인을 설치합니다.
-4. Agent picker에 `modernize` 또는 `github-copilot-modernization:modernize`가 보이는지 확인합니다. 내부 coordinator/worker를 직접 선택하지 않습니다.
+Copilot app에 로그인하고 사용할 계정의 라이선스와 조직 정책을 확인합니다. 앱에서 기존 복제본의 **Current checkout**, Windows는 **This computer** 세션을 사용합니다. `/terminal`로 터미널을 열고 워크숍 루트에서 확인합니다.
 
-목록이 갱신되지 않으면 새 세션을 열거나 앱을 다시 시작합니다. 무인 자동 승인이나 모든 권한 허용을 켜지 마세요. 문제가 계속되면 [문제 해결](08-troubleshooting.md)을 확인하고 멈춥니다. Copilot CLI나 VS Code로 임의 전환하지 않습니다.
+```text
+gh --version
+gh auth status
+modernize --version
+modernize assess --help
+modernize plan create --help
+modernize plan execute --help
+```
+
+gh에 로그인하지 않았다면 참가자가 `gh auth login`을 직접 수행합니다. gh 인증, Copilot app 로그인, `az login`, `azd auth login`은 별개입니다. gh 인증 성공만으로 모델 사용 권한이 확인되지는 않습니다. `modernize help models`로 사용할 모델을 확인하며 앱의 모델 설정이 CLI에 자동 적용된다고 가정하지 않습니다.
 
 ## 샘플 다운로드하기
 
-```bash
-# zsh/bash
-bash scripts/download-sample.sh --track java
-```
+같은 **워크숍 루트**에서 실행합니다.
+
+Windows:
 
 ```powershell
-# PowerShell
-powershell.exe -File ./scripts/download-sample.ps1 -Track java
+./scripts/download-sample.ps1 -Track java
 ```
 
-샘플은 워크숍 루트의 `java` 폴더에 다운로드됩니다. 다운로드할 `java` 폴더는 없거나 비어 있어야 합니다.
+macOS와 Linux:
 
-`java/pom.xml`이 있는지 확인한 뒤 [실습 1: 원본 실행](01-run-locally.md)으로 이동합니다. 기본 경로의 앱 파일은 워크숍 저장소에서 관리하며, 실습 1에서 생성 파일과 비밀이 없는지 검토한 뒤 비교 기준이 될 원본 앱의 현재 상태를 커밋합니다. 저장소 밖에 다운로드했다면 해당 앱은 이 저장소에서 추적되지 않습니다.
+```bash
+./scripts/download-sample.sh --track java
+```
+
+대상 `java` 폴더는 없거나 비어 있어야 합니다. `java/pom.xml`을 확인한 뒤 [원본 실행](01-run-locally.md)으로 이동합니다. 개인 실습 복제본에서는 원본 실행 후 생성 파일과 비밀을 제외하고 기준선 커밋을 만듭니다. 다운로드 도우미는 앱을 커밋하거나 별도 `.git`을 만들지 않습니다.

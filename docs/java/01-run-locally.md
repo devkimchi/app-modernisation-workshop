@@ -2,173 +2,155 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](00-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표
+## 목표와 작업 경로
 
-Java 8 원본 앱을 로컬에서 빌드하고 실행해 이미지 업로드와 비동기 썸네일 생성이 정상 동작하는지 확인합니다. 이 결과를 업그레이드 후 동작을 비교하는 기준으로 삼습니다.
+Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성을 확인합니다. 이 결과가 업그레이드 후 비교 기준입니다. 사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
 
-## 사전 준비
+Copilot app에서 다운로드한 앱 폴더를 열고 **Current checkout**을 사용합니다. Windows는 **This computer**의 PowerShell 7 터미널을 엽니다. 워크숍 루트에서 시작했다면 다음 명령으로 앱 루트에 이동합니다.
 
-사전 점검과 샘플 다운로드를 완료하고, 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `.mvn`이 있는지 확인합니다.
-
-### 실습 셸과 작업 경로
-
-> [!NOTE]
-> **Windows 사용자**
->
-> Windows 터미널에서 아래 명령으로 WSL 셸에 접속합니다.
->
-> ```powershell
-> # PowerShell
-> wsl
-> ```
-
-Windows에서는 WSL 셸, macOS에서는 터미널에서 워크숍 루트로 이동합니다. 기본 위치로 다운로드했다면 다음 명령으로 앱 루트(`java`)로 이동합니다.
-
-```bash
-# zsh/bash
+```text
 cd java
+git rev-parse --show-toplevel
+git branch --show-current
+git status --short
 ```
 
-이후 명령은 **앱 루트(`java`)** 에서 실행합니다.
+이후 위치는 **앱 루트(`java`)**입니다. 별도 worktree를 사용한다면 그 사본에 앱과 `../scripts`가 모두 있는지 확인합니다. 다른 사본의 앱을 평가하거나 수정하지 않습니다. 앱 실행용 터미널과 Modernize CLI용 터미널은 분리합니다.
 
 ## JDK 8과 빌드 확인
 
-아래 스크립트를 실행해 Java 8을 선택합니다.
+Windows PowerShell 7:
+
+```powershell
+. ../scripts/use-java.ps1 -Jdk 8
+./mvnw.cmd -version
+./mvnw.cmd clean verify
+```
+
+macOS와 Linux의 Bash 또는 Zsh:
 
 ```bash
-# zsh/bash
 source ../scripts/use-java.sh --jdk 8
+./mvnw -version
+./mvnw clean verify
 ```
 
-이어서 앱 루트에서 Maven Wrapper 버전을 확인하고 전체 검증을 실행합니다.
+JDK 도우미는 현재 셸의 `JAVA_HOME`과 `PATH`만 바꿉니다. Java/Javac와 Maven이 모두 8을 사용하는지 확인합니다. 빌드 실패 시 현대화를 시작하지 않습니다.
 
-```bash
-# zsh/bash
-bash ./mvnw -version && bash ./mvnw clean verify
+Copilot app 채팅에 빌드를 맡긴다면 다음 조건을 함께 전달합니다. 앱 대화의 실행 프로세스가 터미널의 JDK 선택을 자동으로 상속하지는 않습니다.
+
+```text
+이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘. 소스나 런타임은 바꾸지 마.
+Windows는 PowerShell 7에서 . ../scripts/use-java.ps1 -Jdk 8을 먼저 적용하고
+./mvnw.cmd를 사용해 줘. macOS와 Linux는 Bash 또는 Zsh에서
+source ../scripts/use-java.sh --jdk 8을 먼저 적용하고 ./mvnw를 사용해 줘.
+같은 셸에서 버전과 clean verify 결과를 기록해 줘. 설치는 별도 승인을 받아 줘.
 ```
-
-> [!IMPORTANT]
->
-> 검증에 실패하면 원인을 해결할 때까지 현대화를 시작하지 않습니다. Copilot app에서 문제를 먼저 해결하세요.
 
 ## 로컬 서비스와 앱 실행
 
-실습에는 개인 정보가 포함되지 않은 실제 PNG 파일을 사용합니다. 확장자만 바꾼 텍스트 파일이나 손상된 이미지는 썸네일을 만들지 못할 수 있습니다. 개인 자료나 업무 파일은 업로드하지 마세요.
+개인 정보가 없는 실제 PNG 파일을 준비합니다. 확장자만 바꾼 텍스트나 손상된 이미지는 사용하지 않습니다. 원본 시작 스크립트는 Docker 컨테이너를 만들고 web/worker를 `dev` 프로필로 실행합니다. 파일은 로컬 `storage`에 저장하고 RabbitMQ로 썸네일 작업을 보냅니다.
 
-`startapp.sh`는 웹 앱과 worker를 `dev` 프로필로 실행합니다. 이 프로필은 파일을 로컬 `storage` 폴더에 저장하고 썸네일 생성 작업을 RabbitMQ로 전달합니다.
+기존 `assets-postgres`, `assets-rabbitmq`와 포트 충돌 여부를 먼저 확인합니다. 공유 장비 또는 Podman 사용자는 [루프백 수동 실행](08-troubleshooting.md#루프백-수동-실행)을 사용합니다. 원본 스크립트는 `docker` 명령을 호출하므로 Podman만 설치한 환경에서 그대로 실행하지 않습니다.
 
-아래 스크립트는 Docker 컨테이너를 시작한 뒤 웹 앱과 worker를 백그라운드로 실행합니다.
+Windows:
+
+```powershell
+./scripts/startapp.cmd
+```
+
+macOS와 Linux:
 
 ```bash
-# zsh/bash
-bash scripts/startapp.sh
+./scripts/startapp.sh
 ```
+
+샘플 `.sh`는 자체 shebang인 `#!/bin/bash`로 실행됩니다. Windows에서는 **Web Module**, **Worker Module**이라는 별도 `cmd` 창이 열리며 해당 창에서 로그를 확인합니다.
 
 ## 현재 앱 동작 확인
 
-브라우저에서 `http://localhost:8080`을 열어 초기 목록이 표시되는지 확인합니다.
+브라우저에서 `http://localhost:8080`을 열고 다음을 확인합니다.
 
-> [!CAUTION]
->
-> `http://localhost:8080`으로 접속할 수 없다면 아래 명령으로 IP 주소를 확인한 뒤 해당 주소로 접속해 보세요.
->
-> ```bash
-> hostname -I
-> ```
->
-> `http://<IP주소>:8080`
->
-> 자세한 해결 방법은 [문제 해결 문서의 "Windows에서 localhost:8080에 연결할 수 없음" 절](08-troubleshooting.md#windows에서-localhost8080에-연결할-수-없음)을 참고하세요.
+- 테스트 이미지를 업로드하고 원본과 썸네일이 화면에 표시되는지 확인합니다.
+- RabbitMQ 관리 화면 `http://localhost:15672`에서 로컬 데모 계정 `guest`/`guest`로 로그인합니다. **Queues and Streams**의 `image-processing` 큐에서 Ready, Unacked, Consumers를 확인합니다.
+- Ready가 0이라는 사실만으로 성공을 판단하지 않습니다. worker의 `Successfully generated thumbnail` 로그와 실제 썸네일을 함께 확인합니다.
+- web 로그의 `HikariPool-1 - Start completed`와 이후 오류를 확인합니다. 시작 시 연결 성공이 현재 DB 연결까지 보장하지는 않습니다.
+- `dev` 업로드는 DB에 이미지 메타데이터를 기록하지 않습니다. 화면과 `storage`에 파일이 있어도 DB에 행이 없는 것이 정상입니다. `dev` 외 S3 경로의 메타데이터는 다음 평가 단계에서 구분합니다.
 
-이어서 다음 항목을 확인합니다.
-
-- 테스트 이미지를 업로드하고 업로드 결과와 썸네일이 화면에 나타나는지 확인합니다.
-  - 웹 앱은 원본을 로컬 `storage` 폴더에 저장하고 RabbitMQ에 썸네일 생성 메시지를 보냅니다.
-- RabbitMQ 관리 화면(`http://localhost:15672`)에서 큐 상태를 확인합니다.
-  - `http://localhost:15672`로 접속할 수 없다면 앞서 확인한 IP 주소로 접속합니다.
-  - `guest`/`guest`로 로그인하고 **Queues and Streams**에서 `image-processing` 큐의 Ready, Unacked와 Consumers를 확인합니다.
-  - WSL IP로 접속하면 기본 `guest` 계정의 로그인이 제한될 수 있습니다.
-  - Ready가 0이어도 처리 성공을 단정하지 말고 worker 로그와 썸네일도 확인합니다.
-- worker 로그에서 메시지 처리와 썸네일 생성을 확인합니다.
-  - worker가 메시지를 처리하지 않으면 원본이 저장되어도 썸네일이 생성되지 않을 수 있습니다.
-- 앱 로그에서 PostgreSQL 연결을 확인합니다.
-  - `dev` 프로필은 이미지 메타데이터를 DB에 저장하지 않습니다. 파일이 `storage` 폴더와 화면에 보여도 DB에 행이 없는 것이 정상입니다.
-  - AWS S3 저장과 DB 메타데이터 처리는 [평가와 계획](02-assess-and-plan.md)에서 다룹니다.
-
-`startapp.sh`로 실행했다면 이미지 업로드 후 앱 루트에서 로그를 확인합니다.
+macOS와 Linux에서는 앱 루트의 로그를 확인합니다.
 
 ```bash
-# zsh/bash
 tail -n 100 logs/worker.log
 grep -n -F 'HikariPool-1 - Start completed' logs/web.log
 grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
 ```
 
-- worker 로그에서 업로드한 이미지의 `Successfully generated thumbnail`을 확인합니다.
-- 웹 앱 로그에서 `HikariPool-1 - Start completed` 메시지로 시작 시 PostgreSQL 연결을 확인합니다.
-- 검색 결과의 시각과 주변 내용을 확인해 이후 PostgreSQL 연결 오류가 있는지 살펴봅니다. 오류 검색 결과가 없더라도 현재 연결이 정상이라고 단정하지 않습니다.
+Windows의 원본 `.cmd`는 각 창에 로그를 표시합니다. 별도로 로그 파일을 저장한 경우에만 실제 경로로 다음을 실행합니다.
 
-> [!CAUTION]
->
-> 업로드 완료 메시지만으로 썸네일 처리가 끝났다고 판단하지 마세요. DB나 worker에 오류가 있으면 홈 화면이 열리더라도 오류를 해결한 뒤 다시 확인합니다.
+```powershell
+Get-Content "<worker-로그-경로>" -Tail 100
+Select-String -Path "<web-로그-경로>" -SimpleMatch 'HikariPool-1 - Start completed'
+Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection refused|connection timed out' -Context 3,3
+```
+
+홈 화면이나 업로드 완료 메시지만으로 비동기 처리가 끝났다고 판단하지 않습니다. DB 또는 worker 오류가 있으면 해결 후 다시 확인합니다.
 
 ## 로컬 앱 종료
 
-동작 확인을 마쳤다면 `startapp.sh`로 시작한 앱을 **앱 루트(`java`)** 에서 다음 명령으로 종료합니다.
+시작 스크립트로 만든 프로세스와 컨테이너인지 확인한 뒤, **앱 루트**에서 해당 종료 스크립트를 실행합니다. 종료 스크립트의 컨테이너 정리 범위를 먼저 읽습니다.
+
+Windows:
+
+```powershell
+./scripts/stopapp.cmd
+```
+
+macOS와 Linux:
 
 ```bash
-# zsh/bash
-bash scripts/stopapp.sh
+./scripts/stopapp.sh
 ```
+
+Windows의 Web Module과 Worker Module 프로세스가 끝났는지 확인하고 남은 창은 직접 닫습니다. PID 파일이 없거나 종료에 실패했다면 [문제 해결](08-troubleshooting.md)을 따르고 모든 Java 프로세스를 이름으로 종료하지 않습니다.
 
 ## 원본 앱 상태 커밋
 
-기본 저장 경로는 앱 루트의 `storage` 폴더입니다. `local.storage.directory`를 변경했다면 실제 경로를 확인하고, 생성된 파일이 저장소에 포함되지 않도록 제외 규칙을 보완합니다.
+개인 실습 복제본의 기준선을 기록합니다. 앱 폴더 안에 별도 `.git`을 만들지 않습니다. 기존 제외 규칙을 보존하고 생성물과 비밀을 제외합니다. `local.storage.directory`를 바꿨다면 그 경로도 제외합니다.
+
+Windows:
+
+```powershell
+Add-Content ./.gitignore "`n.azure/`nlogs/`npids/`n/storage/`n**/target/`n**/uploads/`n.env`n.env.*"
+```
+
+macOS와 Linux:
 
 ```bash
-# zsh/bash
 printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.*\n' >> .gitignore
+```
+
+다음 명령은 두 환경에서 같습니다. `git add .`는 앱 루트에서 실행하고 스테이징된 전체 범위를 검토합니다.
+
+```text
 git status --short
-```
-
-커밋할 파일을 확인한 뒤 스테이징합니다.
-
-```bash
-# zsh/bash
 git add .
-```
-
-스테이징한 파일을 검토합니다.
-
-```bash
-# zsh/bash
 git diff --cached --stat
 git diff --cached
 ```
 
-업로드 파일, 로그, 인증 토큰 또는 연결 문자열은 커밋하지 마세요. 이런 파일이 스테이징되어 있으면 제외하고, 제외 규칙을 보완한 다음 다시 확인합니다. 검토를 마치면 Java 8 원본 앱의 현재 상태를 커밋합니다.
+업로드 파일, 로그, 토큰이나 연결 비밀이 있으면 스테이징에서 제외하고 다시 검토합니다. 검토가 끝났을 때만 커밋합니다.
 
-```bash
-# zsh/bash
+```text
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
-Git 사용자 이름이나 이메일이 설정되지 않아 커밋할 수 없다면 아래 명령으로 이 저장소에 사용할 이름과 이메일을 설정합니다. 이 설정은 이 저장소에만 적용되며, 스크립트가 대신 설정하지 않습니다.
+Git 신원이 없다면 참가자가 이 저장소에만 사용할 값을 설정한 뒤 다시 커밋합니다.
 
-```bash
-# zsh/bash
+```text
 git config user.name "Your Name"
 git config user.email "you@example.com"
 ```
 
 ## 완료 및 다음 단계
 
-다음 항목을 모두 확인하면 이 실습을 완료한 것입니다.
-
-- Java 8 빌드 성공
-- 웹 앱과 worker 실행
-- PostgreSQL과 RabbitMQ 연결
-- 이미지 업로드와 썸네일 생성
-- 원본 앱 상태 커밋
-
-확인을 마쳤다면 [실습 2: 평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.
+Java 8 빌드, web/worker 실행, PostgreSQL/RabbitMQ 연결, 업로드/썸네일과 기준선 커밋을 확인했다면 [평가와 계획](02-assess-and-plan.md)으로 이동합니다. 확인하지 못한 항목은 성공으로 표시하지 않습니다.

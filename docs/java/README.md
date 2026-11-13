@@ -11,7 +11,7 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 25**로 업그레이드하고 Azure 서�
 
 | 순서 | 실습 | 완료 시 확인할 것 |
 | --- | --- | --- |
-| 0 | [준비](00-setup.md) | 저장소 생성과 클론, 사전 점검과 보완, 플러그인 설치 및 샘플 다운로드 |
+| 0 | [준비](00-setup.md) | 저장소 생성과 클론, 사전 점검과 보완, Modernize CLI 준비 및 샘플 다운로드 |
 | 1 | [원본 로컬 실행](01-run-locally.md) | Java 8의 웹, DB 연결, 큐, worker 동작과 워크숍 저장소 기준선 커밋 |
 | 2 | [평가와 계획](02-assess-and-plan.md) | 평가 결과, 제약조건, 단계별 승인 계획 |
 | 3 | [JDK 25 업그레이드](03-upgrade.md) | JDK 25 빌드와 기존 기능 회귀 검사 |
@@ -21,14 +21,8 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 25**로 업그레이드하고 Azure 서�
 | 7 | [정리](07-cleanup.md) | Azure 리소스와 로컬 실습 프로세스 정리 |
 | 8 | [문제 해결](08-troubleshooting.md) | 진행 중 발생한 오류의 원인과 조치 확인 |
 
-> [!WARNING]
-> **Windows 사용자**
->
-> SDKMAN과 Java 도구는 WSL2 안에 있습니다. Copilot app이 Windows 셸에서 작업한다면 프롬프트에 실제 WSL 배포판과 앱 경로를 전달하고, **Java 명령을 WSL2에서 실행하도록 명시하세요.** 앱의 세션 작업 경로가 바뀌면 WSL 경로도 다시 확인하세요.
+Windows는 PowerShell 7, macOS와 Linux 데스크톱은 Bash 또는 Zsh 터미널에서 진행합니다. `.sh`는 직접 실행하면 Bash로 실행되며 macOS 기본 Bash 3.2도 지원합니다. JDK 선택 도우미만 현재 셸에 source 또는 dot-source합니다.
 
-> [!NOTE]
-> **macOS 사용자**
->
-> Copilot app에 추가한 앱 폴더에서 Bash로 Java 명령을 실행하세요.
+Copilot app 터미널에서 평가하고 네 계획을 단계별로 검토합니다. 코드 변경은 Modernize CLI가 수행하고, 실제 Azure 배포와 정리는 참가자가 azd로 실행합니다.
 
 각 실습의 완료 조건에 따라 실제 앱 동작을 확인하세요. 문제가 생기면 [문제 해결](08-troubleshooting.md)을 참고하세요.

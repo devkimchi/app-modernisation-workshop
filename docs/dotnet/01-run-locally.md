@@ -12,7 +12,14 @@
 Set-Location ./dotnet
 ```
 
-이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 원본 기준선은 다운로드한 동일 경로에서 확인하는 것이 간단합니다. 별도 worktree 세션을 사용하면 앱과 도우미가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다.
+이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가하고 **This computer**, **Current checkout**을 사용합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 별도 worktree 세션을 사용하면 앱과 도우미가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다. Modernize CLI용 터미널과 IIS Express용 장기 실행 터미널은 분리합니다.
+
+```powershell
+Get-Location
+git rev-parse --show-toplevel
+git branch --show-current
+git status --short
+```
 
 ```powershell
 Get-Content ./ContosoUniversity.csproj | Select-String TargetFrameworkVersion
@@ -26,7 +33,7 @@ dotnet --list-sdks
 
 ## 1. Copilot app에서 복원과 빌드
 
-다음과 같이 요청합니다. 기본 에이전트의 Windows 터미널을 사용하며, 이 단계에 `Upgrade`를 선택하지 않습니다.
+Copilot app 채팅에 다음과 같이 요청하거나 참가자가 직접 실행합니다. 이 단계에서는 Modernize CLI로 소스를 변경하지 않습니다.
 
 ```text
 이 세션의 실제 앱 루트를 확인하고 Windows PowerShell 7에서 원본을 복원/빌드해 줘.
@@ -40,7 +47,7 @@ Visual Studio IDE를 열지 말고, 워크숍 scripts/run-dotnet-original.ps1에
 참가자가 직접 실행해도 같은 경로입니다. 기본 폴더 구조에서는 앱 루트에서:
 
 ```powershell
-pwsh -NoProfile -File ../scripts/run-dotnet-original.ps1 -AppPath .
+../scripts/run-dotnet-original.ps1 -AppPath .
 if ($LASTEXITCODE -ne 0) { throw '원본 복원/빌드 실패. 다음 단계로 진행하지 마세요.' }
 ```
 
@@ -84,7 +91,7 @@ Web.config와 DB 생성/재생성 경로를 확인했고 실습 전용 데이터
 ```
 
 ```powershell
-pwsh -NoProfile -File ../scripts/run-dotnet-original.ps1 -AppPath . -Run -AllowDatabaseInitialization
+../scripts/run-dotnet-original.ps1 -AppPath . -Run -AllowDatabaseInitialization
 ```
 
 도우미는 IIS Express 설치본의 `AppServer/applicationhost.config`를 기반으로 앱 내부 `.vs/workshop/applicationhost-<고유값>.config`를 생성합니다. 전역 IIS 설정, `Web.config`와 기존 `.vs` 설정은 바꾸지 않습니다. CLR v4 Integrated 풀과 원본 프로젝트의 **Windows 인증 활성/익명 인증 비활성**을 유지합니다. 기본 주소는 **`http://localhost:58801/`**입니다. 원본 IDE 프로필의 `https://localhost:44300/`과 달리, CLI 기본은 localhost 전용 HTTP 바인딩으로 인증서/HTTP.sys SSL 등록 없이 실행합니다. 외부 공개나 실제 비밀 데이터 전송에 사용하지 않습니다.

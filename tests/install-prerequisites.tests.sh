@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./tests/install-prerequisites.tests.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$ROOT/scripts/install-prerequisites.sh"
 PASSED=0
+
+if [[ "$(uname -s)" == Darwin ]] && ! command -v sha256sum >/dev/null 2>&1; then
+    sha256sum() { shasum -a 256 "$@"; }
+fi
 
 assert() {
     local name="$1"; shift
@@ -11,6 +19,7 @@ assert() {
 }
 
 bash -n "$ROOT/scripts/install-prerequisites.sh"
+assert 'top-level canonical paths have one leading separator' test "$(canonical_tool_path /usr)" = /usr
 noninteractive=$(
     uname() { printf '%s\n' Darwin; }
     install_missing_tools() { printf '%s\n' 'UNEXPECTED INSTALL'; }
@@ -23,6 +32,7 @@ if [[ "$noninteractive" == *'UNEXPECTED INSTALL'* ]]; then exit 1; else PASSED=$
 skip_output=$(
     SDKMAN_DIR='/nonexistent-workshop-sdkman-test'
     tool_path() { printf '/usr/bin/%s\n' "$1"; }
+    ensure_homebrew() { return 0; }
     confirm_install() { printf '%s\n' 'declined'; return 1; }
     install_missing_tools Darwin
 )
@@ -31,17 +41,16 @@ assert 'SDKMAN consent requested' grep -q 'declined' <<< "$skip_output"
 
 linux_output=$(
     SDKMAN_DIR='/nonexistent-workshop-sdkman-test'
-    WSL_DISTRO_NAME=Ubuntu
-    tool_path() { case "$1" in node) printf '%s\n' '/mnt/c/node.exe' ;; az) printf '%s\n' '/usr/bin/az' ;; esac; }
+    tool_path() { case "$1" in (az|gh|modernize) printf '/usr/bin/%s\n' "$1" ;; esac; }
     apt-get() { :; }
     sudo() { printf 'sudo-call: %s\n' "$*"; }
     run_remote_installer() { printf 'installer: %s %s\n' "$1" "$2"; }
     install_node_with_nvm() { printf 'nvm-node-install\n'; }
+    install_linux_azd() { return 0; }
     confirm_install() { return 1; }
     install_missing_tools Linux
 )
-assert 'WSL Windows binary distinguished' grep -q 'Windows 드라이브' <<< "$linux_output"
-assert 'WSL Node uses nvm' grep -q 'nvm-node-install' <<< "$linux_output"
+assert 'Linux Node uses nvm' grep -q 'nvm-node-install' <<< "$linux_output"
 if [[ "$linux_output" == *'sudo-call:'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
 if [[ "$linux_output" == *'installer: https://aka.ms/'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
 
@@ -49,6 +58,7 @@ failure_output=$(
     SDKMAN_DIR='/nonexistent-workshop-sdkman-test'
     tool_path() { if [[ "$1" != node ]]; then printf '/usr/bin/%s\n' "$1"; fi; }
     install_node_with_nvm() { return 1; }
+    ensure_homebrew() { return 0; }
     confirm_install() { return 1; }
     if install_missing_tools Darwin; then printf '%s\n' 'UNEXPECTED SUCCESS'; else printf '%s\n' 'EXPECTED FAILURE'; fi
 )
@@ -116,7 +126,8 @@ assert 'non-APT environment requires manual action' grep -q '직접 설치' <<< 
 assert 'missing manual dependency fails' grep -q 'EXPECTED FAILURE' <<< "$manual_output"
 
 mkdir -p "$ROOT/.test-output"
-test_dir=$(mktemp -d "$ROOT/.test-output/workshop-sdkman-test.XXXXXXXX")
+test_dir="$ROOT/.test-output/workshop-sdkman-test.$$.$RANDOM"
+(umask 077; mkdir "$test_dir")
 trap 'rm -rf -- "$test_dir"' EXIT
 mkdir -p "$test_dir/bin"
 printf 'preserve\n' > "$test_dir/marker"
@@ -212,12 +223,12 @@ fresh_nvm=$(
     tool_path() { if [[ -n "${MOCK_ACTIVE_VERSION:-}" ]]; then printf '%s/versions/node/%s/bin/node\n' "$NVM_DIR" "$MOCK_ACTIVE_VERSION"; fi; }
     confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
     run_remote_installer() {
-        printf 'installer: %s %s\n' "$1" "$2"
+        printf 'installer: %s %s %s\n' "$1" "$2" "$3"
         cp "$test_dir/nvm/nvm.sh" "$NVM_DIR/nvm.sh"
     }
     install_node_with_nvm 2>&1
 )
-assert 'nvm installed from pinned official source' grep -q 'installer: https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh user' <<< "$fresh_nvm"
+assert 'nvm installed from pinned official source with Bash' grep -q 'installer: https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh user bash' <<< "$fresh_nvm"
 assert 'nvm and Node separate approvals' grep -q 'approval: nvm:' <<< "$fresh_nvm"
 assert 'fresh nvm installs Node' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$fresh_nvm"
 
@@ -334,7 +345,6 @@ chmod +x "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"
 cp "$test_dir/nvm/nvm.sh" "$test_dir/update-nvm/nvm.sh"
 node_update_case() (
     NVM_DIR="$test_dir/update-nvm"
-    WSL_DISTRO_NAME=''
     local before="${MOCK_NODE_BEFORE:-v22.1.0}"
     mkdir -p "$NVM_DIR/versions/node/$before/bin"
     printf '#!/usr/bin/env bash\nprintf "%%s\\n" %q\n' "$before" > "$NVM_DIR/versions/node/$before/bin/node"
@@ -401,7 +411,6 @@ for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.
 done
 unknown_node=$(
     NVM_DIR="$test_dir/update-nvm"
-    WSL_DISTRO_NAME=''
     node() { printf 'v22.1.0\n'; }
     tool_path() { printf '%s/bin/sdkman-init.sh\n' "$test_dir"; }
     confirm_install() { return 0; }
@@ -505,6 +514,7 @@ azure_update_case() (
         if (( changed )); then printf '%s\n' "${MOCK_AZURE_AFTER:-2.2.0}"; else printf '2.1.0\n'; fi
     }
     azd() { printf 'azd version '; az; }
+    gh() { printf 'gh version '; az; }
     confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
     if update_azure_tool "$platform" "$tool" "$path"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
@@ -520,6 +530,10 @@ for tool in az azd; do
 done
 apt_azd=$(MOCK_OWNER=azd azure_update_case Linux azd "$test_dir/foreign/bin/azd")
 assert 'APT azd targeted package updated' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y azd=2.2.0-1' <<< "$apt_azd"
+apt_gh=$(MOCK_OWNER=gh MOCK_APT_ORIGIN=cli.github.com azure_update_case Linux gh "$test_dir/foreign/bin/az")
+assert 'gh update reuses verified official APT route' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y gh=2.2.0-1' <<< "$apt_gh"
+gh_untrusted=$(MOCK_OWNER=gh MOCK_APT_ORIGIN=example.invalid azure_update_case Linux gh "$test_dir/foreign/bin/az")
+assert 'gh update refuses foreign APT source' test "${gh_untrusted#*sudo-call:}" = "$gh_untrusted"
 apt_updated=$(azure_update_case Linux az "$test_dir/foreign/bin/az")
 assert 'APT only verified package/version requested without removals' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y azure-cli=2.2.0-1' <<< "$apt_updated"
 assert 'APT metadata refresh separately approved' grep -q 'approval: az 2.1.0' <<< "$apt_updated"
@@ -565,23 +579,23 @@ azd_script_case() (
     linux_azd_link() { printf '%s/bin/azd\n' "$dir"; }
     linux_azd_target() { printf '%s/install/azd-linux-amd64\n' "$dir"; }
     tool_path() { [[ -L "$dir/bin/azd" ]] && printf '%s/bin/azd\n' "$dir"; return 0; }
-    azd_package_owned() { case "$scenario" in owned) return 0 ;; owner-failure) return 2 ;; *) return 1 ;; esac; }
+    azd_package_owned() { case "$scenario" in (owned) return 0 ;; (owner-failure) return 2 ;; (*) return 1 ;; esac; }
     dpkg-query() { return 1; }
     mv() { [[ "$scenario" != save-failure ]] && command mv "$@"; }
     azure_tool_version() {
         if (( changed )); then
-            case "$scenario" in downgrade) printf '1.0.0\n' ;; invalid) return 1 ;; *) printf '2.2.0\n' ;; esac
+            case "$scenario" in (downgrade) printf '1.0.0\n' ;; (invalid) return 1 ;; (*) printf '2.2.0\n' ;; esac
         else printf '2.1.0\n'; fi
     }
     confirm_install() {
         approvals=$((approvals + 1))
         printf 'approval: %s\n' "$1"
-        case "$scenario:$approvals" in decline-adoption:1|decline-update:2|tracked-decline:1) return 1 ;; esac
+        case "$scenario:$approvals" in (decline-adoption:1|decline-update:2|tracked-decline:1) return 1 ;; esac
         if [[ "$scenario" == concurrent ]]; then printf 'changed\n' >> "$dir/install/azd-linux-amd64"; fi
         return 0
     }
     run_remote_installer() {
-        printf 'official-installer: %s\n' "$1"
+        printf 'official-installer: %s %s %s\n' "$1" "$2" "$3"
         [[ "$scenario" != failure ]] || return 1
         changed=1
         [[ "$scenario" != missing ]] || return 0
@@ -608,9 +622,12 @@ azd_script_case() (
         record-dir) mkdir -p "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install" ;;
     esac
     case "$scenario" in
-        tracked|tracked-decline|tampered|malformed)
+        tracked|tracked-no-newline|tracked-decline|tampered|malformed)
             mkdir -p "$XDG_STATE_HOME/app-modernisation-workshop"
             printf 'official-script\n%s\n2.1.0\n%s\n' "$(linux_azd_target)" "$(azd_file_hash "$(linux_azd_target)")" > "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
+            if [[ "$scenario" == tracked-no-newline ]]; then
+                printf 'official-script\n%s\n2.1.0\n%s' "$(linux_azd_target)" "$(azd_file_hash "$(linux_azd_target)")" > "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
+            fi
             [[ "$scenario" != tampered ]] || printf 'changed\n' >> "$(linux_azd_target)"
             [[ "$scenario" != malformed ]] || printf 'invalid\n' > "$XDG_STATE_HOME/app-modernisation-workshop/azd-script-install"
             ;;
@@ -628,9 +645,9 @@ azd_script_case() (
         fi
     fi
 )
-for scenario in fresh adoption tracked route; do
+for scenario in fresh adoption tracked tracked-no-newline route; do
     azd_output=$(azd_script_case "$scenario")
-    assert "azd $scenario installs officially" grep -q 'official-installer: https://aka.ms/install-azd.sh' <<< "$azd_output"
+    assert "azd $scenario installs officially using Bash" grep -q 'official-installer: https://aka.ms/install-azd.sh user bash' <<< "$azd_output"
     assert "azd $scenario verifies runtime" grep -q '\[PASS\]' <<< "$azd_output"
     assert "azd $scenario persists version" grep -q '^2.2.0$' <<< "$azd_output"
     assert "azd $scenario records actual file hash" grep -q '^record hash matches binary$' <<< "$azd_output"
@@ -660,6 +677,8 @@ azd_dispatch=$(
     tool_path() { [[ "$1" != azd ]] && printf '/usr/bin/%s\n' "$1"; return 0; }
     confirm_install() { return 1; }
     install_linux_azd() { printf 'azd-script-dispatched\n'; return 1; }
+    apt-get() { :; }
+    sudo() { :; }
     if install_missing_tools Linux; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
 assert 'fresh Linux azd uses verified script helper' grep -q '^azd-script-dispatched$' <<< "$azd_dispatch"
@@ -670,9 +689,12 @@ brew_setup_case() (
     command() {
         if [[ "$*" == '-v brew' ]]; then (( available )); else builtin command "$@"; fi
     }
-    brew() { printf 'brew-call: %s\n' "$*"; return "${MOCK_BREW_VERSION_FAILURE:-0}"; }
+    brew() {
+        if [[ "$1" == shellenv ]]; then printf 'export BREW_FIXTURE_READY=1\n'; else printf 'brew-call: %s\n' "$*"; fi
+        return "${MOCK_BREW_VERSION_FAILURE:-0}"
+    }
     run_remote_installer() {
-        printf 'installer: %s %s\n' "$1" "$2"
+        printf 'installer: %s %s %s\n' "$1" "$2" "$3"
         [[ "${MOCK_BREW_INSTALL_FAILURE:-0}" == 0 ]] || return 1
         available=1
     }
@@ -698,7 +720,8 @@ mac_missing_brew_case() (
     tool_path() { [[ "$1" == az ]] || printf '/fixture/%s\n' "$1"; }
     update_node_with_nvm() { :; }
     update_azure_tool() { :; }
-    brew() { printf 'brew-call: %s\n' "$*"; }
+    install_modernize() { :; }
+    brew() { if [[ "$1" != shellenv ]]; then printf 'brew-call: %s\n' "$*"; fi; }
     run_remote_installer() { printf 'installer: %s\n' "$1"; available=1; }
     confirm_install() {
         printf 'approval: %s\n' "$1"
@@ -707,8 +730,8 @@ mac_missing_brew_case() (
     if install_missing_tools Darwin "$1"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
 mac_default=$(mac_missing_brew_case 0)
-assert 'default does not install Homebrew' test "${mac_default#*installer:}" = "$mac_default"
-assert 'default does not offer Homebrew' test "${mac_default#*approval: Homebrew:}" = "$mac_default"
+assert 'default installs missing Homebrew with consent' grep -q 'approval: Homebrew:' <<< "$mac_default"
+assert 'default installs Azure CLI after Homebrew' grep -q 'brew-call: install azure-cli' <<< "$mac_default"
 mac_update=$(mac_missing_brew_case 1)
 assert 'update offers missing Homebrew separately' grep -q 'approval: Homebrew:' <<< "$mac_update"
 assert 'update offers Azure CLI separately after Homebrew' grep -q 'approval: az:' <<< "$mac_update"
@@ -716,4 +739,165 @@ assert 'update installs only requested Homebrew package' grep -q 'brew-call: ins
 mac_decline=$(MOCK_APPROVED=0 mac_missing_brew_case 1)
 assert 'declined missing Homebrew causes no installs' test "${mac_decline#*installer:}" = "$mac_decline"
 assert 'declined missing Homebrew prevents package install' test "${mac_decline#*brew-call: install}" = "$mac_decline"
+assert 'declined missing Homebrew fails' grep -q 'EXPECTED FAILURE' <<< "$mac_decline"
+
+for update in 0 1; do
+    brew_order=$(
+        SDKMAN_DIR="$test_dir/no-sdkman"
+        ensure_homebrew() { printf 'FIRST homebrew\n'; return 1; }
+        tool_path() { :; }
+        install_node_with_nvm() { printf 'continued node\n'; }
+        prepare_sdkman_dependencies() { return 0; }
+        verify_sdkman_installation() { return 0; }
+        install_java_sdks() { printf 'continued JDK\n'; }
+        confirm_install() { [[ "$1" == SDKMAN:* ]]; }
+        run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
+        if install_missing_tools Darwin "$update"; then exit 1; else printf 'EXPECTED FAILURE\n'; fi
+    )
+    assert "Homebrew first in mode $update" test "${brew_order%%$'\n'*}" = 'FIRST homebrew'
+    assert "Node continues without Homebrew $update" grep -q 'continued node' <<< "$brew_order"
+    assert "JDK continues without Homebrew $update" grep -q 'continued JDK' <<< "$brew_order"
+    assert 'macOS SDKMAN uses Zsh installer' grep -q 'installer: https://get.sdkman.io user zsh' <<< "$brew_order"
+done
+sdk_linux=$(
+    SDKMAN_DIR="$test_dir/no-sdkman"
+    tool_path() { printf '/fixture/%s\n' "$1"; }
+    confirm_install() { return 0; }
+    prepare_sdkman_dependencies() { return 0; }
+    verify_sdkman_installation() { return 0; }
+    install_java_sdks() { :; }
+    run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
+    install_missing_tools Linux
+)
+assert 'Linux SDKMAN uses Bash installer' grep -q 'installer: https://get.sdkman.io user bash' <<< "$sdk_linux"
+for shell in /bin/zsh /bin/bash; do
+    profile_output=$(SHELL="$shell" brew_setup_case)
+    if [[ "$shell" == /bin/zsh ]]; then profile='~/.zprofile'; else profile='~/.bash_profile'; fi
+    assert "$shell Homebrew shellenv guidance" grep -Fq "$profile" <<< "$profile_output"
+done
+mkdir -p "$test_dir/brew-home"
+printf 'existing zsh profile\n' > "$test_dir/brew-home/.zprofile"
+printf 'existing bash profile\n' > "$test_dir/brew-home/.bash_profile"
+HOME="$test_dir/brew-home" SHELL=/bin/zsh brew_setup_case >/dev/null
+assert 'Homebrew helper preserves zsh profile' test "$(cat "$test_dir/brew-home/.zprofile")" = 'existing zsh profile'
+assert 'Homebrew helper preserves bash profile' test "$(cat "$test_dir/brew-home/.bash_profile")" = 'existing bash profile'
+assert 'Homebrew uses system Bash' grep -q 'installer: .*Homebrew.* user /bin/bash' <<< "$brew_setup"
+brew_existing=$(
+    brew() { printf 'brew-call: %s\n' "$*"; }
+    confirm_install() { printf 'UNEXPECTED PROMPT\n'; return 1; }
+    ensure_homebrew
+)
+assert 'existing Homebrew is verified without approval' test "${brew_existing#*UNEXPECTED}" = "$brew_existing"
+assert 'existing Homebrew is not reinstalled' grep -q 'brew-call: --version' <<< "$brew_existing"
+azure_installer=$(
+    SDKMAN_DIR="$test_dir/no-sdkman"
+    tool_path() { [[ "$1" == az ]] || printf '/fixture/%s\n' "$1"; }
+    apt-get() { :; }
+    sudo() { :; }
+    confirm_install() { [[ "$1" != SDKMAN:* ]]; }
+    run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
+    install_missing_tools Linux
+)
+assert 'Azure CLI uses sudo Bash installer' grep -q 'installer: https://aka.ms/InstallAzureCLIDeb sudo bash' <<< "$azure_installer"
+
+remote_output=$(
+    cd "$test_dir"
+    export INTERPRETER_LOG="$test_dir/interpreter"
+    curl() {
+        while [[ "$1" != --output ]]; do shift; done
+        printf 'printf "%%s\\n" "${BASH_VERSION:-POSIX}" > "$INTERPRETER_LOG"\n' > "$2"
+    }
+    bash() { printf 'interpreter bash\n'; }
+    zsh() { printf 'interpreter zsh\n'; }
+    sh() { printf 'interpreter sh\n'; }
+    sudo() { printf 'privilege sudo\n'; "$@"; }
+    for interpreter in bash zsh sh /bin/bash; do run_remote_installer https://example.invalid/fixture user "$interpreter"; done
+    run_remote_installer https://example.invalid/fixture sudo bash
+)
+for interpreter in bash zsh sh; do assert "remote interpreter $interpreter" grep -q "interpreter $interpreter" <<< "$remote_output"; done
+assert 'remote sudo explicit interpreter' grep -q 'privilege sudo' <<< "$remote_output"
+assert 'system Bash actually selected' test -s "$test_dir/interpreter"
+for directory in "$test_dir"/.workshop-installer.*; do assert 'remote installer scratch cleaned' test ! -e "$directory"; done
+
+modernize_output=$(
+    HOME="$test_dir/modernize-home"
+    confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
+    run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
+    modernize() { printf 'modernize 1.0.76\n'; }
+    install_modernize Linux 0
+    printf 'path=%s\n' "$PATH"
+)
+assert 'Linux Modernize official sh installer' grep -q 'installer: https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh user sh' <<< "$modernize_output"
+assert 'Linux Modernize updates current PATH' grep -Fq "path=$test_dir/modernize-home/.local/bin:" <<< "$modernize_output"
+assert 'Linux Modernize explains shell settings changes' grep -q 'approval:.*glibc 2.27.*셸 설정' <<< "$modernize_output"
+mac_modernize=$(
+    confirm_install() { return 0; }
+    brew() { printf 'brew-call: %s\n' "$*"; }
+    modernize() { printf 'modernize 1.0.76\n'; }
+    install_modernize Darwin 0
+)
+assert 'Modernize tap registered' grep -q 'brew-call: tap microsoft/modernize https://github.com/microsoft/modernize-cli' <<< "$mac_modernize"
+assert 'Modernize full cask name used' grep -q 'brew-call: install --cask microsoft/modernize/modernize' <<< "$mac_modernize"
+assert 'Modernize never trusts entire tap' test "${mac_modernize#*brew-call: trust}" = "$mac_modernize"
+modernize_update=$(
+    HOME="$test_dir/modernize-home"
+    confirm_install() { return 0; }
+    run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
+    modernize() { printf 'modernize 1.0.76\n'; }
+    install_modernize Linux 1 "$HOME/.local/bin/modernize"
+)
+assert 'Modernize update reruns official installer' grep -q 'installer: .*modernize-cli/main/scripts/install.sh user sh' <<< "$modernize_update"
+for scenario in declined installer-failed version-failed; do
+    modernize_failed=$(
+        confirm_install() { [[ "$scenario" != declined ]]; }
+        run_remote_installer() { printf 'installer-called\n'; [[ "$scenario" != installer-failed ]]; }
+        modernize() { [[ "$scenario" != version-failed ]] && printf 'modernize 1.0.76\n'; }
+        if install_modernize Linux 0; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    )
+    if [[ "$scenario" == declined ]]; then
+        assert 'Modernize decline never installs' test "${modernize_failed#*installer-called}" = "$modernize_failed"
+    else
+        assert "Modernize $scenario propagates" grep -q 'EXPECTED FAILURE' <<< "$modernize_failed"
+    fi
+done
+linux_unsupported=$(
+    SDKMAN_DIR="$test_dir/no-sdkman"
+    command() { case "$*" in ('-v apt-get'|'-v sudo') return 1 ;; (*) builtin command "$@" ;; esac; }
+    tool_path() { [[ "$1" != node ]] || printf '/fixture/node\n'; }
+    confirm_install() { return 1; }
+    run_remote_installer() { printf 'UNEXPECTED INSTALL\n'; }
+    install_missing_tools Linux
+)
+for tool in az azd gh modernize; do assert "unsupported Linux $tool manual" grep -q "WARN.*$tool.*공식 수동 설치" <<< "$linux_unsupported"; done
+assert 'unsupported Linux never installs' test "${linux_unsupported#*UNEXPECTED}" = "$linux_unsupported"
+
+gh_install_case() (
+    cd "$test_dir"
+    confirm_install() { printf 'approval: %s\n' "$1"; [[ "${MOCK_APPROVED:-1}" == 1 ]]; }
+    dpkg() { printf 'amd64\n'; }
+    curl() {
+        printf 'curl-call: %s\n' "$*"
+        while [[ "$1" != --output ]]; do shift; done
+        printf 'fixture key\n' > "$2"
+    }
+    sudo() {
+        printf 'sudo-call: %s\n' "$*" >&2
+        if [[ "$1" == tee ]]; then cat; fi
+        return "${MOCK_GH_INSTALL_FAILURE:-0}"
+    }
+    gh() { printf 'gh version 2.45.0\n'; }
+    if install_linux_gh; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+)
+gh_installed=$(gh_install_case 2>&1)
+assert 'gh official key URL used' grep -q 'https://cli.github.com/packages/githubcli-archive-keyring.gpg' <<< "$gh_installed"
+assert 'gh repository added after approval' grep -q 'sudo-call: tee /etc/apt/sources.list.d/github-cli.list' <<< "$gh_installed"
+assert 'gh installed via apt' grep -q 'sudo-call: apt-get install -y gh' <<< "$gh_installed"
+assert 'gh consent explains sudo and keyring' grep -q 'approval:.*키링.*sudo' <<< "$gh_installed"
+gh_declined=$(MOCK_APPROVED=0 gh_install_case 2>&1)
+assert 'gh decline never mutates' test "${gh_declined#*sudo-call:}" = "$gh_declined"
+assert 'gh decline never downloads' test "${gh_declined#*curl-call:}" = "$gh_declined"
+gh_failed=$(MOCK_GH_INSTALL_FAILURE=1 gh_install_case 2>&1)
+assert 'gh failure propagates' grep -q 'EXPECTED FAILURE' <<< "$gh_failed"
+assert 'gh key failure prevents package install' test "${gh_failed#*sudo-call: apt-get}" = "$gh_failed"
+if CI=1 confirm_install 'must not prompt' </dev/null; then printf 'FAILED: noninteractive consent\n' >&2; exit 1; fi
 printf 'PASS: %s installation Bash assertions\n' "$PASSED"

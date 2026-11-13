@@ -1,6 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
@@ -43,28 +41,6 @@ try {
     Assert-True (Test-MinimumVersion 'azd version 1.37.3 (commit abc)' '1.37.3') 'azd minimum'
     Assert-True (-not (Test-MinimumVersion '1.37.2' '1.37.3')) 'old azd'
     Assert-True (-not (Test-MinimumVersion '22.0.0-rc.1' '22.0.0')) 'preview rejected'
-
-    if ($IsWindows) {
-        & {
-            $script:FixtureDistributions = "Ubuntu`nUbuntu-24.04"
-            $script:FixtureWslVersion = 2
-            function Invoke-ToolProbe {
-                param([string]$Name, [string[]]$Arguments)
-                $text = if ($Arguments -contains '--quiet') { $script:FixtureDistributions }
-                    else { "  Ubuntu Running $script:FixtureWslVersion`n  Ubuntu-24.04 Stopped 2" }
-                return [pscustomobject]@{ Code = 0; Text = $text }
-            }
-            Assert-True ((Get-JavaBashTarget '').Distribution -eq 'Ubuntu') 'Ubuntu default with multiple distributions'
-            Assert-True ((Get-JavaBashTarget 'Ubuntu-24.04').Distribution -eq 'Ubuntu-24.04') 'explicit distribution overrides Ubuntu'
-            $script:FixtureDistributions = 'Ubuntu-24.04'
-            Assert-Throws { Get-JavaBashTarget '' } 'missing Ubuntu does not fall back to sole distribution'
-            $script:FixtureDistributions = ''
-            Assert-Throws { Get-JavaBashTarget '' } 'no distribution fails'
-            $script:FixtureDistributions = 'Ubuntu'
-            $script:FixtureWslVersion = 1
-            Assert-Throws { Get-JavaBashTarget '' } 'WSL1 Ubuntu rejected'
-        }
-    }
 
     $script:Calls = [Collections.Generic.List[string]]::new()
     $script:Stopped = $false
@@ -117,6 +93,11 @@ try {
         switch ($Name) {
             git { $text = 'git version 2.50.0' }
             node { $text = 'v22.1.0'; if ($script:MissingNode) { $code=127; $text='' } }
+            modernize { $text = '1.0.95'; if ($script:ModernizeFailure) { $code=1 } }
+            gh {
+                if ($Arguments[0] -eq '--version') { $text = 'gh version 2.45.0'; if ($script:OldGh) { $text='gh version 2.44.0' } }
+                elseif ($script:GhAuthFailure) { $code=1 }
+            }
             az {
                 switch ($Arguments[0]) {
                     version { $text='{}' }
@@ -154,6 +135,20 @@ try {
     New-Results
     Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object Status -EQ FAIL).Count -eq 0) 'complete common tool fixture'
+    & {
+        $script:ModernizeFailure=$true; $script:OldGh=$true
+        New-Results
+        Test-CommonTools docker dotnet
+        Assert-True (Has-Failure modernize) 'unusable Modernize fails'
+        Assert-True (Has-Failure gh) 'old gh fails'
+        $script:ModernizeFailure=$false; $script:OldGh=$false; $script:GhAuthFailure=$true
+        New-Results
+        Test-CommonTools docker dotnet
+        Assert-True (Has-Failure gh-login) 'gh auth failure'
+        $script:GhAuthFailure=$false
+    }
+    New-Results
+    Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*subscription-id*' }).Count -eq 1) 'subscription identity requires confirmation'
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq '구독 이름: Subscription name / 구독 ID: subscription-id' }).Count -eq 1) 'subscription format'
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -notlike '*11111111-2222-3333-4444-555555555555*' -and $_.Message -like '*Subscription name*' }).Count -eq 1) 'subscription excludes tenant ID'
@@ -188,28 +183,25 @@ try {
     . (Join-Path $root 'scripts\check-prerequisites.ps1')
 
     if ($IsWindows) {
-        $Track='java'; $ContainerEngine='docker'; $Help=$false
-        $env:AZD_CONTAINER_RUNTIME='docker'
-        $script:HostNodeMissing=$false
-        $script:BashResult=0
-        function Invoke-ToolProbe {
-            param([string]$Name, [string[]]$Arguments)
-            if ($Name -eq 'node' -and $script:HostNodeMissing) { return [pscustomobject]@{ Code=127; Text='' } }
-            return [pscustomobject]@{ Code=0; Text=$(switch ($Name) { node { 'v22.1.0' } azd { 'azd version 1.37.3' } default { 'git version 2.50.0' } }) }
+        & {
+            $Track='java'; $ContainerEngine='docker'; $Help=$false
+            $env:AZD_CONTAINER_RUNTIME='docker'
+            $script:NativeMissing=$false
+            function Test-CommonTools {
+                param($Engine, $SelectedTrack)
+                Assert-True ($Engine -eq 'docker' -and $SelectedTrack -eq 'java') 'native Java runs common tools'
+                Assert-True ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -eq 'no') 'native Java disables dynamic installs'
+                if ($script:NativeMissing) { Add-Check FAIL node 'fixture missing Node' }
+            }
+            function Test-JavaTools { Add-Check PASS jdk-8 'fixture'; Add-Check PASS jdk-25 'fixture' }
+            function Test-DotnetTools { throw 'Java must not probe .NET tools' }
+            $previous = $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL
+            Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'native Windows Java passes'
+            Assert-True ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -ceq $previous) 'dynamic-install state restored'
+            Assert-True (@($script:CheckResults | Where-Object Id -eq 'jdk-25').Count -eq 1) 'native JDK check reached'
+            $script:NativeMissing=$true
+            Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'native Java common failure propagated'
         }
-        function Invoke-JavaBashScript {
-            param($Script, $Arguments, $Distribution)
-            $script:JavaArguments = $Arguments
-            return $script:BashResult
-        }
-        Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'Windows Java host passes'
-        Assert-True ($script:JavaArguments -contains '--windows-host-checked') 'Windows host check communicated to WSL'
-        Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'windows-host-azd' -and $_.Status -eq 'INFO' -and $_.Message -like '*1.37.3*' }).Count -eq 1) 'host azd shown as informational'
-        $script:HostNodeMissing=$true
-        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'Windows Java host missing Node fails'
-        $script:HostNodeMissing=$false; $script:BashResult=1
-        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'WSL failure propagates'
-        Remove-Item Function:\Invoke-ToolProbe, Function:\Invoke-JavaBashScript
         . (Join-Path $root 'scripts\check-prerequisites.ps1')
         $env:ProgramFiles = Join-Path $temporary 'program-files'
         ${env:ProgramFiles(x86)} = Join-Path $temporary 'program-files-x86'
@@ -389,22 +381,28 @@ try {
         Assert-True ($bash.Contains($sample.Commit)) "same commit in both shells: $trackName"
         Assert-True ($bash.Contains($sample.Repository)) "same source in both shells: $trackName"
     }
-    $devContainer = Get-Content -LiteralPath (Join-Path $root '.devcontainer\devcontainer.json') -Raw | ConvertFrom-Json
-    Assert-True (@($devContainer.features.PSObject.Properties.Name | Where-Object { $_ -notmatch ':latest$' }).Count -eq 0) 'Dev Container features use latest tags'
-    $javaFeature = $devContainer.features.'ghcr.io/devcontainers/features/java:latest'
-    Assert-True ($javaFeature.version -eq '8' -and @($javaFeature.additionalVersions -split ',') -contains '21' -and @($javaFeature.additionalVersions -split ',') -contains '25') 'Dev Container includes JDK 8, 21 and 25'
-    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/dotnet:latest'.version -eq '10.0') 'Dev Container includes .NET 10 SDK'
-    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/node:latest'.version -eq '22') 'Dev Container includes Node 22'
-    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/azure-cli:latest' -and $null -ne $devContainer.features.'ghcr.io/azure/azure-dev/azd:latest') 'Dev Container includes Azure CLI and azd'
-    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/docker-in-docker:latest') 'Dev Container includes isolated Docker engine'
-    Assert-True ($devContainer.containerEnv.WORKSHOP_DEVCONTAINER -eq '1' -and $devContainer.containerEnv.AZD_CONTAINER_RUNTIME -eq 'docker') 'Dev Container selects the documented Java and Docker environment'
-    Assert-True (@($devContainer.forwardPorts) -contains 8080 -and @($devContainer.forwardPorts) -contains 15672) 'Dev Container forwards app and management ports'
     $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
     $env:AZD_CONTAINER_RUNTIME='docker'
     function pwsh { $global:LASTEXITCODE=1 }
     Assert-True ((Invoke-DownloadMain) -eq 1) 'download propagates prerequisite failure'
     Assert-True (-not (Test-Path $Destination)) 'prerequisite failure prevents download'
     Remove-Item Function:\pwsh
+    if ($IsWindows) {
+        & {
+            $Track='java'; $Destination=Join-Path $temporary 'native-java'; $ContainerEngine='docker'
+            function pwsh {
+                Assert-True (($args -join ' ') -match '-Track java') 'Java preflight uses native Java track'
+                $global:LASTEXITCODE=0
+            }
+            function Invoke-SampleDownload {
+                param($Target,$Definition,$WorkshopRoot)
+                Assert-True ($Definition.Subdirectory -eq 'asset-manager') 'Java download uses pinned Java definition'
+                Assert-True ($Definition.Required -contains 'mvnw.cmd') 'Windows wrapper required'
+                Assert-True ($Target -eq $Destination) 'Java native destination unchanged'
+            }
+            Assert-True ((Invoke-DownloadMain) -eq 0) 'Java reaches native download after preflight'
+        }
+    }
     $documents = @((Get-Item (Join-Path $root 'README.md'))) + @(Get-ChildItem (Join-Path $root 'docs') -Recurse -Filter '*.md')
     Assert-True ($documents.Count -eq 21) '21 workshop documents (root and 20 track documents)'
     foreach ($document in $documents) {

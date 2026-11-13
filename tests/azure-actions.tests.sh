@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./tests/azure-actions.tests.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$ROOT/scripts/install-prerequisites.sh"
@@ -123,6 +127,9 @@ probe() {
     case "$*" in
         'git --version') PROBE_TEXT='git version 2.0.0' ;;
         'node --version') PROBE_TEXT=v22.0.0 ;;
+        'modernize --version') PROBE_TEXT='modernize 1.0.76' ;;
+        'gh --version') PROBE_TEXT='gh version 2.45.0' ;;
+        'gh auth status') PROBE_CODE=0 ;;
         'az version --output json') PROBE_TEXT='{}' ;;
         'az extension show --name containerapp --query version --output tsv') PROBE_CODE=1 ;;
         'az account show --query state --output tsv') PROBE_TEXT=Enabled ;;

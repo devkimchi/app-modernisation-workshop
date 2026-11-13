@@ -2,7 +2,6 @@
 param(
     [string]$Track,
     [string]$ContainerEngine,
-    [string]$WslDistribution = 'Ubuntu',
     [switch]$Help
 )
 
@@ -12,6 +11,7 @@ if ($bootstrap.Handled) { exit $bootstrap.Code }
 
 $script:WorkshopScripts = $PSScriptRoot
 . (Join-Path $PSScriptRoot 'dotnet-framework-tools.ps1')
+. (Join-Path $PSScriptRoot 'java-tools.ps1')
 
 function Resolve-ContainerEngine {
     param([string]$Requested, [string]$Configured = $env:AZD_CONTAINER_RUNTIME)
@@ -96,7 +96,7 @@ function Test-ContainerRuntime {
     param([string]$Engine)
     $version = Invoke-ToolProbe $Engine @('--version')
     if ($version.Code -ne 0) {
-        Add-Check FAIL 'container-cli' "$Engine 실행 실패 (종료 코드 $($version.Code)). docs\setup.md를 확인하세요."
+        Add-Check FAIL 'container-cli' "$Engine 실행 실패 (종료 코드 $($version.Code)). 해당 트랙의 준비 문서를 확인하세요."
         return
     }
     Add-Check PASS 'container-cli' "$Engine CLI 실행: $($version.Text)"
@@ -140,6 +140,17 @@ function Test-CommonTools {
     $node = Invoke-ToolProbe node @('--version')
     if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) { Add-Check PASS node $node.Text }
     else { Add-Check FAIL node 'Node.js 22 이상의 안정 버전이 필요합니다.' }
+    $modernize = Invoke-ToolProbe modernize @('--version')
+    if ($modernize.Code -eq 0 -and $modernize.Text) { Add-Check PASS modernize $modernize.Text }
+    else { Add-Check FAIL modernize 'Modernize CLI 설치와 PATH를 확인하세요.' }
+    $gh = Invoke-ToolProbe gh @('--version')
+    if ($gh.Code -eq 0 -and (Test-MinimumVersion $gh.Text '2.45.0')) {
+        Add-Check PASS gh $gh.Text
+        $auth = Invoke-ToolProbe gh @('auth', 'status')
+        if ($auth.Code -eq 0) { Add-Check PASS 'gh-login' 'GitHub CLI 로그인 상태를 확인했습니다. Copilot 모델 사용 권한은 별도입니다.' }
+        else { Add-Check FAIL 'gh-login' 'gh auth login을 직접 실행하거나 인증 오류를 해결하세요.' }
+    }
+    else { Add-Check FAIL gh 'GitHub CLI 2.45.0 이상이 필요합니다.' }
     $az = Invoke-ToolProbe az @('version', '--output', 'json')
     if ($az.Code -eq 0) {
         Add-Check PASS az 'Azure CLI를 실행할 수 있습니다.'
@@ -168,7 +179,7 @@ function Test-CommonTools {
     }
     else { Add-Check FAIL azd '워크샵 기준 azd 1.37.3 이상이 필요합니다. 자동 업데이트하지 않습니다.' }
     Test-ContainerRuntime $Engine
-    Add-Check MANUAL 'copilot-app' 'Windows에서 실행하는 Copilot app의 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.'
+    Add-Check MANUAL 'copilot-app' 'Copilot app의 로그인, 라이선스, 조직 정책과 터미널 접근을 확인하세요.'
     Add-Check MANUAL 'azure-access' '위에서 조회한 Azure CLI의 구독이 실습 대상인지 확인하고, 해당 구독의 리전, 쿼터, 역할 할당 및 데이터베이스 Entra 관리자 설정 권한을 확인하세요.'
 }
 
@@ -219,78 +230,26 @@ function Test-DotnetTools {
         else { Add-Check FAIL localdb 'LocalDB 실행 실패. 설치 또는 권한을 확인하세요.' }
     }
     else { Add-Check FAIL localdb 'SQL Server Express LocalDB를 설치하세요.' }
-    Add-Check MANUAL 'upgrade-plugin' 'Copilot app에서 upgrade-agent 플러그인과 Upgrade 에이전트를 확인하세요.'
 }
 
-function Get-JavaBashTarget {
-    param([string]$Distribution)
-    if (-not $IsWindows) { return [pscustomobject]@{ Command = 'bash'; Prefix = @(); Distribution = '' } }
-    $list = Invoke-ToolProbe wsl @('--list', '--quiet')
-    if ($list.Code -ne 0) { throw 'WSL 배포판을 조회하지 못했습니다. WSL2 설치 상태를 확인하세요.' }
-    $names = @(($list.Text -replace "`0", '') -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-    if (-not $Distribution) {
-        $Distribution = 'Ubuntu'
+function Test-JavaTools {
+    foreach ($major in @(8, 25)) {
+        $jdk = Find-WorkshopJava -Major $major
+        if ($jdk) { Add-Check PASS "jdk-$major" "Temurin java와 javac 확인: $($jdk.Home)" }
+        else { Add-Check FAIL "jdk-$major" "실행 가능한 Temurin JDK $major 가 필요합니다. 설치 도우미와 Java 준비 문서를 확인하세요." }
     }
-    if ($Distribution -cnotin $names) { throw "WSL 배포판이 없습니다: $Distribution. 기본값은 Ubuntu입니다. wsl --list --verbose로 이름을 확인하고 -WslDistribution <이름>을 지정하세요." }
-    $details = Invoke-ToolProbe wsl @('--list', '--verbose')
-    $pattern = '(?m)^\s*\*?\s*' + [regex]::Escape($Distribution) + '\s+.+?\s+2\s*$'
-    if ($details.Code -ne 0 -or ($details.Text -replace "`0", '') -notmatch $pattern) { throw "배포판 $Distribution 이 WSL2인지 확인하지 못했습니다. wsl --list --verbose로 VERSION 2인지 확인하세요." }
-    return [pscustomobject]@{ Command = 'wsl'; Prefix = @('--distribution', $Distribution, '--exec'); Distribution = $Distribution }
-}
-
-function Convert-ToJavaPath {
-    param([string]$Path, $Target)
-    $full = [IO.Path]::GetFullPath($Path)
-    if (-not $IsWindows) { return $full }
-    $result = Invoke-ToolProbe wsl @('--distribution', $Target.Distribution, '--exec', 'wslpath', '-a', $full)
-    if ($result.Code -ne 0 -or -not $result.Text) { throw 'Windows 경로를 WSL 경로로 변환하지 못했습니다.' }
-    return $result.Text.Trim()
-}
-
-function Invoke-JavaBashScript {
-    param([string]$Script, [string[]]$Arguments, [string]$Distribution)
-    $target = Get-JavaBashTarget $Distribution
-    $path = Convert-ToJavaPath $Script $target
-    $commandArguments = if ($IsWindows) { @($target.Prefix) + @('bash', $path) + $Arguments } else { @($path) + $Arguments }
-    & $target.Command @commandArguments | Out-Host
-    return $LASTEXITCODE
 }
 
 function Invoke-PrerequisiteMain {
     if ($Help) {
-        Write-Host 'pwsh -File scripts\check-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman] [-WslDistribution Ubuntu]'
+        Write-Host './scripts/check-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman]'
         return 0
     }
     if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] -Track java 또는 -Track dotnet을 지정하세요.'; return 2 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
     catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
     $script:CheckResults = [Collections.Generic.List[object]]::new()
-    if ($Track -eq 'java') {
-        try {
-            if ($IsWindows) {
-                $script:CheckContext = 'Windows 호스트'
-                Write-Host 'Windows 호스트 검사: Copilot app 호스트의 Git과 Node.js를 확인하고 azd 버전은 참고용으로 표시합니다.'
-                $git = Invoke-ToolProbe git @('--version')
-                if ($git.Code -eq 0) { Add-Check PASS 'windows-host-git' $git.Text }
-                else { Add-Check FAIL 'windows-host-git' 'Windows Copilot app 호스트에 Git이 필요합니다.' }
-                $node = Invoke-ToolProbe node @('--version')
-                if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) { Add-Check PASS 'windows-host-node' $node.Text }
-                else { Add-Check FAIL 'windows-host-node' 'Windows Copilot app 호스트에 Node.js 22 이상의 안정 버전이 필요합니다.' }
-                $hostAzd = Invoke-ToolProbe azd @('version')
-                if ($hostAzd.Code -eq 0) { Add-Check INFO 'windows-host-azd' "$($hostAzd.Text). 참고용이며 Java 실습의 WSL azd 검사와 별개입니다." }
-                else { Add-Check INFO 'windows-host-azd' 'Windows 호스트의 azd는 확인되지 않았습니다. Java 실습에서는 WSL의 azd가 필요합니다.' }
-            }
-            Write-Host 'Java 실습 검사: 아래 Bash 결과는 지정한 WSL 배포판 또는 macOS의 호출 환경입니다.'
-            $bashArguments = @('--track', 'java', '--container-engine', $engine)
-            if ($IsWindows) { $bashArguments += '--windows-host-checked' }
-            $bashResult = Invoke-JavaBashScript (Join-Path $script:WorkshopScripts 'check-prerequisites.sh') $bashArguments $WslDistribution
-            $hostFailures = @($script:CheckResults | Where-Object Status -eq 'FAIL').Count
-            if ($hostFailures -gt 0) { Write-Host "Windows 호스트 필수 실패: $hostFailures"; return 1 }
-            return $bashResult
-        }
-        catch { Write-Host "[FAIL] Java Bash 실행 실패: $($_.Exception.Message)"; return 1 }
-    }
-    if (-not $IsWindows) { Write-Host '[FAIL] .NET 원본 실습은 Windows에서만 지원합니다.'; return 1 }
+    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell 진입점은 Windows 전용입니다. Java 트랙은 ./scripts/check-prerequisites.sh를 실행하세요.'; return 1 }
     $script:CheckContext = 'Windows 호스트'
     if ($PSVersionTable.PSVersion.Major -ge 7) { Add-Check PASS pwsh "PowerShell $($PSVersionTable.PSVersion)" }
     else { Add-Check FAIL pwsh 'PowerShell 7이 필요합니다.' }
@@ -299,7 +258,7 @@ function Invoke-PrerequisiteMain {
     try {
         $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = 'no'
         Test-CommonTools $engine $Track
-        Test-DotnetTools
+        if ($Track -eq 'java') { Test-JavaTools } else { Test-DotnetTools }
     }
     finally { $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = $previous }
     $failures = @($script:CheckResults | Where-Object Status -eq 'FAIL').Count

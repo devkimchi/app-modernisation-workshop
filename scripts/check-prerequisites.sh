@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./scripts/check-prerequisites.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
+
 WORKSHOP_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 resolve_engine() {
@@ -33,7 +38,7 @@ tool_path() {
 initialize_node_environment() {
     local node_path nvm_dir
     node_path=$(tool_path node)
-    if [[ -n "$node_path" && ! ( "${CHECK_CONTEXT:-}" == WSL* && "$node_path" =~ ^/mnt/[a-zA-Z]/ ) ]]; then return 0; fi
+    if [[ -n "$node_path" ]]; then return 0; fi
     if [[ -n "${NVM_DIR:-}" ]]; then nvm_dir="$NVM_DIR"
     elif [[ -n "${XDG_CONFIG_HOME:-}" ]]; then nvm_dir="$XDG_CONFIG_HOME/nvm"
     else nvm_dir="$HOME/.nvm"; fi
@@ -172,6 +177,27 @@ check_java_sdks() {
     (( found25 == 1 )) || check_result FAIL jdk-25 'SDKMAN으로 설치한 JDK 25가 필요합니다.'
 }
 
+check_homebrew() {
+    probe brew --version
+    if (( PROBE_CODE == 0 )); then check_result PASS homebrew "$PROBE_TEXT"
+    else check_result FAIL homebrew 'Homebrew가 필요합니다. ./scripts/install-prerequisites.sh --track java를 실행하세요.'; fi
+}
+
+check_modernize_tools() {
+    probe modernize --version
+    if (( PROBE_CODE == 0 )); then check_result PASS modernize "$PROBE_TEXT"
+    elif [[ "$(uname -s)" == Linux && -x "$HOME/.local/bin/modernize" && "$PROBE_CODE" == 127 ]]; then
+        check_result FAIL modernize '~/.local/bin/modernize가 PATH에 없습니다. 새 터미널을 열거나 셸 설정 파일을 다시 읽으세요.'
+    else check_result FAIL modernize "Modernize CLI 설치 또는 실행 상태를 확인하세요 (종료 코드 $PROBE_CODE)."; fi
+    probe gh --version
+    if (( PROBE_CODE == 0 )) && minimum_version "$PROBE_TEXT" 2.45.0; then
+        check_result PASS gh "$PROBE_TEXT"
+        probe gh auth status
+        if (( PROBE_CODE == 0 )); then check_result PASS gh-auth 'GitHub CLI 인증 상태를 확인했습니다. Copilot 모델 사용 권한은 별도로 확인하세요.'
+        else check_result FAIL gh-auth 'gh auth login을 실행하거나 인증 오류를 해결하세요.'; fi
+    else check_result FAIL gh 'GitHub CLI(gh) 2.45.0 이상이 필요합니다.'; fi
+}
+
 check_common() {
     local engine="$1" provider path
     probe git --version
@@ -185,9 +211,6 @@ check_common() {
     if (( PROBE_CODE == 0 )); then
         path=$(tool_path az)
         check_result PASS az "Azure CLI를 실행할 수 있습니다 (실행 파일: $path)."
-        if [[ "${CHECK_CONTEXT:-}" == WSL* && "$path" =~ ^/mnt/[a-zA-Z]/ ]]; then
-            check_result WARN az-origin 'WSL에서 Windows 드라이브의 Azure CLI를 사용하고 있습니다. 표시된 로그인과 구독은 이 CLI의 설정입니다. WSL에 설치된 CLI를 사용하려면 command -v az로 선택된 경로를 확인하고, 해당 CLI의 로그인과 구독을 다시 확인하세요.'
-        fi
         probe az extension show --name containerapp --query version --output tsv
         if (( PROBE_CODE == 0 )) && [[ -n "$PROBE_TEXT" ]]; then check_result PASS az-containerapp "확장 버전: $PROBE_TEXT"
         else check_result FAIL az-containerapp '설치 도우미에서 containerapp 확장을 설치하거나 조회 오류를 해결하세요.'; fi
@@ -208,25 +231,21 @@ check_common() {
         else check_result FAIL azd-login 'azd auth login을 직접 실행하거나 인증 오류를 해결하세요.'; fi
     elif (( PROBE_CODE == 127 )); then check_result FAIL azd '이 Bash 환경의 PATH에서 azd를 찾지 못했습니다. 여기에서 azd 1.37.3 이상을 사용할 수 있도록 설정하세요.'
     else check_result FAIL azd "이 Bash 환경에서 azd 1.37.3 이상을 실행하지 못했습니다 (종료 코드 $PROBE_CODE, 출력: ${PROBE_TEXT:-없음})."; fi
+    check_modernize_tools
     check_container "$engine"
-    if [[ "${CHECK_CONTEXT:-}" == WSL* ]]; then
-        check_result MANUAL copilot-app 'Windows에서 실행하는 Copilot app의 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.' 'Windows 호스트 (수동 확인)'
-    else
-        check_result MANUAL copilot-app 'Copilot app을 실행하는 호스트에서 로그인, 라이선스, 조직 정책과 Modernization 플러그인을 확인하세요.'
-    fi
+    check_result MANUAL copilot-app 'Copilot app의 로그인, 라이선스, 조직 정책과 터미널 접근을 확인하세요.'
     check_result MANUAL azure-access '위에서 조회한 Azure CLI의 구독이 실습 대상인지 확인하고, 해당 구독의 리전, 쿼터, 역할 할당 및 데이터베이스 Entra 관리자 설정 권한을 확인하세요.' 'Azure (수동 확인)'
 }
 
 prerequisite_main() {
-    local track='' requested='' engine os windows_host_checked=0 previous_dynamic="${AZURE_EXTENSION_USE_DYNAMIC_INSTALL-}"
+    local track='' requested='' engine os previous_dynamic="${AZURE_EXTENSION_USE_DYNAMIC_INSTALL-}"
     while (( $# )); do
         case "$1" in
             --track|--container-engine)
                 if (( $# < 2 )) || [[ "$2" == --* || -z "$2" ]]; then printf '%s\n' "[FAIL] $1 값이 필요합니다." >&2; return 2; fi
                 if [[ "$1" == --track ]]; then track="$2"; else requested="$2"; fi
                 shift 2 ;;
-            --windows-host-checked) windows_host_checked=1; shift ;;
-            --help|-h) printf '%s\n' 'bash scripts/check-prerequisites.sh --track java|dotnet [--container-engine docker|podman]'; return 0 ;;
+            --help|-h) printf '%s\n' './scripts/check-prerequisites.sh --track java [--container-engine docker|podman]'; return 0 ;;
             *) printf '[FAIL] 알 수 없는 인자: %s\n' "$1" >&2; return 2 ;;
         esac
     done
@@ -234,27 +253,20 @@ prerequisite_main() {
     engine=$(resolve_engine "$requested") || return $?
     os=$(uname -s)
     if [[ "$track" == dotnet ]]; then
-        case "$os" in MINGW*|MSYS*) ;; *) printf '%s\n' '[FAIL] .NET Bash 진입점은 Windows Git Bash에서만 지원합니다.'; return 1 ;; esac
-        command -v pwsh >/dev/null 2>&1 || { printf '%s\n' '[FAIL] PowerShell 7을 설치하세요.'; return 1; }
-        MSYS2_ARG_CONV_EXCL='*' pwsh -NoLogo -NoProfile -File "$(cygpath -w "$WORKSHOP_SCRIPTS/check-prerequisites.ps1")" -Track dotnet -ContainerEngine "$engine"
-        return $?
+        printf '%s\n' '[FAIL] .NET은 Windows PowerShell에서 ./scripts/check-prerequisites.ps1 -Track dotnet을 실행하세요.'
+        return 1
     fi
     case "$os" in
-        Darwin) ;;
-        Linux)
-            if [[ "${WORKSHOP_DEVCONTAINER:-}" != 1 ]] && ! grep -Eqi 'microsoft.*wsl2|wsl2.*microsoft' /proc/sys/kernel/osrelease; then
-                printf '%s\n' '[FAIL] Java 지원 환경은 macOS, Windows WSL2 또는 워크숍 Dev Container입니다.'; return 1
-            fi ;;
-        *) printf '%s\n' '[FAIL] Windows Java는 Git Bash가 아니라 WSL2에서 실행하세요.'; return 1 ;;
+        Darwin|Linux) ;;
+        *) printf '%s\n' '[FAIL] macOS와 Linux에서 실행하세요. Windows PowerShell에서는 ./scripts/check-prerequisites.ps1 -Track java를 실행하세요.'; return 1 ;;
     esac
     CHECK_FAILURES=0
     if [[ "$os" == Darwin ]]; then CHECK_CONTEXT='macOS Bash'
-    elif [[ "${WORKSHOP_DEVCONTAINER:-}" == 1 ]]; then CHECK_CONTEXT='Dev Container Bash'
-    else CHECK_CONTEXT="WSL${WSL_DISTRO_NAME:+ $WSL_DISTRO_NAME} Bash"; fi
+    else CHECK_CONTEXT='Linux Bash'; fi
     printf '트랙: java / 엔진: %s / 호출 환경: %s\n' "$engine" "$CHECK_CONTEXT"
-    printf '%s\n' '다음 결과는 이 Bash의 PATH와 호출된 도구의 설정을 기준으로 합니다. Windows 호스트 검사와 별개입니다.'
+    printf '%s\n' '다음 결과는 이 Bash의 PATH와 호출된 도구의 설정을 기준으로 합니다.'
     check_result PASS bash "Bash $BASH_VERSION"
-    if [[ "$os" == Linux && "${WORKSHOP_DEVCONTAINER:-}" != 1 && "$windows_host_checked" != 1 ]]; then check_result MANUAL windows-host 'Windows Copilot app 호스트에도 Git과 Node.js 22 이상이 필요합니다. WSL 내부 검사와 별개이며 Windows PowerShell 진입점은 호스트도 검사합니다.'; fi
+    if [[ "$os" == Darwin ]]; then check_homebrew; fi
     export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
     check_common "$engine"
     check_java_sdks

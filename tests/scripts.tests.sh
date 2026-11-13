@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./tests/scripts.tests.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
 set -e
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$ROOT/scripts/check-prerequisites.sh"
 source "$ROOT/scripts/download-sample.sh"
 mkdir -p "$ROOT/.test-output"
-TEMPORARY=$(mktemp -d "$ROOT/.test-output/bash.XXXXXXXX")
+TEMPORARY="$ROOT/.test-output/bash.$$.$RANDOM"
+(umask 077; mkdir "$TEMPORARY")
 trap 'rm -rf -- "$TEMPORARY"' EXIT
 PASSED=0
 
@@ -35,14 +40,6 @@ existing_node_output=$(
     node --version
 )
 assert 'existing native Node preserved' test "$existing_node_output" = v22.1.0
-wsl_node_output=$(
-    CHECK_CONTEXT='WSL Ubuntu Bash'
-    NVM_DIR="$nvm_fixture"
-    tool_path() { printf '/mnt/c/node.exe\n'; }
-    initialize_node_environment
-    node --version
-)
-assert 'WSL nvm replaces Windows Node for check' test "$wsl_node_output" = v24.18.0
 unset AZD_CONTAINER_RUNTIME
 assert 'default engine' test "$(resolve_engine '')" = docker
 assert 'explicit engine' test "$(resolve_engine podman)" = podman
@@ -55,42 +52,32 @@ assert 'azd minimum' minimum_version 'azd version 1.37.3 (commit abc)' 1.37.3
 if minimum_version 1.37.2 1.37.3; then exit 1; else PASSED=$((PASSED + 1)); fi
 if minimum_version 22.0.0-rc.1 22.0.0; then exit 1; else PASSED=$((PASSED + 1)); fi
 
-previous_devcontainer="${WORKSHOP_DEVCONTAINER-}"
-unset WORKSHOP_DEVCONTAINER
-devcontainer_output=$(
-    export WORKSHOP_DEVCONTAINER=1
-    uname() { printf '%s\n' Linux; }
-    check_common() { check_result PASS fixture-common 'common checks reached'; }
-    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
-    prerequisite_main --track java --container-engine docker
-)
-assert 'Dev Container reaches common checks' grep -q 'fixture-common' <<< "$devcontainer_output"
-assert 'Dev Container reaches SDK checks' grep -q 'fixture-sdks' <<< "$devcontainer_output"
-if [[ "$devcontainer_output" == *windows-host* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
-if ( uname() { printf '%s\n' Linux; }; grep() { return 1; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
-if ( export WORKSHOP_DEVCONTAINER=true; uname() { printf '%s\n' Linux; }; grep() { return 1; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
-if ( export WORKSHOP_DEVCONTAINER=1; uname() { printf '%s\n' MINGW64_NT; }; prerequisite_main --track java --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
-if ( export WORKSHOP_DEVCONTAINER=1; uname() { printf '%s\n' Linux; }; prerequisite_main --track dotnet --container-engine docker >/dev/null 2>&1 ); then exit 1; else PASSED=$((PASSED + 1)); fi
-wsl_output=$(
-    unset WORKSHOP_DEVCONTAINER
-    uname() { printf '%s\n' Linux; }
-    grep() { return 0; }
-    check_common() { check_result PASS fixture-common 'common checks reached'; }
-    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
-    prerequisite_main --track java --container-engine docker
-)
-assert 'WSL still prompts for Windows host' grep -q 'MANUAL.*windows-host' <<< "$wsl_output"
-delegated_wsl_output=$(
-    unset WORKSHOP_DEVCONTAINER
-    uname() { printf '%s\n' Linux; }
-    grep() { return 0; }
-    check_common() { check_result PASS fixture-common 'common checks reached'; }
-    check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
-    prerequisite_main --track java --container-engine docker --windows-host-checked
-)
-assert 'delegated WSL reaches checks' grep -q 'fixture-common' <<< "$delegated_wsl_output"
-if [[ "$delegated_wsl_output" == *windows-host* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
-if [[ -n "$previous_devcontainer" ]]; then export WORKSHOP_DEVCONTAINER="$previous_devcontainer"; else unset WORKSHOP_DEVCONTAINER; fi
+for platform in Darwin Linux; do
+    platform_output=$(
+        uname() { printf '%s\n' "$platform"; }
+        check_homebrew() { check_result PASS fixture-homebrew 'Homebrew check'; }
+        check_common() { check_result PASS fixture-common 'common checks reached'; }
+        check_java_sdks() { check_result PASS fixture-sdks 'SDK checks reached'; }
+        prerequisite_main --track java --container-engine docker
+    )
+    assert "$platform reaches common checks" grep -q 'fixture-common' <<< "$platform_output"
+    assert "$platform reaches SDK checks" grep -q 'fixture-sdks' <<< "$platform_output"
+    if [[ "$platform" == Darwin ]]; then
+        assert 'Homebrew checked before common tools' grep -q 'fixture-homebrew' <<< "$platform_output"
+    else
+        assert 'Linux does not use Homebrew' test "${platform_output#*fixture-homebrew}" = "$platform_output"
+    fi
+done
+for entry in prerequisite_main install_prerequisite_main download_main; do
+    source "$ROOT/scripts/install-prerequisites.sh"
+    unsupported=$(
+        uname() { printf '%s\n' FreeBSD; }
+        if "$entry" --track java 2>&1; then exit 1; else printf 'exit=%s\n' "$?"; fi
+    )
+    assert "$entry unsupported OS rejected" grep -q 'FAIL.*Windows PowerShell' <<< "$unsupported"
+    dotnet_output=$(if "$entry" --track dotnet; then exit 1; else printf 'exit=%s\n' "$?"; fi 2>&1)
+    assert "$entry dotnet rejected" grep -q 'FAIL.*Windows PowerShell' <<< "$dotnet_output"
+done
 
 CALLS="$TEMPORARY/calls"
 STOPPED=0
@@ -117,15 +104,15 @@ if grep -q '^podman ' "$CALLS"; then exit 1; else PASSED=$((PASSED + 1)); fi
 source "$ROOT/scripts/check-prerequisites.sh"
 
 container_output=$(
-    CHECK_CONTEXT='WSL Ubuntu Bash'
+    CHECK_CONTEXT='Linux Bash'
     tool_path() { printf '%s\n' '/usr/bin/docker'; }
     probe() {
         PROBE_CODE=0; PROBE_TEXT=''
         case "$2" in
-            --version) PROBE_TEXT='Docker version 29.0.0' ;;
-            info) PROBE_TEXT=linux ;;
-            build) PROBE_TEXT=--platform ;;
-            buildx) PROBE_TEXT='v0.20.0' ;;
+            (--version) PROBE_TEXT='Docker version 29.0.0' ;;
+            (info) PROBE_TEXT=linux ;;
+            (build) PROBE_TEXT=--platform ;;
+            (buildx) PROBE_TEXT='v0.20.0' ;;
         esac
     }
     CHECK_FAILURES=0
@@ -137,24 +124,26 @@ assert 'buildx is only version lookup' grep -q 'PASS.*builder:.*버전 조회.*�
 assert 'workload manual verification' grep -q 'MANUAL.*container-workload.*실제 워크로드 성공을 보장하지 않습니다' <<< "$container_output"
 
 common_output=$(
-    CHECK_CONTEXT='WSL Ubuntu Bash'
-    tool_path() { if [[ "$1" == az ]]; then printf '%s\n' '/mnt/c/Azure CLI/az'; else printf '/usr/bin/%s\n' "$1"; fi; }
+    CHECK_CONTEXT='Linux Bash'
+    tool_path() { printf '/usr/bin/%s\n' "$1"; }
     probe() {
         PROBE_CODE=0; PROBE_TEXT=''
         case "$1 $2" in
-            'git --version') PROBE_TEXT='git version 2.50.0' ;;
-            'node --version') PROBE_TEXT='v22.1.0' ;;
-            'az version') PROBE_TEXT='{}' ;;
-            'az extension') PROBE_TEXT='1.3.0' ;;
-            'az account')
+            ('git --version') PROBE_TEXT='git version 2.50.0' ;;
+            ('node --version') PROBE_TEXT='v22.1.0' ;;
+            ('az version') PROBE_TEXT='{}' ;;
+            ('az extension') PROBE_TEXT='1.3.0' ;;
+            ('az account')
                 if [[ "$*" == *'--query state'* ]]; then PROBE_TEXT=Enabled
                 elif [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT='11111111-2222-3333-4444-555555555555'
                 elif [[ "$*" == *'--query [[id,name]]'* ]]; then PROBE_TEXT=$'subscription-id\tSubscription name'
                 else PROBE_CODE=1; fi ;;
-            'az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
-            'az rest') PROBE_TEXT='Example tenant' ;;
-            'az provider') PROBE_TEXT=Registered ;;
-            'azd version') PROBE_TEXT='azd version 1.37.3' ;;
+            ('az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
+            ('az rest') PROBE_TEXT='Example tenant' ;;
+            ('az provider') PROBE_TEXT=Registered ;;
+            ('azd version') PROBE_TEXT='azd version 1.37.3' ;;
+            ('modernize --version') PROBE_TEXT='modernize 1.0.76' ;;
+            ('gh --version') PROBE_TEXT='gh version 2.45.0' ;;
         esac
     }
     check_container() { :; }
@@ -162,41 +151,82 @@ common_output=$(
     check_common docker
 )
 assert 'Azure identity shown for manual confirmation' grep -q 'MANUAL.*azure-subscription.*subscription-id' <<< "$common_output"
-assert 'Azure subscription format' grep -Fxq '[MANUAL] [WSL Ubuntu Bash] azure-subscription: 구독 이름: Subscription name / 구독 ID: subscription-id' <<< "$common_output"
-assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [WSL Ubuntu Bash] azure-tenant: 테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
+assert 'Azure subscription format' grep -Fxq '[MANUAL] [Linux Bash] azure-subscription: 구독 이름: Subscription name / 구독 ID: subscription-id' <<< "$common_output"
+assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [Linux Bash] azure-tenant: 테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
 if grep 'azure-subscription' <<< "$common_output" | grep -q '11111111-2222-3333-4444-555555555555'; then exit 1; else PASSED=$((PASSED + 1)); fi
-assert 'Windows Azure CLI path identified' grep -q 'PASS.*WSL Ubuntu Bash.*az.*Azure CLI/az' <<< "$common_output"
-assert 'Windows Azure CLI origin warns' grep -q 'WARN.*WSL Ubuntu Bash.*az-origin' <<< "$common_output"
-assert 'Windows Azure CLI warning explains path check' grep -q 'WARN.*az-origin.*command -v az' <<< "$common_output"
+assert 'Azure CLI path identified' grep -q 'PASS.*Linux Bash.*az.*usr/bin/az' <<< "$common_output"
 assert 'Java PostgreSQL provider checked' grep -q 'PASS.*Microsoft.DBforPostgreSQL' <<< "$common_output"
-assert 'Copilot app manual check is on Windows' grep -Fq '[MANUAL] [Windows 호스트 (수동 확인)] copilot-app:' <<< "$common_output"
+assert 'Copilot app requires manual terminal check' grep -q 'MANUAL.*copilot-app:.*터미널 접근' <<< "$common_output"
 assert 'Azure permissions manual check scoped to Azure' grep -Fq '[MANUAL] [Azure (수동 확인)] azure-access:' <<< "$common_output"
 
 missing_output=$(
-    CHECK_CONTEXT='WSL Ubuntu Bash'
+    CHECK_CONTEXT='Linux Bash'
     probe() {
         PROBE_TEXT=''; PROBE_CODE=0
         case "$1 $2" in
-            'node --version'|'azd version') PROBE_CODE=127 ;;
-            'az version') PROBE_CODE=127 ;;
+            ('node --version'|'azd version') PROBE_CODE=127 ;;
+            ('az version') PROBE_CODE=127 ;;
         esac
     }
     check_container() { :; }
     CHECK_FAILURES=0
     check_common docker
 )
-assert 'missing WSL Node is scoped' grep -q 'FAIL.*WSL Ubuntu Bash.*node.*이 Bash 환경의 PATH' <<< "$missing_output"
-assert 'missing WSL azd is scoped' grep -q 'FAIL.*WSL Ubuntu Bash.*azd.*이 Bash 환경의 PATH' <<< "$missing_output"
+assert 'missing Node is scoped' grep -q 'FAIL.*Linux Bash.*node.*이 Bash 환경의 PATH' <<< "$missing_output"
+assert 'missing azd is scoped' grep -q 'FAIL.*Linux Bash.*azd.*이 Bash 환경의 PATH' <<< "$missing_output"
+
+for scenario in ready missing-modernize broken-modernize missing-gh old-gh broken-gh unauthenticated; do
+    tool_output=$(
+        probe() {
+            PROBE_CODE=0; PROBE_TEXT=''
+            case "$1 $2" in
+                ('modernize --version') PROBE_TEXT='modernize 1.0.76'
+                    case "$scenario" in (missing-modernize) PROBE_CODE=127 ;; (broken-modernize) PROBE_CODE=1 ;; esac ;;
+                ('gh --version') PROBE_TEXT='gh version 2.45.0'
+                    case "$scenario" in (missing-gh) PROBE_CODE=127 ;; (old-gh) PROBE_TEXT='gh version 2.44.0' ;; (broken-gh) PROBE_CODE=1 ;; esac ;;
+                ('gh auth') [[ "$scenario" != unauthenticated ]] || PROBE_CODE=1 ;;
+                (*) return 1 ;;
+            esac
+        }
+        CHECK_FAILURES=0
+        check_modernize_tools
+        printf 'failures=%s\n' "$CHECK_FAILURES"
+    )
+    if [[ "$scenario" == ready ]]; then expected=0; else expected=1; fi
+    assert "modernization prerequisite $scenario" grep -q "^failures=$expected$" <<< "$tool_output"
+done
+mkdir -p "$TEMPORARY/home/.local/bin"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TEMPORARY/home/.local/bin/modernize"
+chmod +x "$TEMPORARY/home/.local/bin/modernize"
+hidden_modernize=$(
+    HOME="$TEMPORARY/home"
+    uname() { printf 'Linux\n'; }
+    probe() { PROBE_CODE=127; PROBE_TEXT=''; }
+    CHECK_FAILURES=0
+    check_modernize_tools
+)
+assert 'installed Modernize outside PATH explains reload' grep -q 'FAIL.*modernize.*새 터미널' <<< "$hidden_modernize"
+for code in 0 1 127; do
+    brew_output=$(
+        probe() { PROBE_CODE="$code"; PROBE_TEXT='Homebrew fixture'; }
+        CHECK_FAILURES=0
+        check_homebrew
+        printf 'failures=%s\n' "$CHECK_FAILURES"
+    )
+    if [[ "$code" == 0 ]]; then expected=0; else expected=1; fi
+    assert "Homebrew exit $code" grep -q "^failures=$expected$" <<< "$brew_output"
+    if [[ "$code" != 0 ]]; then assert 'Homebrew failure gives direct installer help' grep -q './scripts/install-prerequisites.sh' <<< "$brew_output"; fi
+done
 
 tenant_failure_output=$(
     probe() {
         PROBE_CODE=0; PROBE_TEXT=''
         case "$1 $2" in
-            'az account')
+            ('az account')
                 if [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT='11111111-2222-3333-4444-555555555555'
                 else PROBE_TEXT=$'subscription-id\tSubscription name'; fi ;;
-            'az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
-            'az rest') PROBE_CODE=1; PROBE_TEXT='access denied' ;;
+            ('az cloud') PROBE_TEXT='https://management.example.invalid/' ;;
+            ('az rest') PROBE_CODE=1; PROBE_TEXT='access denied' ;;
         esac
     }
     CHECK_FAILURES=0
@@ -211,10 +241,10 @@ invalid_tenant_output=$(
     probe() {
         PROBE_CODE=0; PROBE_TEXT=''
         case "$1 $2" in
-            'az account')
+            ('az account')
                 if [[ "$*" == *'--query tenantId'* ]]; then PROBE_TEXT="invalid' query"
                 else PROBE_TEXT=$'subscription-id\tSubscription name'; fi ;;
-            *) printf 'unexpected Azure call\n' >&2; return 1 ;;
+            (*) printf 'unexpected Azure call\n' >&2; return 1 ;;
         esac
     }
     CHECK_FAILURES=0
@@ -233,10 +263,10 @@ machine_output=$(
     probe() {
         PROBE_CODE=0; PROBE_TEXT=''
         case "$2" in
-            --version) PROBE_TEXT='podman version 5.4.0' ;;
-            info) PROBE_TEXT=linux ;;
-            machine) PROBE_CODE=1 ;;
-            build) PROBE_TEXT=--platform ;;
+            (--version) PROBE_TEXT='podman version 5.4.0' ;;
+            (info) PROBE_TEXT=linux ;;
+            (machine) PROBE_CODE=1 ;;
+            (build) PROBE_TEXT=--platform ;;
         esac
     }
     CHECK_FAILURES=0
@@ -369,5 +399,7 @@ if bash -c 'source "$1/scripts/download-sample.sh"; download_sample "$2" "$3" "$
     printf 'FAILED: bad commit accepted\n' >&2; exit 1
 else PASSED=$((PASSED + 1)); fi
 assert 'failed download not published' test ! -e "$TEMPORARY/failed"
-assert 'temporary paths cleaned' test -z "$(find "$TEMPORARY" -maxdepth 1 -name '.workshop-download.*' -print)"
+for staging in "$TEMPORARY"/.workshop-download.*; do
+    assert 'temporary paths cleaned' test ! -e "$staging"
+done
 printf 'PASS: %s Bash assertions\n' "$PASSED"

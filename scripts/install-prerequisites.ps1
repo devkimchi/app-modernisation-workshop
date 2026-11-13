@@ -94,6 +94,7 @@ function Initialize-AzureProvider {
 }
 
 function Initialize-AzureEnvironment {
+    param([string]$SelectedTrack = 'dotnet')
     $script:CheckResults = [Collections.Generic.List[object]]::new()
     $script:CheckContext = 'Windows PowerShell'
     $previousDynamic = $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL
@@ -105,7 +106,9 @@ function Initialize-AzureEnvironment {
             $account = Invoke-ToolProbe az @('account', 'show', '--query', 'state', '--output', 'tsv')
             if ($account.Code -eq 0 -and $account.Text -eq 'Enabled') {
                 Show-AzureIdentity
-                foreach ($provider in @('Microsoft.App', 'Microsoft.OperationalInsights', 'Microsoft.Storage', 'Microsoft.ContainerRegistry', 'Microsoft.ServiceBus', 'Microsoft.Sql')) {
+                $providers = @('Microsoft.App', 'Microsoft.OperationalInsights', 'Microsoft.Storage', 'Microsoft.ContainerRegistry', 'Microsoft.ServiceBus')
+                $providers += if ($SelectedTrack -eq 'java') { 'Microsoft.DBforPostgreSQL' } else { 'Microsoft.Sql' }
+                foreach ($provider in $providers) {
                     Initialize-AzureProvider $provider
                 }
             }
@@ -209,17 +212,58 @@ function Install-WorkshopDotnetSdk {
     return $true
 }
 
+function Install-WorkshopJava {
+    param([int]$Major, [switch]$Update)
+    if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
+    if ($Major -notin @(8, 25)) { Write-Host '[FAIL] 지원하는 JDK는 8과 25입니다.'; return $false }
+    $existing = Find-WorkshopJava -Major $Major
+    if ($existing -and -not $Update) {
+        Write-Host "[INFO] Temurin JDK $Major 유지: $($existing.Home)"
+        return $true
+    }
+    if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
+        Write-Host '[WARN] Temurin 자동 설치에는 winget이 필요합니다. https://adoptium.net/temurin/releases/ 에서 직접 설치하세요.'
+        return $true
+    }
+    $package = "EclipseAdoptium.Temurin.$Major.JDK"
+    if (-not (Confirm-ToolInstall "Temurin JDK $Major`: winget $package 패키지를 설치하거나 업데이트합니다. 관리자 승인이 필요하며, ADDLOCAL=FeatureMain으로 시스템 PATH, JAVA_HOME과 파일 연결을 변경하지 않습니다.")) {
+        Write-Host "[INFO] Temurin JDK $Major 설치 또는 업데이트를 건너뜁니다."
+        return $true
+    }
+    $verb = if ($existing) { 'upgrade' } else { 'install' }
+    & winget $verb --id $package --exact --source winget --custom 'ADDLOCAL=FeatureMain' | Out-Host
+    $code = $LASTEXITCODE
+    # WinGet reports this status when an installed package is already current.
+    if ($code -ne 0 -and -not ($existing -and $code -eq -1978335189)) {
+        Write-Host "[FAIL] Temurin JDK $Major 설치 실패 (종료 코드 $code)."
+        return $false
+    }
+    if (-not (Find-WorkshopJava -Major $Major)) {
+        Write-Host "[FAIL] 설치 후 Temurin JDK $Major 의 java와 javac를 확인하지 못했습니다."
+        return $false
+    }
+    Write-Host "[PASS] Temurin JDK $Major 설치를 확인했습니다."
+    return $true
+}
+
 function Install-WindowsTools {
     param([string]$SelectedTrack)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
     $nodeInstalled = Install-WorkshopNode -Update:$Update
-    if ($SelectedTrack -eq 'java') { return $nodeInstalled }
     $tools =
         @(
             @{ Command='az'; Package='Microsoft.AzureCLI'; Name='Azure CLI' },
-            @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' }
+            @{ Command='azd'; Package='Microsoft.Azd'; Name='Azure Developer CLI' },
+            @{ Command='gh'; Package='GitHub.cli'; Name='GitHub CLI' },
+            @{ Command='modernize'; Package='GitHub.Copilot.modernization.agent'; Name='Modernize CLI' }
         )
-    $sdkInstalled = Install-WorkshopDotnetSdk -Update:$Update
+    $sdkInstalled = $true
+    if ($SelectedTrack -eq 'java') {
+        foreach ($major in @(8, 25)) {
+            if (-not (Install-WorkshopJava -Major $major -Update:$Update)) { $sdkInstalled = $false }
+        }
+    }
+    else { $sdkInstalled = Install-WorkshopDotnetSdk -Update:$Update }
     $failed = -not $nodeInstalled -or -not $sdkInstalled
     foreach ($tool in $tools) {
         $existing = Get-Command $tool.Command -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -245,11 +289,11 @@ function Install-WindowsTools {
 
 function Invoke-InstallPrerequisiteMain {
     if ($Help) {
-        Write-Host 'pwsh -File scripts\install-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman] [-Update]'
+        Write-Host './scripts/install-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman] [-Update]'
         return 0
     }
     if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] -Track java 또는 -Track dotnet을 지정하세요.'; return 2 }
-    if (-not $IsWindows) { Write-Host '[FAIL] 이 설치 도우미는 Windows에서만 지원합니다.'; return 1 }
+    if (-not $IsWindows) { Write-Host '[FAIL] 이 설치 도우미는 Windows 전용입니다. Java 트랙은 ./scripts/install-prerequisites.sh를 실행하세요.'; return 1 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
     catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
     if (-not (Test-WorkshopBootstrapInteractive)) {
@@ -268,21 +312,7 @@ function Invoke-InstallPrerequisiteMain {
         Write-Host '[FAIL] 설치 또는 업데이트를 완료하지 못했습니다. 위 안내를 해결한 뒤 다시 실행하세요. 추가 도구 실행은 건너뜁니다.'
         return 1
     }
-    if ($Track -eq 'java') {
-        $node = Invoke-ToolProbe node @('--version')
-        if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) {
-            Write-Host "[PASS] [Windows 호스트] node: $($node.Text)"
-        }
-        else {
-            Write-Host '[FAIL] [Windows 호스트] node: Node.js 22 이상의 안정 버전을 실행하지 못했습니다. PATH 또는 설치 상태를 확인하세요.'
-            $installed = $false
-        }
-        Write-Host 'Windows 설치가 끝났습니다. Java 도구는 선택한 WSL 배포판을 열고 bash scripts/install-prerequisites.sh --track java를 별도로 실행하세요.'
-        Write-Host 'WSL 및 호스트 사전 점검은 이후 check-prerequisites.ps1에서 실행하세요.'
-        if (-not $installed) { return 1 }
-        return 0
-    }
-    $prepared = Initialize-AzureEnvironment
+    $prepared = Initialize-AzureEnvironment -SelectedTrack $Track
     Write-Host '설치와 Azure 준비 후 조회 전용 사전 점검을 실행합니다. 수동 항목은 직접 확인하세요.'
     $result = Invoke-PrerequisiteMain
     if (-not $installed -or -not $prepared -or $result -ne 0) { return 1 }

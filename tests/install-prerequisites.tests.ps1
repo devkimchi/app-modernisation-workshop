@@ -1,6 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
@@ -34,6 +32,7 @@ if ($IsWindows) {
         return [pscustomobject]@{ Code=$script:SdkCode; Text=$script:SdkText }
     }
     function Install-WorkshopNode { param([switch]$Update); $script:NodeUpdates.Add([bool]$Update); return $script:NodeSuccess }
+    function Install-WorkshopJava { param($Major, [switch]$Update); return $true }
     function Get-Command {
         [CmdletBinding()]param($Name, $CommandType)
         if (($Name -eq 'winget' -and $script:HasWinget) -or $Name -eq 'az') { return [pscustomobject]@{ Source="fixture-$Name" } }
@@ -45,7 +44,9 @@ if ($IsWindows) {
     Assert-True ($script:InstallCalls.Count -eq 0) 'declined tools never installed'
     $script:Approved = $true
     Assert-True (Install-WindowsTools dotnet) 'approved installations succeed'
-    Assert-True ($script:InstallCalls.Count -eq 1) 'only missing Azure tools installed'
+    Assert-True ($script:InstallCalls.Count -eq 3) 'only missing Azure, gh and Modernize tools installed'
+    Assert-True ($script:InstallCalls -contains 'install --id GitHub.cli --exact --source winget') 'gh package selected'
+    Assert-True ($script:InstallCalls -contains 'install --id GitHub.Copilot.modernization.agent --exact --source winget') 'Modernize package selected'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*OpenJS.NodeJS.LTS*' }).Count -eq 0) 'standalone Node package never selected'
     Assert-True ($script:NodeUpdates.Count -eq 2 -and -not $script:NodeUpdates[0]) '.NET Node uses shared nvm installer without update by default'
     Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 1) 'azd package selected'
@@ -57,7 +58,7 @@ if ($IsWindows) {
     Assert-True ($script:NodeUpdates[3]) 'Java forwards update to nvm'
     $script:NodeSuccess = $false
     Assert-True (-not (Install-WindowsTools dotnet)) '.NET nvm failure propagates'
-    Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 3) 'Node failure does not block independent missing Azure tools'
+    Assert-True (@($script:InstallCalls | Where-Object { $_ -like '*Microsoft.Azd*' }).Count -eq 4) 'Node failure does not block independent missing Azure tools'
     $script:NodeSuccess = $true
     function winget { $global:LASTEXITCODE=1 }
     Assert-True (-not (Install-WindowsTools dotnet)) 'installer failure propagates'
@@ -92,7 +93,8 @@ if ($IsWindows) {
     $before = $script:InstallCalls.Count
     $script:SdkText = ''
     Assert-True (Install-WindowsTools java) 'Java does not require SDK'
-    Assert-True ($script:InstallCalls.Count -eq $before) 'Java never installs SDK'
+    Assert-True (@($script:InstallCalls | Select-Object -Skip $before | Where-Object { $_ -like '*Microsoft.DotNet.SDK*' }).Count -eq 0) 'Java never installs SDK'
+    $before = $script:InstallCalls.Count
     $script:HasWinget = $false
     Assert-True (Install-WorkshopDotnetSdk) 'missing winget leaves SDK installation manual'
     Assert-True ($script:InstallCalls.Count -eq $before) 'missing winget never launches installer'
@@ -140,7 +142,7 @@ if ($IsWindows) {
     Assert-True ($script:InstallCalls.Count -eq $before) 'noninteractive SDK never installed'
     function Test-WorkshopBootstrapInteractive { return $true }
     Remove-Item Function:\Invoke-ToolProbe
-    foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath','Install-WorkshopNode')) { Remove-Item "Function:\$name" }
+    foreach ($name in @('Get-Command','Confirm-ToolInstall','winget','Update-ProcessPath','Install-WorkshopNode','Install-WorkshopJava')) { Remove-Item "Function:\$name" }
     $Update = $false
     $Track = 'dotnet'
     $script:PreparationSuccess = $true
@@ -161,9 +163,10 @@ if ($IsWindows) {
     Assert-True (($script:MainCalls -join ',') -eq 'install') 'failed tool setup skips Azure actions and probes'
     $script:MainCalls.Clear()
     $script:ToolsSuccess = $true
+    $script:PreparationSuccess = $true
     $Track = 'java'
-    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'Java Windows host setup succeeds without Azure preparation'
-    Assert-True (($script:MainCalls -join ',') -eq 'install') 'Java Azure preparation remains in WSL'
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'native Java preparation and final check succeed'
+    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,check') 'native Java follows common preparation and check'
     foreach ($name in @('Install-WindowsTools','Initialize-AzureEnvironment','Invoke-PrerequisiteMain','Invoke-ToolProbe')) { Remove-Item "Function:\$name" }
     . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
 }

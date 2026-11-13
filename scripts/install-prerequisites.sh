@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ -z "${BASH_VERSION:-}" ]; then
+    printf '%s\n' '[FAIL] ./scripts/install-prerequisites.sh로 실행하세요.' >&2
+    return 2 2>/dev/null || exit 2
+fi
+
 INSTALL_SCRIPTS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$INSTALL_SCRIPTS/check-prerequisites.sh"
 
@@ -94,7 +99,7 @@ prepare_azure_environment() (
     local provider
     export AZURE_EXTENSION_USE_DYNAMIC_INSTALL=no
     CHECK_FAILURES=0
-    CHECK_CONTEXT="${WSL_DISTRO_NAME:+WSL $WSL_DISTRO_NAME }Bash"
+    if [[ "$(uname -s)" == Darwin ]]; then CHECK_CONTEXT='macOS Bash'; else CHECK_CONTEXT='Linux Bash'; fi
     if command -v az >/dev/null 2>&1; then
         prepare_azure_account
         prepare_containerapp_extension
@@ -112,27 +117,32 @@ prepare_azure_environment() (
 
 confirm_install() {
     local answer
+    can_prompt_azure || return 1
     printf '%s\n' "$1"
     read -r -p '설치하시겠습니까? [y/N] ' answer || return 1
     [[ "$answer" == y || "$answer" == Y ]]
 }
 
 run_remote_installer() {
-    local url="$1" privilege="$2" temporary status
+    local url="$1" privilege="$2" interpreter="$3" temporary directory status
     command -v curl >/dev/null 2>&1 || { printf '%s\n' '[FAIL] curl이 필요합니다.' >&2; return 1; }
-    temporary=$(mktemp "${TMPDIR:-/tmp}/workshop-installer.XXXXXXXX") || return 1
+    directory="$PWD/.workshop-installer.$$.$RANDOM"
+    (umask 077; mkdir -- "$directory") || return 1
+    temporary="$directory/install"
     if ! curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --output "$temporary" "$url"; then
         rm -f -- "$temporary"
+        rmdir -- "$directory"
         printf '%s\n' '[FAIL] 설치 스크립트를 다운로드하지 못했습니다.' >&2
         return 1
     fi
     status=0
     if [[ "$privilege" == sudo ]]; then
-        sudo bash "$temporary" || status=$?
+        sudo "$interpreter" "$temporary" || status=$?
     else
-        bash "$temporary" || status=$?
+        "$interpreter" "$temporary" || status=$?
     fi
     rm -f -- "$temporary"
+    rmdir -- "$directory"
     return "$status"
 }
 
@@ -146,10 +156,6 @@ sdkman_missing_dependencies() {
 prepare_sdkman_dependencies() {
     local os="$1" missing dependency package
     local -a packages=()
-    if (( BASH_VERSINFO[0] < 4 )); then
-        printf '%s\n' '[FAIL] SDKMAN 설치에는 Bash 4 이상이 필요합니다. Bash를 업그레이드한 뒤 다시 실행하세요.' >&2
-        return 1
-    fi
     missing=$(sdkman_missing_dependencies)
     if [[ -z "$missing" ]]; then return 0; fi
     printf '[WARN] SDKMAN 설치에 필요한 명령이 없습니다: %s\n' "${missing//$'\n'/, }"
@@ -210,7 +216,7 @@ install_node_with_nvm() {
         if ! mkdir -p "$nvm_dir"; then
             printf '[FAIL] nvm 설치 경로를 만들지 못했습니다: %s\n' "$nvm_dir" >&2; return 1
         fi
-        if ! NVM_DIR="$nvm_dir" NODE_VERSION='' run_remote_installer 'https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh' user; then
+        if ! NVM_DIR="$nvm_dir" NODE_VERSION='' run_remote_installer 'https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh' user bash; then
             printf '%s\n' '[FAIL] nvm 설치에 실패했습니다.' >&2; return 1
         fi
     fi
@@ -224,7 +230,6 @@ install_node_with_nvm() {
 update_node_with_nvm() {
     local update="${1:-1}" current='' latest nvm_dir installed active resolved_dir major=22 node_path live_path
     node_path=$(tool_path node)
-    if [[ -n "${WSL_DISTRO_NAME:-}" && "$node_path" =~ ^/mnt/[a-zA-Z]/ ]]; then node_path=''; fi
     if [[ -n "$node_path" ]]; then
         current=$(node --version) || { printf '%s\n' '[FAIL] Node.js 버전 확인에 실패했습니다.' >&2; return 1; }
         if [[ ! "$current" =~ ^v([0-9]+)\.[0-9]+\.[0-9]+$ ]]; then
@@ -290,7 +295,6 @@ update_node_with_nvm() {
         return $?
     fi
     live_path=$(tool_path node)
-    if [[ -n "${WSL_DISTRO_NAME:-}" && "$live_path" =~ ^/mnt/[a-zA-Z]/ ]]; then live_path=''; fi
     if [[ "$live_path" != "$node_path" ]] ||
         { [[ -n "$current" ]] && { [[ $(node --version) != "$current" ]] ||
             [[ $(canonical_tool_path "$live_path") != "$active" ]]; }; }; then
@@ -314,7 +318,7 @@ canonical_tool_path() (
         if [[ "$link" == /* ]]; then path="$link"; else path="$(dirname "$path")/$link"; fi
     done
     cd -P -- "$(dirname "$path")" || return 1
-    printf '%s/%s\n' "$PWD" "${path##*/}"
+    printf '%s/%s\n' "${PWD%/}" "${path##*/}"
 )
 
 version_not_older() {
@@ -336,17 +340,28 @@ azure_tool_version() {
         text=$(az version --query '"azure-cli"' --output tsv) || return 1
         [[ "$text" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
         printf '%s\n' "$text"
-    else
+    elif [[ "$1" == azd ]]; then
         text=$(azd version) || return 1
         [[ "$text" =~ ^azd[[:space:]]version[[:space:]]([0-9]+\.[0-9]+\.[0-9]+)([[:space:]]|$) ]] || return 1
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    else
+        text=$("$1" --version) || return 1
+        [[ "$text" != *-rc* && "$text" != *-preview* && "$text" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]] || return 1
         printf '%s\n' "${BASH_REMATCH[1]}"
     fi
 }
 
 ensure_homebrew() {
-    command -v brew >/dev/null 2>&1 && return 0
-    if ! confirm_install 'Homebrew: 공식 설치 스크립트를 실행합니다. 네트워크, 디스크와 관리자 권한이 필요하며 macOS 개발 도구가 설치될 수 있습니다. 출처: https://brew.sh'; then return 1; fi
-    if ! run_remote_installer 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh' user; then
+    local environment profile brew_path
+    if command -v brew >/dev/null 2>&1; then
+        brew --version && return 0
+        printf '%s\n' '[FAIL] 기존 Homebrew 실행에 실패했습니다. 설치 상태를 직접 확인하세요.' >&2
+        return 1
+    fi
+    if ! confirm_install 'Homebrew: 공식 설치 스크립트를 실행합니다. 네트워크, 디스크와 관리자 권한이 필요하며 Xcode Command Line Tools가 설치될 수 있습니다. 출처: https://brew.sh'; then
+        printf '%s\n' '[FAIL] Homebrew 설치를 승인하지 않아 Homebrew 의존 도구를 건너뜁니다.' >&2; return 1
+    fi
+    if ! run_remote_installer 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh' user /bin/bash; then
         printf '%s\n' '[FAIL] Homebrew 설치에 실패했습니다.' >&2; return 1
     fi
     if ! command -v brew >/dev/null 2>&1; then
@@ -354,17 +369,23 @@ ensure_homebrew() {
         elif [[ -x /usr/local/bin/brew ]]; then export PATH="/usr/local/bin:$PATH"; fi
     fi
     if ! brew --version; then printf '%s\n' '[FAIL] Homebrew 실행 확인에 실패했습니다.' >&2; return 1; fi
+    environment=$(brew shellenv) && eval "$environment" || {
+        printf '%s\n' '[FAIL] Homebrew shellenv 적용에 실패했습니다.' >&2; return 1;
+    }
+    brew_path=$(command -v brew)
+    case "${SHELL##*/}" in zsh) profile='~/.zprofile' ;; *) profile='~/.bash_profile' ;; esac
+    printf '[MANUAL] %s에 다음 명령을 직접 추가하세요: eval "$(%s shellenv)"\n' "$profile" "$brew_path"
 }
 
 microsoft_apt_candidate() {
-    local policy
+    local policy origin="${2:-packages.microsoft.com}"
     policy=$(LC_ALL=C apt-cache policy "$1") || return 2
-    printf '%s\n' "$policy" | awk '
+    printf '%s\n' "$policy" | awk -v origin="$origin" '
         /Candidate:/ { candidate=$2 }
         /^[[:space:]]*(\*\*\*[[:space:]]*)?[^[:space:]]+[[:space:]]+[0-9]+$/ {
             version=$1 == "***" ? $2 : $1
         }
-        version == candidate && $2 ~ /^https:\/\/packages\.microsoft\.com\// { found=1 }
+        version == candidate && index($2, "https://" origin "/") == 1 { found=1 }
         END { if(found) print candidate; else exit 1 }'
 }
 
@@ -405,7 +426,7 @@ azd_package_owned() {
 install_linux_azd() (
     local path="${1:-}" target link before='' digest='' after live
     local state="${XDG_STATE_HOME:-$HOME/.local/state}/app-modernisation-workshop"
-    local record temporary owner_status ancestor
+    local record temporary owner_status ancestor line
     local -a saved=()
     if ! command -v sha256sum >/dev/null 2>&1; then
         printf '%s\n' '[FAIL] azd: 설치 기록 검증에 sha256sum이 필요합니다.' >&2; return 1
@@ -443,9 +464,10 @@ install_linux_azd() (
             printf '%s\n' '[FAIL] azd: 기존 버전/해시 확인에 실패했습니다.' >&2; return 1;
         }
         if [[ -e "$record" ]]; then
-            [[ -f "$record" ]] && mapfile -t saved < "$record" || {
+            [[ -f "$record" && -r "$record" ]] || {
                 printf '%s\n' '[FAIL] azd: 관리 기록을 읽지 못했습니다.' >&2; return 1;
             }
+            while IFS= read -r line || [[ -n "$line" ]]; do saved+=("$line"); done < "$record"
             if [[ "${#saved[@]}" != 4 || "${saved[0]}" != official-script ||
                 "${saved[1]}" != "$target" || "${saved[2]}" != "$before" || "${saved[3]}" != "$digest" ]]; then
                 printf '%s\n' '[FAIL] azd: 설치 파일이 관리 기록과 다릅니다. 자동으로 변경하지 않습니다.' >&2; return 1
@@ -459,7 +481,6 @@ install_linux_azd() (
     fi
     if ! confirm_install "azd ${before:-미설치}: Microsoft 공식 스크립트로 설치/업데이트합니다. 네트워크와 sudo가 필요할 수 있습니다. 출처: https://aka.ms/install-azd.sh"; then return 0; fi
     live=$(tool_path azd)
-    if [[ -z "$path" && -n "${WSL_DISTRO_NAME:-}" && "$live" =~ ^/mnt/[a-zA-Z]/ ]]; then live=''; fi
     if [[ "$live" != "$path" ]] || { [[ -n "$path" ]] &&
         { [[ "$(canonical_tool_path "$link")" != "$target" ]] ||
           [[ "$(azd_file_hash "$target")" != "$digest" ]]; }; }; then
@@ -476,11 +497,12 @@ install_linux_azd() (
             printf '%s\n' '[FAIL] azd: 패키지 소유권 재조회에 실패했습니다.' >&2; return 1
         fi
     fi
-    if ! (umask 077; mkdir -p -- "$state") || ! temporary=$(mktemp "$state/.azd-script-install.XXXXXXXX"); then
+    temporary="$state/.azd-script-install.$$.$RANDOM"
+    if ! (umask 077; mkdir -p -- "$state" && set -C && : > "$temporary"); then
         printf '%s\n' '[FAIL] azd: 관리 기록을 준비하지 못했습니다.' >&2; return 1
     fi
-    trap 'rm -f -- "$temporary"' EXIT
-    if ! run_remote_installer 'https://aka.ms/install-azd.sh' user; then
+    trap "rm -f -- $(printf '%q' "$temporary")" EXIT
+    if ! run_remote_installer 'https://aka.ms/install-azd.sh' user bash; then
         printf '%s\n' '[FAIL] azd 공식 스크립트 설치/업데이트에 실패했습니다.' >&2; return 1
     fi
     hash -r
@@ -498,8 +520,8 @@ install_linux_azd() (
 )
 
 update_azure_tool() {
-    local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed
-    case "$tool" in az) package=azure-cli ;; azd) package=azd ;; esac
+    local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed origin=packages.microsoft.com
+    case "$tool" in az) package=azure-cli ;; azd) package=azd ;; gh) package=gh; origin=cli.github.com ;; esac
     if [[ "$os" == Darwin ]] && command -v brew >/dev/null 2>&1; then
         [[ "$tool" != azd ]] || package=azure/azd/azd
         if prefix=$(brew --prefix "$package") && brew list --versions "$package" >/dev/null 2>&1 &&
@@ -507,11 +529,11 @@ update_azure_tool() {
             [[ "$(canonical_tool_path "$path")" == "$(canonical_tool_path "$prefix/bin/$tool")" ]]; then managed=brew; fi
     elif [[ "$os" == Linux ]] && command -v dpkg-query >/dev/null 2>&1 &&
         command -v apt-cache >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-        # 패키지 이름 외에 선택된 실행 파일의 소유자와 Microsoft 업데이트 원본도 확인한다.
+        # 선택된 실행 파일의 소유자와 공식 업데이트 원본을 함께 확인한다.
         if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" == 'install ok installed' ]] &&
             { [[ "$(dpkg-query -S "$path" 2>/dev/null)" == "$package: $path" ]] ||
               [[ "$(dpkg-query -S "$(canonical_tool_path "$path")" 2>/dev/null)" == "$package: $(canonical_tool_path "$path")" ]]; }; then
-            if candidate=$(microsoft_apt_candidate "$package"); then
+            if candidate=$(microsoft_apt_candidate "$package" "$origin"); then
                 installed=$(dpkg-query -W -f='${Version}' "$package") || return 1
                 if ! dpkg --compare-versions "$candidate" ge "$installed"; then
                     printf '[FAIL] %s: APT 후보가 현재 버전보다 낮습니다. 변경하지 않습니다.\n' "$tool" >&2; return 1
@@ -530,7 +552,7 @@ update_azure_tool() {
         return $?
     fi
     if [[ -z "$managed" ]]; then
-        printf '[MANUAL] %s: 실행 파일의 Homebrew/APT(Microsoft 저장소) 출처를 확인하지 못했습니다. 덮어쓰지 않습니다. docs/java/08-troubleshooting.md를 참고하세요.\n' "$tool"
+        printf '[MANUAL] %s: 실행 파일의 Homebrew/공식 APT 저장소 출처를 확인하지 못했습니다. 덮어쓰지 않습니다. docs/java/08-troubleshooting.md를 참고하세요.\n' "$tool"
         return 0
     fi
     if ! before=$(azure_tool_version "$tool"); then printf '[FAIL] %s 버전 실행 확인에 실패했습니다.\n' "$tool" >&2; return 1; fi
@@ -542,9 +564,9 @@ update_azure_tool() {
             printf '[FAIL] %s 업데이트 목록 갱신에 실패했습니다.\n' "$tool" >&2; return 1
         fi
         # 갱신 후 후보의 출처/다운그레이드 여부를 다시 확인하고 그 버전만 요청한다.
-        if ! candidate=$(microsoft_apt_candidate "$package") ||
+        if ! candidate=$(microsoft_apt_candidate "$package" "$origin") ||
             ! dpkg --compare-versions "$candidate" ge "$installed"; then
-            printf '[FAIL] %s 갱신 후 안전한 Microsoft APT 후보를 확인하지 못했습니다.\n' "$tool" >&2; return 1
+            printf '[FAIL] %s 갱신 후 안전한 공식 APT 후보를 확인하지 못했습니다.\n' "$tool" >&2; return 1
         fi
         if ! sudo apt-get install --only-upgrade --no-remove -y "$package=$candidate"; then
             printf '[FAIL] %s 업데이트에 실패했습니다.\n' "$tool" >&2; return 1
@@ -669,9 +691,84 @@ install_java_sdks() (
     return "$failed"
 )
 
+linux_install_supported() {
+    if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then return 0; fi
+    printf '[WARN] %s 자동 설치에는 apt-get과 sudo가 필요합니다. 공식 수동 설치 안내: %s\n' "$1" "$2"
+    return 1
+}
+
+install_linux_gh() (
+    local directory architecture
+    if ! confirm_install 'GitHub CLI(gh): cli.github.com의 공식 APT 저장소와 키링을 추가하고 gh를 설치합니다. sudo와 네트워크가 필요하며 시스템 패키지가 변경됩니다. 출처: https://github.com/cli/cli/blob/trunk/docs/install_linux.md'; then return 0; fi
+    architecture=$(dpkg --print-architecture) || return 1
+    case "$architecture" in amd64|arm64|armhf|i386) ;; *) printf '%s\n' '[FAIL] gh: 지원하는 APT 아키텍처를 확인하지 못했습니다.' >&2; return 1 ;; esac
+    directory="$PWD/.workshop-gh.$$.$RANDOM"
+    (umask 077; mkdir -- "$directory") || return 1
+    trap "rm -rf -- $(printf '%q' "$directory")" EXIT
+    if ! curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+        --output "$directory/keyring.gpg" 'https://cli.github.com/packages/githubcli-archive-keyring.gpg' ||
+        ! sudo install -d -m 0755 /etc/apt/keyrings ||
+        ! sudo install -m 0644 "$directory/keyring.gpg" /etc/apt/keyrings/githubcli-archive-keyring.gpg; then
+        printf '%s\n' '[FAIL] gh 공식 APT 키링을 준비하지 못했습니다.' >&2; return 1
+    fi
+    if ! printf 'deb [arch=%s signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main\n' "$architecture" |
+        sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null ||
+        ! sudo apt-get update || ! sudo apt-get install -y gh; then
+        printf '%s\n' '[FAIL] gh 공식 APT 설치에 실패했습니다.' >&2; return 1
+    fi
+    hash -r
+    local version
+    version=$(gh --version) && minimum_version "$version" 2.45.0 || {
+        printf '%s\n' '[FAIL] 설치 후 gh 2.45.0 이상을 실행하지 못했습니다.' >&2; return 1;
+    }
+)
+
+install_modernize() {
+    local os="$1" update="$2" path="${3:-}" before='' after cask_root
+    if [[ -n "$path" ]]; then
+        if [[ "$os" == Darwin ]]; then
+            cask_root=$(brew --caskroom microsoft/modernize/modernize) &&
+                brew list --cask --versions microsoft/modernize/modernize >/dev/null 2>&1 || {
+                    printf '%s\n' '[MANUAL] Modernize CLI의 Homebrew 출처를 확인하지 못했습니다. 기존 설치 관리자로 업데이트하세요.'; return 0;
+                }
+            case "$(canonical_tool_path "$path")" in "$cask_root"/*) ;; *)
+                printf '%s\n' '[MANUAL] Modernize CLI 실행 경로가 Homebrew cask와 다릅니다. 덮어쓰지 않습니다.'; return 0 ;; esac
+        else
+            if [[ "$path" != "$HOME/.local/bin/modernize" ]]; then
+                printf '%s\n' '[MANUAL] Modernize CLI가 공식 설치 경로 밖에 있습니다. 기존 설치 관리자로 업데이트하세요.'; return 0
+            fi
+        fi
+        before=$(azure_tool_version modernize) || return 1
+    fi
+    if [[ "$os" == Darwin ]]; then
+        if ! confirm_install 'Modernize CLI: Homebrew tap microsoft/modernize를 추가하고 microsoft/modernize/modernize cask를 설치/업데이트합니다. 네트워크와 디스크가 필요합니다. 출처: https://github.com/microsoft/modernize-cli'; then return 0; fi
+        if ! brew tap microsoft/modernize https://github.com/microsoft/modernize-cli; then return 1; fi
+        if [[ -n "$path" && "$update" == 1 ]]; then
+            brew upgrade --cask microsoft/modernize/modernize || return 1
+        else
+            brew install --cask microsoft/modernize/modernize || return 1
+        fi
+    else
+        if ! confirm_install 'Modernize CLI: 공식 install.sh를 sh로 실행해 ~/.local/share/modernize와 ~/.local/bin에 설치/업데이트합니다. sudo는 사용하지 않으며 glibc 2.27 이상이 필요합니다. 네트워크와 디스크를 사용하고 설치기가 ~/.bashrc 등 셸 설정에 PATH를 추가합니다. 출처: https://github.com/microsoft/modernize-cli'; then return 0; fi
+        run_remote_installer 'https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh' user sh || return 1
+        export PATH="$HOME/.local/bin:$PATH"
+    fi
+    hash -r
+    if ! after=$(azure_tool_version modernize) ||
+        { [[ -n "$before" ]] && ! version_not_older "$after" "$before"; }; then
+        printf '%s\n' '[FAIL] Modernize CLI 설치 후 버전 확인에 실패했습니다.' >&2; return 1
+    fi
+    printf '[PASS] Modernize CLI %s\n' "$after"
+}
+
 install_missing_tools() {
-    local os="$1" update="${2:-0}" tool path sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" failed=0
-    for tool in node az azd sdkman; do
+    local os="$1" update="${2:-0}" tool path sdk_dir="${SDKMAN_DIR:-$HOME/.sdkman}" failed=0 brew_ready=1 interpreter
+    if [[ "$os" == Darwin ]] && ! ensure_homebrew; then failed=1; brew_ready=0; fi
+    for tool in node az azd gh modernize sdkman; do
+        case "$os:$tool" in
+            Darwin:az|Darwin:azd|Darwin:gh|Darwin:modernize)
+                if (( ! brew_ready )); then printf '[WARN] %s: Homebrew를 사용할 수 없어 건너뜁니다.\n' "$tool"; continue; fi ;;
+        esac
         if [[ "$tool" == sdkman ]]; then
             if [[ -e "$sdk_dir" || -L "$sdk_dir" ]]; then
                 if [[ ! -r "$sdk_dir/bin/sdkman-init.sh" ]]; then
@@ -687,55 +784,57 @@ install_missing_tools() {
             fi
         else
             path=$(tool_path "$tool")
-            if [[ -n "$path" && ! ( "$os" == Linux && -n "${WSL_DISTRO_NAME:-}" && "$path" =~ ^/mnt/[a-zA-Z]/ ) ]]; then
+            if [[ -n "$path" ]]; then
                 if (( update )); then
+                    case "$os:$tool" in
+                        Linux:az|Linux:azd|Linux:gh|Linux:modernize)
+                            linux_install_supported "$tool" 'docs/java/00-setup.md' || continue ;;
+                    esac
                     case "$tool" in
                         node) update_node_with_nvm "$update" || failed=1 ;;
-                        az|azd) update_azure_tool "$os" "$tool" "$path" || failed=1 ;;
+                        az|azd|gh) update_azure_tool "$os" "$tool" "$path" || failed=1 ;;
+                        modernize) install_modernize "$os" "$update" "$path" || failed=1 ;;
                     esac
                     continue
                 fi
                 printf '[INFO] %s: PATH에서 발견했습니다 (%s). 설치하거나 업데이트하지 않습니다.\n' "$tool" "$path"
                 continue
             fi
-            if [[ -n "$path" ]]; then
-                printf '[INFO] %s: Windows 드라이브의 실행 파일만 PATH에서 선택되었습니다 (%s). WSL에 별도로 설치할 수 있습니다.\n' "$tool" "$path"
-            fi
         fi
         case "$os:$tool" in
             Linux:node|Darwin:node)
                 install_node_with_nvm "$update" || failed=1 ;;
             Linux:az)
-                if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
-                    printf '%s\n' '[WARN] Azure CLI 자동 설치에는 apt-get과 sudo가 필요합니다. docs/java/00-setup.md에서 수동 설치 방법을 확인하세요.'
-                    continue
-                fi
+                linux_install_supported az 'https://learn.microsoft.com/cli/azure/install-azure-cli-linux' || continue
                 if confirm_install 'Azure CLI: 현재 Linux 환경에 Microsoft 공식 설치 스크립트를 실행합니다. sudo와 네트워크가 필요하며 APT 저장소와 시스템 패키지가 변경됩니다. 출처: https://aka.ms/InstallAzureCLIDeb'; then
-                    if ! run_remote_installer 'https://aka.ms/InstallAzureCLIDeb' sudo; then printf '%s\n' '[FAIL] Azure CLI 설치에 실패했습니다.' >&2; failed=1; fi
+                    if ! run_remote_installer 'https://aka.ms/InstallAzureCLIDeb' sudo bash; then printf '%s\n' '[FAIL] Azure CLI 설치에 실패했습니다.' >&2; failed=1; fi
                 fi ;;
             Linux:azd)
+                linux_install_supported azd 'https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd' || continue
                 install_linux_azd || failed=1 ;;
-            Darwin:az|Darwin:azd)
-                if ! command -v brew >/dev/null 2>&1; then
-                    if (( update )); then
-                        if ! ensure_homebrew; then failed=1; continue; fi
-                    else
-                        printf '[WARN] %s 자동 설치에는 Homebrew가 필요합니다. Homebrew는 자동 설치하지 않습니다.\n' "$tool"
-                        continue
-                    fi
-                fi
+            Linux:gh)
+                linux_install_supported gh 'https://github.com/cli/cli/blob/trunk/docs/install_linux.md' || continue
+                install_linux_gh || failed=1 ;;
+            Linux:modernize)
+                linux_install_supported modernize 'https://github.com/microsoft/modernize-cli' || continue
+                install_modernize "$os" "$update" || failed=1 ;;
+            Darwin:modernize)
+                install_modernize "$os" "$update" || failed=1 ;;
+            Darwin:az|Darwin:azd|Darwin:gh)
                 case "$tool" in
                     az) set -- azure-cli ;;
                     azd) set -- azure/azd/azd ;;
+                    gh) set -- gh ;;
                 esac
                 if confirm_install "$tool: macOS에서 Homebrew 패키지 $1을 설치합니다. 네트워크가 필요하며 Homebrew 저장소와 패키지가 변경될 수 있습니다."; then
                     if ! brew install "$1"; then printf '[FAIL] %s 설치에 실패했습니다.\n' "$tool" >&2; failed=1; fi
                 fi ;;
             *:sdkman)
+                if [[ "$os" == Darwin ]]; then interpreter=zsh; else interpreter=bash; fi
                 if confirm_install "SDKMAN: 현재 사용자의 $sdk_dir에 공식 설치 스크립트를 실행합니다. 네트워크가 필요하며 셸 설정 파일이 변경될 수 있습니다. JDK는 버전별로 별도 동의를 받아 설치합니다. 출처: https://get.sdkman.io"; then
                     if ! prepare_sdkman_dependencies "$os"; then
                         failed=1
-                    elif ! SDKMAN_DIR="$sdk_dir" run_remote_installer 'https://get.sdkman.io' user; then
+                    elif ! SDKMAN_DIR="$sdk_dir" run_remote_installer 'https://get.sdkman.io' user "$interpreter"; then
                         printf '%s\n' '[FAIL] SDKMAN 설치에 실패했습니다. 위 오류와 기존 설치 경로를 확인하세요.' >&2; failed=1
                     elif ! verify_sdkman_installation "$sdk_dir"; then
                         failed=1
@@ -757,20 +856,19 @@ install_prerequisite_main() {
                 if [[ "$1" == --track ]]; then track="$2"; else requested="$2"; fi
                 shift 2 ;;
             --update) update=1; shift ;;
-            --help|-h) printf '%s\n' 'bash scripts/install-prerequisites.sh --track java [--container-engine docker|podman] [--update]'; return 0 ;;
+            --help|-h) printf '%s\n' './scripts/install-prerequisites.sh --track java [--container-engine docker|podman] [--update]'; return 0 ;;
             *) printf '[FAIL] 알 수 없는 인자: %s\n' "$1" >&2; return 2 ;;
         esac
     done
-    [[ "$track" == java ]] || { printf '%s\n' '[FAIL] Bash 설치 도우미는 --track java만 지원합니다.' >&2; return 2; }
+    if [[ "$track" == dotnet ]]; then
+        printf '%s\n' '[FAIL] .NET은 Windows PowerShell에서 ./scripts/install-prerequisites.ps1 -Track dotnet을 실행하세요.' >&2; return 1
+    fi
+    [[ "$track" == java ]] || { printf '%s\n' '[FAIL] --track java를 지정하세요.' >&2; return 2; }
     engine=$(resolve_engine "$requested") || return $?
     os=$(uname -s)
     case "$os" in
-        Darwin) ;;
-        Linux)
-            if [[ "${WORKSHOP_DEVCONTAINER:-}" != 1 ]] && ! grep -Eqi 'microsoft.*wsl2|wsl2.*microsoft' /proc/sys/kernel/osrelease; then
-                printf '%s\n' '[FAIL] Java 설치 도우미는 macOS, WSL2 또는 워크숍 Dev Container에서 실행하세요.' >&2; return 1
-            fi ;;
-        *) printf '%s\n' '[FAIL] Java 설치 도우미는 Windows가 아닌 WSL2 또는 macOS에서 실행하세요.' >&2; return 1 ;;
+        Darwin|Linux) ;;
+        *) printf '%s\n' '[FAIL] macOS와 Linux에서 실행하세요. Windows PowerShell에서는 ./scripts/install-prerequisites.ps1 -Track java를 실행하세요.' >&2; return 1 ;;
     esac
     if [[ ! -t 0 || ! -t 1 || -n "${CI:-}" ]]; then
         printf '%s\n' '[FAIL] 설치는 대화형 터미널에서만 가능합니다. 비대화형 환경에서는 설치하지 않습니다.' >&2
@@ -779,7 +877,7 @@ install_prerequisite_main() {
     if (( update )); then
         printf '%s\n' '업데이트 모드: 도구별 출처 확인과 별도 동의 후 변경합니다. 기존 버전과 기본 런타임은 유지하며 Node.js 활성화는 별도 동의를 받습니다.'
     else
-        printf '설치 대상: %s%s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os" "${WSL_DISTRO_NAME:+ / WSL $WSL_DISTRO_NAME}"
+        printf '설치 대상: %s. 이미 PATH에 있는 도구는 변경하지 않습니다.\n' "$os"
     fi
     install_missing_tools "$os" "$update" || result=1
     if (( result != 0 )); then

@@ -3,7 +3,6 @@ param(
     [string]$Track,
     [string]$Destination,
     [string]$ContainerEngine,
-    [string]$WslDistribution = 'Ubuntu',
     [switch]$Help
 )
 
@@ -16,7 +15,7 @@ $script:DownloadScripts = $PSScriptRoot
 function Get-SampleDefinition {
     param([string]$SelectedTrack)
     switch -CaseSensitive ($SelectedTrack) {
-        'java' { return [pscustomobject]@{ Repository = 'https://github.com/Azure-Samples/java-migration-copilot-samples.git'; Commit = '317d3bbfd61fb1e402bea61f90e385bec12f2070'; Subdirectory = 'asset-manager'; Required = @('pom.xml', 'web', 'worker', 'mvnw', '.mvn\wrapper\maven-wrapper.properties') } }
+        'java' { return [pscustomobject]@{ Repository = 'https://github.com/Azure-Samples/java-migration-copilot-samples.git'; Commit = '317d3bbfd61fb1e402bea61f90e385bec12f2070'; Subdirectory = 'asset-manager'; Required = @('pom.xml', 'web', 'worker', 'mvnw', 'mvnw.cmd', '.mvn\wrapper\maven-wrapper.properties') } }
         'dotnet' { return [pscustomobject]@{ Repository = 'https://github.com/Azure-Samples/dotnet-migration-copilot-samples.git'; Commit = '7c1bf47b7e2627fe5a1c764716638815d35e0282'; Subdirectory = 'ContosoUniversity'; Required = @('ContosoUniversity.sln', 'ContosoUniversity.csproj', 'packages.config') } }
         default { throw [ArgumentException]::new('-Track java 또는 dotnet을 지정하세요.') }
     }
@@ -106,14 +105,15 @@ function Invoke-SampleDownload {
 
 function Invoke-DownloadMain {
     if ($Help) {
-        Write-Host 'pwsh -File scripts\download-sample.ps1 -Track java|dotnet [-Destination PATH] [-ContainerEngine docker|podman] [-WslDistribution Ubuntu]'
+        Write-Host './scripts/download-sample.ps1 -Track java|dotnet [-Destination PATH] [-ContainerEngine docker|podman]'
         return 0
     }
     if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] -Track java 또는 -Track dotnet을 지정하세요.'; return 2 }
+    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell 진입점은 Windows 전용입니다. Java 트랙은 ./scripts/download-sample.sh를 실행하세요.'; return 1 }
     $definition = Get-SampleDefinition $Track
     $workshop = Split-Path $script:DownloadScripts -Parent
     $savedHelp = $Help
-    . (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track $Track -ContainerEngine $ContainerEngine -WslDistribution $WslDistribution
+    . (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track $Track -ContainerEngine $ContainerEngine
     $Help = $savedHelp
     try {
         $destinationPath = if ($Destination) { [IO.Path]::GetFullPath($Destination, (Get-Location).ProviderPath) } else { Join-Path $workshop $Track }
@@ -121,15 +121,7 @@ function Invoke-DownloadMain {
         $null = Assert-SafeDestination $destinationPath $workshop
     }
     catch { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
-    if ($Track -eq 'java') {
-        try {
-            $target = Get-JavaBashTarget $WslDistribution
-            $javaDestination = Convert-ToJavaPath $destinationPath $target
-            return (Invoke-JavaBashScript (Join-Path $script:DownloadScripts 'download-sample.sh') @('--track', 'java', '--destination', $javaDestination, '--container-engine', $engine) $WslDistribution)
-        }
-        catch { Write-Host "[FAIL] Java 다운로드 위임 실패: $($_.Exception.Message)"; return 1 }
-    }
-    & pwsh -NoLogo -NoProfile -File (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track dotnet -ContainerEngine $engine | Out-Host
+    & pwsh -NoLogo -NoProfile -File (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track $Track -ContainerEngine $engine | Out-Host
     if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] 사전 점검이 통과하지 않아 다운로드하지 않았습니다.'; return 1 }
     try {
         Invoke-SampleDownload $destinationPath $definition $workshop

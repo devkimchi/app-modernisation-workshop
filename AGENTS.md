@@ -6,7 +6,21 @@
 
 ## 2. 저장소 구조와 기준 문서
 
-저장소 구조와 실습 순서는 [README](README.md), 기여 절차와 로컬 테스트는 [CONTRIBUTING](CONTRIBUTING.md), CI 검증 범위는 [ci.yml](.github/workflows/ci.yml)을 참고하세요. `scripts/`에는 준비와 원본 실행 도우미, `tests/`에는 격리된 입력과 모의 명령 응답을 사용하는 회귀 테스트가 있습니다.
+```text
+.
+├── README.md              # 참가자용 워크숍 개요와 전체 목차
+├── CONTRIBUTING.md        # 기여 절차와 로컬 테스트 안내
+├── docs
+│   ├── java               # Java 트랙의 준비, 실습과 문제 해결
+│   └── dotnet             # .NET 트랙의 준비, 실습과 문제 해결
+├── scripts                # 사전 점검, 설치, 샘플 다운로드와 원본 실행 도우미
+├── tests                  # 격리된 입력과 가짜 명령 응답을 사용하는 회귀 테스트
+└── .github
+    └── workflows
+        └── ci.yml         # CI에서 실행하는 검증
+```
+
+실습 순서는 [README](README.md), 기여 절차와 로컬 테스트는 [CONTRIBUTING](CONTRIBUTING.md), CI 검증 범위는 [ci.yml](.github/workflows/ci.yml)을 참고하세요.
 
 도구 버전과 참가자 준비 절차는 [Java 준비](docs/java/00-setup.md)와 [.NET 준비](docs/dotnet/00-setup.md)를 기준으로 확인하세요. 이 파일에 버전이나 테스트 명령 목록을 중복해서 적지 마세요.
 

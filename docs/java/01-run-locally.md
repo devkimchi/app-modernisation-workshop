@@ -64,8 +64,6 @@ JDK 8을 먼저 적용하고 mvnw 명령어를 사용해 줘.
 
 ## 로컬 서비스와 앱 실행
 
-개인 정보가 없는 PNG 파일을 준비합니다. 아래 스크립트는 Docker 컨테이너를 만들고 앱을 `dev` 프로필로 실행합니다.
-
 ```bash
 # zsh/bash
 ./scripts/startapp.sh
@@ -80,7 +78,7 @@ JDK 8을 먼저 적용하고 mvnw 명령어를 사용해 줘.
 
 브라우저에서 `http://localhost:8080`을 열고 다음을 확인합니다.
 
-- 테스트 이미지를 업로드하고 원본과 썸네일이 화면에 표시되는지 확인합니다.
+- 개인 정보가 없는 PNG 파일을 업로드하고 원본과 썸네일이 화면에 표시되는지 확인합니다.
 - RabbitMQ 관리 화면 `http://localhost:15672`에서 로컬 데모 계정 `guest`/`guest`로 로그인합니다. **Queues and Streams**의 `image-processing` 큐에서 Ready, Unacked, Consumers를 확인합니다.
 - Ready가 0이라는 사실만으로 성공을 판단하지 않습니다. worker의 `Successfully generated thumbnail` 로그와 실제 썸네일을 함께 확인합니다.
 - web 로그의 `HikariPool-1 - Start completed`와 이후 오류를 확인합니다. 시작 시 연결 성공이 현재 DB 연결까지 보장하지는 않습니다.

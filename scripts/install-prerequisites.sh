@@ -918,7 +918,7 @@ install_prerequisite_main() {
     fi
     hash -r
     prepare_azure_environment || result=1
-    printf '%s\n' 'After installation and Azure preparation, running read-only prerequisite checks. Verify MANUAL items yourself.'
+    workshop_status_printf '%s\n' '[INFO] Running read-only prerequisite checks from ./scripts/check-prerequisites.sh. Verify MANUAL items yourself.'
     prerequisite_main --track java --container-engine "$engine" || result=1
     return "$result"
 }

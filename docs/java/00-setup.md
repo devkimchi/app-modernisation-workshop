@@ -86,6 +86,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ./scripts/install-prerequisites.ps1 -Track java -Update
 ```
 
+설치 도우미는 설치와 Azure 준비 후 해당 환경의 `check-prerequisites` 점검을 다시 실행하며, `[INFO]` 메시지로 실행할 스크립트를 알립니다.
+
 #### 도구별 설치 및 업데이트 방법
 
 | 대상 | 설치 및 업데이트 방법 |

@@ -330,7 +330,7 @@ function Invoke-InstallPrerequisiteMain {
         return 1
     }
     $prepared = Initialize-AzureEnvironment -SelectedTrack $Track
-    Write-Host 'Running read-only prerequisite checks after installation and Azure setup. Verify MANUAL items yourself.'
+    Write-WorkshopMessage '[INFO] Running read-only prerequisite checks from ./scripts/check-prerequisites.ps1. Verify MANUAL items yourself.'
     $result = Invoke-PrerequisiteMain
     if (-not $installed -or -not $prepared -or $result -ne 0) { return 1 }
     return 0

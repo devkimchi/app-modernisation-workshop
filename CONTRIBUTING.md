@@ -42,7 +42,7 @@ bash tests/use-java.tests.sh
 bash tests/shell-portability.tests.sh
 ```
 
-Run these suites on macOS and Linux. On macOS, use `/bin/bash tests/<suite>.tests.sh` to test the built-in Bash 3.2 rather than Homebrew Bash. The `use-java.sh` tests also require Zsh; install it separately on Ubuntu if absent. See the [CI workflow](.github/workflows/ci.yml) for the platform matrix.
+Run these suites on macOS and Linux. On macOS, use `/bin/bash tests/<suite>.tests.sh` to test the built-in Bash 3.2 rather than Homebrew Bash. Installer tests use the system `script` utility for pseudo-terminal fixtures. The `use-java.sh` tests also require Zsh; install it separately on Ubuntu if absent. See the [CI workflow](.github/workflows/ci.yml) for the platform matrix.
 
 Keep `.sh` files compatible with Bash 3.2 and Bash 5, with LF line endings and BSD/GNU-compatible commands. Guard OS-specific commands. `use-java.sh` must also source correctly in Zsh without leaking helper functions or changing caller options.
 

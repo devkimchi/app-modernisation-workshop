@@ -59,6 +59,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ```
 
+설치 도우미는 설치와 Azure 준비 후 `check-prerequisites.ps1` 점검을 다시 실행하며, `[INFO]` 메시지로 실행할 스크립트를 알립니다.
+
 | 대상 | 설치와 업데이트 |
 | --- | --- |
 | PowerShell 7 | winget으로 설치하고 출처가 확인된 지원 설치본만 업데이트 |

@@ -150,13 +150,20 @@ if ($IsWindows) {
     $script:MainCalls = [Collections.Generic.List[string]]::new()
     function Install-WindowsTools { $script:MainCalls.Add('install'); return $script:ToolsSuccess }
     function Initialize-AzureEnvironment { $script:MainCalls.Add('prepare'); return $script:PreparationSuccess }
+    function Write-WorkshopMessage {
+        param([string]$Message)
+        if ($Message -ceq '[INFO] Running read-only prerequisite checks from ./scripts/check-prerequisites.ps1. Verify MANUAL items yourself.') {
+            $script:MainCalls.Add('announce-check')
+        }
+    }
     function Invoke-PrerequisiteMain { $script:MainCalls.Add('check'); return 0 }
     function Invoke-ToolProbe { return [pscustomobject]@{ Code = 0; Text = 'v22.0.0' } }
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) '.NET preparation and final check succeed'
-    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,check') '.NET preparation occurs only after installation and before final check'
+    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,announce-check,check') '.NET final check is announced after preparation and before execution'
     $script:MainCalls.Clear()
     $script:PreparationSuccess = $false
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'Azure preparation failure survives successful final check'
+    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,announce-check,check') 'final check is still announced when Azure preparation fails'
     $script:MainCalls.Clear()
     $script:ToolsSuccess = $false
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'tool failure prevents preparation'
@@ -166,8 +173,8 @@ if ($IsWindows) {
     $script:PreparationSuccess = $true
     $Track = 'java'
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'native Java preparation and final check succeed'
-    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,check') 'native Java follows common preparation and check'
-    foreach ($name in @('Install-WindowsTools','Initialize-AzureEnvironment','Invoke-PrerequisiteMain','Invoke-ToolProbe')) { Remove-Item "Function:\$name" }
+    Assert-True (($script:MainCalls -join ',') -eq 'install,prepare,announce-check,check') 'native Java announces the final check before execution'
+    foreach ($name in @('Install-WindowsTools','Initialize-AzureEnvironment','Invoke-PrerequisiteMain','Invoke-ToolProbe','Write-WorkshopMessage')) { Remove-Item "Function:\$name" }
     . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
 }
 

@@ -338,6 +338,37 @@ redirected_update=$(
 assert 'redirected update rejected without CI' grep -q 'EXPECTED FAILURE' <<< "$redirected_update"
 assert 'redirected update never dispatches' test "${redirected_update#*UNEXPECTED}" = "$redirected_update"
 
+cat > "$test_dir/final-check.sh" <<'SH'
+set -e
+source "$1/scripts/install-prerequisites.sh"
+fixture_case="$2"
+unset CI
+export NO_COLOR=1
+uname() { printf 'Linux\n'; }
+install_missing_tools() { printf 'fixture:install\n'; [[ "$fixture_case" != install-failed ]]; }
+prepare_azure_environment() { printf 'fixture:prepare\n'; [[ "$fixture_case" != prepare-failed ]]; }
+prerequisite_main() { printf 'fixture:check\n'; [[ "$fixture_case" != check-failed ]]; }
+if install_prerequisite_main --track java; then printf 'fixture:exit=0\n'; else printf 'fixture:exit=1\n'; fi
+SH
+for final_case in success install-failed prepare-failed check-failed; do
+    final_log="$test_dir/final-$final_case.log"
+    if [[ "$(uname -s)" == Darwin ]]; then
+        script -q "$final_log" "$BASH" "$test_dir/final-check.sh" "$ROOT" "$final_case" </dev/null >/dev/null
+    else
+        printf -v final_command '%q %q %q %q' "$BASH" "$test_dir/final-check.sh" "$ROOT" "$final_case"
+        script -q -c "$final_command" "$final_log" </dev/null >/dev/null
+    fi
+    final_events=$(tr -d '\r' < "$final_log" | grep -E '^fixture:|^\[INFO\] Running read-only prerequisite checks from ')
+    if [[ "$final_case" == install-failed ]]; then
+        assert 'failed installation skips the check and its announcement' test "$final_events" = $'fixture:install\nfixture:exit=1'
+    else
+        final_code=1
+        if [[ "$final_case" == success ]]; then final_code=0; fi
+        expected_final=$'fixture:install\nfixture:prepare\n[INFO] Running read-only prerequisite checks from ./scripts/check-prerequisites.sh. Verify MANUAL items yourself.\nfixture:check\nfixture:exit='
+        assert "$final_case announces the final check immediately before execution" test "$final_events" = "$expected_final$final_code"
+    fi
+done
+
 mkdir -p "$test_dir/update-nvm/versions/node/v22.1.0/bin" "$test_dir/update-nvm/alias"
 printf 'v22.1.0\n' > "$test_dir/update-nvm/alias/default"
 printf '#!/usr/bin/env bash\nprintf "v22.1.0\\n"\n' > "$test_dir/update-nvm/versions/node/v22.1.0/bin/node"

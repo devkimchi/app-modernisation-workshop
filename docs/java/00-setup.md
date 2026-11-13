@@ -141,10 +141,10 @@ modernize plan execute --help
 
 대상 `java` 폴더는 없거나 비어 있어야 합니다.
 
-## 완료
+## 완료 및 다음 단계
 
-사전 점검과 필요한 로그인을 마치고 `java/pom.xml`이 있는지 확인합니다.
+- [ ] 필수 사전 점검을 마쳤습니다.
+- [ ] `az login`, `azd auth login`, `gh auth login`을 실행했습니다.
+- [ ] 샘플의 `java/pom.xml`을 확인했습니다.
 
-## 다음 단계
-
-[1. 원본 실행](01-run-locally.md)으로 이동합니다.
+다음 단계인 [1. 원본 실행](01-run-locally.md)으로 이동합니다.

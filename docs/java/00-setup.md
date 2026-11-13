@@ -106,7 +106,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 워크숍 루트의 터미널에서 다음 명령을 차례로 실행하고, 각 서비스에서 실습에 사용할 계정으로 로그인합니다.
 
-```text
+```bash
 az login
 azd auth login
 gh auth login
@@ -118,7 +118,7 @@ gh auth login
 
 다음 명령으로 선택한 Azure 구독과 각 도구의 로그인 상태를 확인합니다.
 
-```text
+```bash
 az account show
 azd auth login --check-status
 gh auth status
@@ -128,7 +128,7 @@ gh auth status
 
 Copilot app에서 터미널을 열고 워크숍 루트로 이동합니다. 다음 명령으로 도구 설치 여부를 확인하고 Modernize CLI의 주요 명령을 살펴봅니다.
 
-```text
+```bash
 gh --version
 modernize --version
 modernize assess --help

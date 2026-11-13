@@ -167,11 +167,11 @@ for scenario in minimum supported old unavailable unrecognized; do
         probe() {
             PROBE_CODE=0
             case "$scenario" in
-                minimum) PROBE_TEXT='glibc 2.27' ;;
-                supported) PROBE_TEXT='glibc 2.39' ;;
-                old) PROBE_TEXT='glibc 2.26' ;;
-                unavailable) PROBE_CODE=127; PROBE_TEXT='' ;;
-                unrecognized) PROBE_TEXT='musl libc (x86_64)' ;;
+                (minimum) PROBE_TEXT='glibc 2.27' ;;
+                (supported) PROBE_TEXT='glibc 2.39' ;;
+                (old) PROBE_TEXT='glibc 2.26' ;;
+                (unavailable) PROBE_CODE=127; PROBE_TEXT='' ;;
+                (unrecognized) PROBE_TEXT='musl libc (x86_64)' ;;
             esac
         }
         CHECK_FAILURES=0

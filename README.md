@@ -1,6 +1,6 @@
 # GitHub Copilot app으로 앱 현대화하기
 
-GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer CLI(azd)로 Azure에 배포하는 핸즈온 워크숍입니다.
+GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer CLI(azd)로 Azure에 배포하는 실습 워크숍입니다.
 
 ## 워크숍 구조
 
@@ -15,9 +15,9 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 └── dotnet          # 다운로드되는 .NET 앱
 ```
 
-## 먼저 할 일
+## 시작하기 전에
 
-참가자에게 다음이 필요합니다.
+실습에 필요한 계정과 저장소를 준비합니다.
 
 - Azure 구독. 없다면 [Azure 무료 구독](https://aka.ms/azure/free)을 직접 신청합니다. 무료 크레딧의 서비스, 리전, 쿼터 제한과 유료 전환 조건을 확인하세요.
 - GitHub 계정과 유효한 [GitHub Copilot 라이선스](https://github.com/github-copilot/signup). 조직 정책에 따라 Modernize CLI와 모델 사용이 제한될 수 있습니다.
@@ -28,11 +28,10 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 | 항목 | [Java 트랙](docs/java/README.md) | [.NET 트랙](docs/dotnet/README.md) |
 | --- | --- | --- |
 | 참가자 환경 | Windows, macOS 또는 Linux 데스크톱(Ubuntu, Debian 계열 자동 설치 지원) | Windows |
-| 원본 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, .NET Framework 4.8, ASP.NET MVC 5 |
-| 최종 런타임 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
-| 도구 | Copilot app, Modernize CLI, azd | Copilot app, Modernize CLI, azd |
+| 원본 앱 | Asset Manager, Java 8, Spring Boot 2.7.18 | Contoso University, .NET Framework 4.8, ASP.NET MVC 5 |
+| 업그레이드 목표 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
 | 서비스 이전 | PostgreSQL, RabbitMQ, 파일(`dev`: 로컬, 그 외: AWS S3) → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
-| 배포 단위 | web + worker, ACA 2개 | 웹 앱, 필요하면 처리기 분리 여부를 계획에서 결정 |
+| 배포 구성 | 웹 앱과 워커를 각각 Azure Container Apps에 배포 | 웹 앱을 배포하며, 처리기를 분리할지는 계획 단계에서 결정 |
 
 ## 워크숍 진행 순서
 
@@ -47,14 +46,14 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 | 6 | [ACA 배포](docs/java/06-deploy-aca.md) | [ACA 배포](docs/dotnet/06-deploy-aca.md) |
 | 7 | [정리](docs/java/07-cleanup.md) | [정리](docs/dotnet/07-cleanup.md) |
 
-## 원본과 검증 범위
+## 원본 샘플
 
-| 원본 | 다운로드 고정 커밋 | 추출 폴더 |
+| 원본 | 다운로드할 커밋 | 가져올 폴더 |
 | --- | --- | --- |
 | [Java 샘플](https://github.com/Azure-Samples/java-migration-copilot-samples/tree/317d3bbfd61fb1e402bea61f90e385bec12f2070/asset-manager) | `317d3bbfd61fb1e402bea61f90e385bec12f2070` | `asset-manager` 내용 |
 | [.NET 샘플](https://github.com/Azure-Samples/dotnet-migration-copilot-samples/tree/7c1bf47b7e2627fe5a1c764716638815d35e0282/ContosoUniversity) | `7c1bf47b7e2627fe5a1c764716638815d35e0282` | `ContosoUniversity` 내용 |
 
-다운로드는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 남깁니다. 원본 루트의 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다.
+다운로드 스크립트는 원본 코드와 대상 프레임워크를 바꾸지 않고 출처를 `upstream-source.json`에 기록합니다. 원본 저장소의 루트에 라이선스와 고지가 있으면 `UPSTREAM-*` 이름으로 함께 보존합니다.
 
 ## 참고자료
 

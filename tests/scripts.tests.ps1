@@ -414,26 +414,49 @@ try {
         Assert-True ($bash.Contains($sample.Commit)) "same commit in both shells: $trackName"
         Assert-True ($bash.Contains($sample.Repository)) "same source in both shells: $trackName"
     }
-    $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
-    $env:AZD_CONTAINER_RUNTIME='docker'
-    function pwsh { $global:LASTEXITCODE=1 }
-    Assert-True ((Invoke-DownloadMain) -eq 1) 'download propagates prerequisite failure'
-    Assert-True (-not (Test-Path $Destination)) 'prerequisite failure prevents download'
-    Remove-Item Function:\pwsh
     if ($IsWindows) {
         & {
-            $Track='java'; $Destination=Join-Path $temporary 'native-java'; $ContainerEngine='docker'
-            function pwsh {
-                Assert-True (($args -join ' ') -match '-Track java') 'Java preflight uses native Java track'
-                $global:LASTEXITCODE=0
+            $savedDownloadScripts = $script:DownloadScripts
+            $preflightScripts = Join-Path $temporary 'preflight scripts'
+            [IO.Directory]::CreateDirectory($preflightScripts) | Out-Null
+            $preflightPath = Join-Path $preflightScripts 'check-prerequisites.ps1'
+            [IO.File]::WriteAllText($preflightPath, @"
+param([string]`$Track, [string]`$ContainerEngine, [switch]`$Help)
+function Resolve-ContainerEngine {
+${function:Resolve-ContainerEngine}
+}
+"@, [Text.UTF8Encoding]::new($true))
+            $preflightCode = 1
+            $preflightCalls = [Collections.Generic.List[string]]::new()
+            $downloadCalls = [Collections.Generic.List[string]]::new()
+            $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
+            $env:AZD_CONTAINER_RUNTIME='docker'
+            function Invoke-WorkshopPowerShell {
+                param($ScriptPath, $BoundParameters, $RemainingArguments)
+                $preflightCalls.Add($ScriptPath)
+                Assert-True ($ScriptPath -eq $preflightPath) 'download preflight uses the shared console-preserving launcher'
+                Assert-True ($BoundParameters.Track -eq $Track) 'preflight receives the selected track'
+                Assert-True ($BoundParameters.ContainerEngine -eq $ContainerEngine) 'preflight receives the selected engine'
+                Assert-True ($RemainingArguments.Count -eq 0) 'preflight has no additional arguments'
+                $global:LASTEXITCODE = if ($preflightCode -eq 0) { 1 } else { 0 }
+                return $preflightCode
             }
             function Invoke-SampleDownload {
                 param($Target,$Definition,$WorkshopRoot)
+                $downloadCalls.Add($Target)
                 Assert-True ($Definition.Subdirectory -eq 'asset-manager') 'Java download uses pinned Java definition'
                 Assert-True ($Definition.Required -contains 'mvnw.cmd') 'Windows wrapper required'
                 Assert-True ($Target -eq $Destination) 'Java native destination unchanged'
             }
-            Assert-True ((Invoke-DownloadMain) -eq 0) 'Java reaches native download after preflight'
+            try {
+                $script:DownloadScripts = $preflightScripts
+                Assert-True ((Invoke-DownloadMain) -eq 1) 'download propagates prerequisite failure rather than stale LASTEXITCODE'
+                Assert-True ($downloadCalls.Count -eq 0 -and -not (Test-Path $Destination)) 'prerequisite failure prevents download'
+                $Track='java'; $Destination=Join-Path $temporary 'native-java'; $preflightCode=0
+                Assert-True ((Invoke-DownloadMain) -eq 0) 'Java reaches native download after preflight rather than stale LASTEXITCODE'
+                Assert-True ($preflightCalls.Count -eq 2 -and $downloadCalls.Count -eq 1) 'each download runs preflight once'
+            }
+            finally { $script:DownloadScripts = $savedDownloadScripts }
         }
     }
     $documents = @((Get-Item (Join-Path $root 'README.md'))) + @(Get-ChildItem (Join-Path $root 'docs') -Recurse -Filter '*.md')

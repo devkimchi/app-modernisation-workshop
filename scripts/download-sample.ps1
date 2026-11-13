@@ -121,8 +121,8 @@ function Invoke-DownloadMain {
         $null = Assert-SafeDestination $destinationPath $workshop
     }
     catch { Write-WorkshopMessage "[FAIL] $($_.Exception.Message)"; return 2 }
-    & pwsh -NoLogo -NoProfile -File (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -Track $Track -ContainerEngine $engine | Out-Host
-    if ($LASTEXITCODE -ne 0) { Write-WorkshopMessage '[FAIL] Prerequisite checks did not pass. Nothing was downloaded.'; return 1 }
+    $preflightCode = Invoke-WorkshopPowerShell -ScriptPath (Join-Path $script:DownloadScripts 'check-prerequisites.ps1') -BoundParameters @{ Track = $Track; ContainerEngine = $engine } -RemainingArguments @()
+    if ($preflightCode -ne 0) { Write-WorkshopMessage '[FAIL] Prerequisite checks did not pass. Nothing was downloaded.'; return 1 }
     try {
         Invoke-SampleDownload $destinationPath $definition $workshop
         return 0

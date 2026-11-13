@@ -26,7 +26,7 @@ ls -al
 dir
 ```
 
-현재 브랜치와 상태를 확인합니다.
+현재 Git 브랜치와 파일 변경 사항을 확인합니다.
 
 ```bash
 git branch --show-current

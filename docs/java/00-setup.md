@@ -126,11 +126,10 @@ gh auth status
 
 ## Copilot app과 Modernize CLI 준비
 
-Copilot app에서 터미널을 열고 워크숍 루트로 이동합니다. 다음 명령으로 도구가 설치되어 있는지, GitHub에 로그인되어 있는지 확인하고 Modernize CLI의 주요 명령을 살펴봅니다.
+Copilot app에서 터미널을 열고 워크숍 루트로 이동합니다. 다음 명령으로 도구 설치 여부를 확인하고 Modernize CLI의 주요 명령을 살펴봅니다.
 
 ```text
 gh --version
-gh auth status
 modernize --version
 modernize assess --help
 modernize plan create --help

@@ -6,6 +6,8 @@ Follow the [Code of Conduct](CODE_OF_CONDUCT.md) when contributing.
 
 Keep changes focused on workshop documentation, preparation scripts, and regression tests. Update the relevant documentation when instructions or script behavior change. Do not commit credentials, local configuration, downloaded applications, or generated test output.
 
+Write user-facing script messages in English; keep participant documentation in Korean.
+
 Preserve the download scripts' pinned source commits, `upstream-source.json` records, and `UPSTREAM-*` licenses and notices. Downloads must not modify sample code or target frameworks, create a nested `.git`, or commit or push files.
 
 ## Local checks

@@ -1,43 +1,43 @@
 #!/usr/bin/env bash
 
 if [ -z "${BASH_VERSION:-}" ] && [ -z "${ZSH_VERSION:-}" ]; then
-    printf '%s\n' '[FAIL] Bash 또는 Zsh에서 source ../scripts/use-java.sh --jdk 8|25로 실행하세요.' >&2
+    printf '%s\n' '[FAIL] Run source ../scripts/use-java.sh --jdk 8|25 in Bash or Zsh.' >&2
     return 2 2>/dev/null || exit 2
 fi
 if [ -n "${BASH_VERSION:-}" ]; then
     if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-        printf '%s\n' '[FAIL] 현재 셸에서 source ../scripts/use-java.sh --jdk 8|25로 실행하세요.' >&2
+        printf '%s\n' '[FAIL] Run source ../scripts/use-java.sh --jdk 8|25 in the current shell.' >&2
         exit 2
     fi
 else
     case "$ZSH_EVAL_CONTEXT" in
         *:file) ;;
-        *) printf '%s\n' '[FAIL] 현재 셸에서 source ../scripts/use-java.sh --jdk 8|25로 실행하세요.' >&2; exit 2 ;;
+        *) printf '%s\n' '[FAIL] Run source ../scripts/use-java.sh --jdk 8|25 in the current shell.' >&2; exit 2 ;;
     esac
 fi
 
 _workshop_use_java() {
     local major='' sdkman_dir="${SDKMAN_DIR:-$HOME/.sdkman}" candidate identifier runtime compiler runtime_major compiler_major
     if [[ $# -ne 2 || "$1" != --jdk ]]; then
-        printf '%s\n' '[FAIL] 사용법: source ../scripts/use-java.sh --jdk 8|25' >&2
+        printf '%s\n' '[FAIL] Usage: source ../scripts/use-java.sh --jdk 8|25' >&2
         return 2
     fi
     major="$2"
     case "$major" in
         8|25) ;;
-        *) printf '%s\n' '[FAIL] --jdk 값으로 8, 25 중 하나를 지정하세요.' >&2; return 2 ;;
+        *) printf '%s\n' '[FAIL] Specify 8 or 25 as the --jdk value.' >&2; return 2 ;;
     esac
     if [[ ! -f ./mvnw ]]; then
-        printf '%s\n' '[FAIL] 샘플 앱 루트에서 실행하세요. 현재 폴더에 mvnw가 없습니다.' >&2
+        printf '%s\n' '[FAIL] Run this from the sample app root. No mvnw file was found in the current directory.' >&2
         return 1
     fi
 
     if [[ ! -r "$sdkman_dir/bin/sdkman-init.sh" ]]; then
-        printf '[FAIL] SDKMAN 초기화 파일이 없습니다: %s/bin/sdkman-init.sh\n' "$sdkman_dir" >&2
+        printf '[FAIL] SDKMAN initialization file not found: %s/bin/sdkman-init.sh\n' "$sdkman_dir" >&2
         return 1
     fi
     if ! source "$sdkman_dir/bin/sdkman-init.sh"; then
-        printf '%s\n' '[FAIL] SDKMAN 초기화에 실패했습니다.' >&2
+        printf '%s\n' '[FAIL] Failed to initialize SDKMAN.' >&2
         return 1
     fi
 
@@ -63,17 +63,17 @@ _workshop_use_java() {
     )
 
     if [[ -z "$identifier" ]]; then
-        printf '[FAIL] 실행 가능한 SDKMAN JDK %s를 찾지 못했습니다. 설치된 JDK와 SDKMAN_DIR을 확인하세요.\n' "$major" >&2
+        printf '[FAIL] No runnable SDKMAN JDK %s was found. Check the installed JDKs and SDKMAN_DIR.\n' "$major" >&2
         return 1
     fi
     if ! sdk use java "$identifier"; then
-        printf '[FAIL] SDKMAN에서 JDK %s (%s)로 전환하지 못했습니다.\n' "$major" "$identifier" >&2
+        printf '[FAIL] Could not switch to JDK %s (%s) with SDKMAN.\n' "$major" "$identifier" >&2
         return 1
     fi
     export JAVA_HOME="$sdkman_dir/candidates/java/$identifier"
     export PATH="$JAVA_HOME/bin:$PATH"
     hash -r
-    printf '[PASS] SDKMAN JDK %s 선택: %s\n' "$major" "$identifier"
+    printf '[PASS] Selected SDKMAN JDK %s: %s\n' "$major" "$identifier"
 }
 
 _workshop_show_versions() {
@@ -85,7 +85,7 @@ _workshop_show_versions() {
         :
     else
         result=$?
-        printf '[FAIL] java -version에 실패했습니다.\n' >&2
+        printf '[FAIL] java -version failed.\n' >&2
         return "$result"
     fi
     printf '[INFO] javac -version\n'
@@ -93,7 +93,7 @@ _workshop_show_versions() {
         :
     else
         result=$?
-        printf '[FAIL] javac -version에 실패했습니다.\n' >&2
+        printf '[FAIL] javac -version failed.\n' >&2
         return "$result"
     fi
 }

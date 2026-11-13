@@ -28,8 +28,15 @@ $savedProgramFilesX86 = ${env:ProgramFiles(x86)}
 try {
     foreach ($file in Get-ChildItem (Join-Path $root 'scripts') -Filter '*.ps1') {
         $tokens = $null; $errors = $null
-        $null = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
+        $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
         Assert-True ($errors.Count -eq 0) "syntax $($file.Name)"
+        $koreanStrings = @($ast.FindAll({
+            param($node)
+            ($node -is [Management.Automation.Language.StringConstantExpressionAst] -or
+                $node -is [Management.Automation.Language.ExpandableStringExpressionAst]) -and
+                $node.Extent.Text -match '[\uac00-\ud7a3]'
+        }, $true))
+        Assert-True ($koreanStrings.Count -eq 0) "English script messages: $($file.Name)"
     }
     $env:AZD_CONTAINER_RUNTIME = ''
     Assert-True ((Resolve-ContainerEngine '') -eq 'docker') 'default engine'
@@ -64,8 +71,8 @@ try {
     Test-ContainerRuntime podman
     Assert-True (-not (Has-Failure 'container-cli')) 'podman CLI'
     Assert-True (-not (Has-Failure 'builder')) 'podman native builder'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-engine' -and $_.Message -like '*설치 위치는 이 검사로 확인하지 않습니다*' }).Count -eq 1) 'engine location is not inferred'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-workload' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*실제 워크로드 성공을 보장하지 않습니다*' }).Count -eq 1) 'actual container workload remains manual'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-engine' -and $_.Message -like '*does not verify where the engine is installed*' }).Count -eq 1) 'engine location is not inferred'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-workload' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*do not guarantee that the actual workload will succeed*' }).Count -eq 1) 'actual container workload remains manual'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'docker *' }).Count -eq 0) 'podman never probes docker'
     if ($IsWindows -or $IsMacOS) {
         Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'podman-machine' -and $_.Status -eq 'PASS' -and $_.Message -like '*fixture-machine*' }).Count -eq 1) 'podman machine list shown'
@@ -150,9 +157,9 @@ try {
     New-Results
     Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*subscription-id*' }).Count -eq 1) 'subscription identity requires confirmation'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq '구독 이름: Subscription name / 구독 ID: subscription-id' }).Count -eq 1) 'subscription format'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq 'Subscription name: Subscription name / Subscription ID: subscription-id' }).Count -eq 1) 'subscription format'
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -notlike '*11111111-2222-3333-4444-555555555555*' -and $_.Message -like '*Subscription name*' }).Count -eq 1) 'subscription excludes tenant ID'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq '테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' }).Count -eq 1) 'tenant name and ID require confirmation'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq 'Tenant name: Example tenant / Tenant ID: 11111111-2222-3333-4444-555555555555' }).Count -eq 1) 'tenant name and ID require confirmation'
     $script:TenantFails=$true
     New-Results
     Test-CommonTools docker dotnet

@@ -1,26 +1,26 @@
 ﻿param([string]$Jdk)
 
 if ($MyInvocation.InvocationName -ne '.') {
-    Write-Error '앱 루트에서 dot-source하세요: . ../scripts/use-java.ps1 -Jdk 8|25'
+    Write-Error 'Dot-source from the app root: . ../scripts/use-java.ps1 -Jdk 8|25'
     exit 2
 }
 if ($PSVersionTable.PSVersion.Major -lt 7) {
-    throw '현재 셸의 Java를 전환하려면 PowerShell 7에서 dot-source하세요. Windows PowerShell 5.1에서는 호출자 환경을 바꿀 수 없습니다.'
+    throw 'Dot-source in PowerShell 7 to switch Java in the current shell. Windows PowerShell 5.1 cannot update the caller environment.'
 }
 
 & {
     param($Major, $Scripts)
-    if ($Major -cnotin @('8', '25')) { throw '-Jdk 값은 8 또는 25여야 합니다.' }
-    if (-not (Test-Path -LiteralPath '.\mvnw.cmd' -PathType Leaf)) { throw '샘플 앱 루트에서 실행하세요. 현재 폴더에 mvnw.cmd가 없습니다.' }
+    if ($Major -cnotin @('8', '25')) { throw '-Jdk must be 8 or 25.' }
+    if (-not (Test-Path -LiteralPath '.\mvnw.cmd' -PathType Leaf)) { throw 'Run from the sample app root. The current directory has no mvnw.cmd.' }
     . (Join-Path $Scripts 'java-tools.ps1')
     $jdk = Find-WorkshopJava -Major ([int]$Major)
-    if (-not $jdk) { throw "실행 가능한 Temurin JDK $Major 의 java와 javac를 찾지 못했습니다. 설치 경로와 버전을 확인하세요." }
+    if (-not $jdk) { throw "Could not find working java and javac for Temurin JDK $Major. Check the installation path and version." }
     $oldBin = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin' } else { '' }
     $newBin = Join-Path $jdk.Home 'bin'
     $remaining = @($env:PATH -split ';' | Where-Object { $_ -and $_.TrimEnd('\', '/') -ine $oldBin -and $_.TrimEnd('\', '/') -ine $newBin })
     $env:JAVA_HOME = $jdk.Home
     $env:PATH = (@($newBin) + $remaining) -join ';'
-    Write-Host "[PASS] Temurin JDK $Major 선택: $($jdk.Home)"
+    Write-Host "[PASS] Selected Temurin JDK $Major`: $($jdk.Home)"
     Write-Host $jdk.RuntimeVersion
     Write-Host $jdk.CompilerVersion
 } $Jdk $PSScriptRoot

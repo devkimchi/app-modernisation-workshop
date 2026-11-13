@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-    printf '%s\n' '[FAIL] ./tests/install-prerequisites.tests.sh로 실행하세요.' >&2
+    printf '%s\n' '[FAIL] Run ./tests/install-prerequisites.tests.sh.' >&2
     return 2 2>/dev/null || exit 2
 fi
 set -e
@@ -26,7 +26,7 @@ noninteractive=$(
     export CI=1
     install_prerequisite_main --track java 2>&1 || true
 )
-assert 'noninteractive rejected' grep -q '비대화형 환경에서는 설치하지 않습니다' <<< "$noninteractive"
+assert 'noninteractive rejected' grep -q 'Nothing is installed in a non-interactive environment' <<< "$noninteractive"
 if [[ "$noninteractive" == *'UNEXPECTED INSTALL'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
 
 skip_output=$(
@@ -36,7 +36,7 @@ skip_output=$(
     confirm_install() { printf '%s\n' 'declined'; return 1; }
     install_missing_tools Darwin
 )
-assert 'existing node not installed' grep -q 'node.*PATH에서 발견' <<< "$skip_output"
+assert 'existing node not installed' grep -q 'node.*Found on PATH' <<< "$skip_output"
 assert 'SDKMAN consent requested' grep -q 'declined' <<< "$skip_output"
 
 linux_output=$(
@@ -73,7 +73,7 @@ dependency_output=$(
     prepare_sdkman_dependencies Linux
 )
 assert 'missing SDKMAN dependencies shown' grep -q 'zip, unzip' <<< "$dependency_output"
-assert 'dependencies require approval' grep -q 'approval: SDKMAN 선행 패키지' <<< "$dependency_output"
+assert 'dependencies require approval' grep -q 'approval: SDKMAN prerequisite packages' <<< "$dependency_output"
 assert 'APT metadata updated' grep -q 'sudo-call: apt-get update' <<< "$dependency_output"
 assert 'only missing packages installed' grep -q 'sudo-call: apt-get install -y zip unzip' <<< "$dependency_output"
 
@@ -122,7 +122,7 @@ manual_output=$(
     sdkman_missing_dependencies() { printf 'zip\n'; }
     if prepare_sdkman_dependencies Darwin 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
-assert 'non-APT environment requires manual action' grep -q '직접 설치' <<< "$manual_output"
+assert 'non-APT environment requires manual action' grep -q 'Install the missing commands manually' <<< "$manual_output"
 assert 'missing manual dependency fails' grep -q 'EXPECTED FAILURE' <<< "$manual_output"
 
 mkdir -p "$ROOT/.test-output"
@@ -192,7 +192,7 @@ nvm_output=$(
 assert 'nvm installs Node 22 without activating it' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$nvm_output"
 assert 'nvm activates Node 22' grep -q 'nvm-call: use v22.99.1' <<< "$nvm_output"
 assert 'Node install requires approval' grep -q 'approval: Node.js 22' <<< "$nvm_output"
-assert 'Node activation requires separate approval' grep -q 'approval: Node.js v22.99.1 활성화' <<< "$nvm_output"
+assert 'Node activation requires separate approval' grep -q 'approval: Activate Node.js v22.99.1' <<< "$nvm_output"
 assert 'fresh install does not create default alias' test ! -e "$test_dir/nvm/alias/default"
 nvm_failure=$(
     NVM_DIR="$test_dir/nvm"
@@ -212,7 +212,7 @@ if [[ "$nvm_declined" == *'nvm-call: install'* ]]; then exit 1; else PASSED=$((P
 fresh_activation_declined=$(
     NVM_DIR="$test_dir/nvm"
     tool_path() { :; }
-    confirm_install() { [[ "$1" != *' 활성화:'* ]]; }
+    confirm_install() { [[ "$1" != 'Activate '* ]]; }
     if install_node_with_nvm 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
 assert 'fresh activation decline leaves no usable Node and fails' grep -q 'EXPECTED FAILURE' <<< "$fresh_activation_declined"
@@ -307,7 +307,7 @@ java_unavailable=$(
     confirm_install() { return 0; }
     if install_java_sdks "$test_dir/empty" 2>&1; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
 )
-assert 'unavailable JDK reported' grep -q '정식 Temurin JDK 8가 없습니다' <<< "$java_unavailable"
+assert 'unavailable JDK reported' grep -q 'No stable Temurin JDK 8 is available' <<< "$java_unavailable"
 assert 'unavailable JDK fails' grep -q 'EXPECTED FAILURE' <<< "$java_unavailable"
 if [[ "$java_unavailable" == *'sdk-install:'* ]]; then exit 1; else PASSED=$((PASSED + 1)); fi
 java_build_output=$(
@@ -326,7 +326,7 @@ update_noninteractive=$(
     export CI=1
     if install_prerequisite_main --track java --update 2>&1; then exit 1; else printf 'EXPECTED FAILURE\n'; fi
 )
-assert 'update flag accepted but CI rejected' grep -q '비대화형 환경에서는 설치하지 않습니다' <<< "$update_noninteractive"
+assert 'update flag accepted but CI rejected' grep -q 'Nothing is installed in a non-interactive environment' <<< "$update_noninteractive"
 assert 'CI update returns nonzero' grep -q 'EXPECTED FAILURE' <<< "$update_noninteractive"
 assert 'CI update never dispatches installer' test "${update_noninteractive#*UNEXPECTED}" = "$update_noninteractive"
 redirected_update=$(
@@ -354,7 +354,7 @@ node_update_case() (
     npm() { return 0; }
     confirm_install() {
         printf 'approval: %s\n' "$1"
-        if [[ "$1" == *' 활성화:'* ]]; then
+        if [[ "$1" == 'Activate '* ]]; then
             if [[ -n "${MOCK_CONCURRENT:-}" ]]; then before="$MOCK_CONCURRENT"; fi
             [[ "${MOCK_ACTIVATE:-1}" == 1 ]]
         else [[ "${MOCK_APPROVED:-1}" == 1 ]]; fi
@@ -392,7 +392,7 @@ node_concurrent=$(MOCK_CONCURRENT=v24.1.0 node_update_case 2>&1)
 assert 'concurrent selection change fails before activation' grep -q 'EXPECTED FAILURE' <<< "$node_concurrent"
 assert 'concurrent Node never overwritten' test "${node_concurrent#*nvm-call: use}" = "$node_concurrent"
 node_latest=$(MOCK_NODE_BEFORE=v22.99.1 node_update_case 2>&1)
-assert 'latest Node skipped' grep -q '이미 최신' <<< "$node_latest"
+assert 'latest Node skipped' grep -q 'already current' <<< "$node_latest"
 assert 'latest Node not reinstalled' test "${node_latest#*nvm-call: install}" = "$node_latest"
 node_no_update=$(MOCK_UPDATE=0 node_update_case 2>&1)
 assert 'no update preserves existing Node without prompts' test "${node_no_update#*approval:}" = "$node_no_update"
@@ -404,7 +404,7 @@ node_old_decline=$(MOCK_NODE_BEFORE=v20.1.0 MOCK_ACTIVATE=0 node_update_case 2>&
 assert 'unsupported Node without activation fails' grep -q 'EXPECTED FAILURE' <<< "$node_old_decline"
 node_reuse=$(MOCK_REUSE=1 node_update_case 2>&1)
 assert 'existing inactive release reused without reinstall' test "${node_reuse#*nvm-call: install}" = "$node_reuse"
-assert 'existing inactive release still needs activation' grep -q 'approval: Node.js v22.99.1 활성화' <<< "$node_reuse"
+assert 'existing inactive release still needs activation' grep -q 'approval: Activate Node.js v22.99.1' <<< "$node_reuse"
 for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.1 MOCK_NODE_BEFORE=invalid MOCK_UPDATE_FAILURE=1 MOCK_INSTALLED_VERSION=v22.0.0 MOCK_NVM_USE_FAILURE=1 MOCK_NODE_AFTER=v22.1.0 MOCK_NPM_FAILURE=1; do
     node_failed=$(export "$setting"; node_update_case 2>&1)
     assert "Node error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$node_failed"
@@ -829,7 +829,7 @@ modernize_output=$(
 )
 assert 'Linux Modernize official sh installer' grep -q 'installer: https://raw.githubusercontent.com/microsoft/modernize-cli/main/scripts/install.sh user sh' <<< "$modernize_output"
 assert 'Linux Modernize updates current PATH' grep -Fq "path=$test_dir/modernize-home/.local/bin:" <<< "$modernize_output"
-assert 'Linux Modernize explains shell settings changes' grep -q 'approval:.*glibc 2.27.*셸 설정' <<< "$modernize_output"
+assert 'Linux Modernize explains shell settings changes' grep -q 'approval:.*glibc 2.27.*shell configuration' <<< "$modernize_output"
 mac_modernize=$(
     confirm_install() { return 0; }
     brew() { printf 'brew-call: %s\n' "$*"; }
@@ -868,7 +868,7 @@ linux_unsupported=$(
     run_remote_installer() { printf 'UNEXPECTED INSTALL\n'; }
     install_missing_tools Linux
 )
-for tool in az azd gh modernize; do assert "unsupported Linux $tool manual" grep -q "WARN.*$tool.*공식 수동 설치" <<< "$linux_unsupported"; done
+for tool in az azd gh modernize; do assert "unsupported Linux $tool manual" grep -q "WARN.*$tool.*Official manual installation instructions" <<< "$linux_unsupported"; done
 assert 'unsupported Linux never installs' test "${linux_unsupported#*UNEXPECTED}" = "$linux_unsupported"
 
 gh_install_case() (
@@ -892,7 +892,7 @@ gh_installed=$(gh_install_case 2>&1)
 assert 'gh official key URL used' grep -q 'https://cli.github.com/packages/githubcli-archive-keyring.gpg' <<< "$gh_installed"
 assert 'gh repository added after approval' grep -q 'sudo-call: tee /etc/apt/sources.list.d/github-cli.list' <<< "$gh_installed"
 assert 'gh installed via apt' grep -q 'sudo-call: apt-get install -y gh' <<< "$gh_installed"
-assert 'gh consent explains sudo and keyring' grep -q 'approval:.*키링.*sudo' <<< "$gh_installed"
+assert 'gh consent explains sudo and keyring' grep -q 'approval:.*keyring.*sudo' <<< "$gh_installed"
 gh_declined=$(MOCK_APPROVED=0 gh_install_case 2>&1)
 assert 'gh decline never mutates' test "${gh_declined#*sudo-call:}" = "$gh_declined"
 assert 'gh decline never downloads' test "${gh_declined#*curl-call:}" = "$gh_declined"

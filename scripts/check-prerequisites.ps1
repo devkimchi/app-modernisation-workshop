@@ -17,11 +17,11 @@ function Resolve-ContainerEngine {
     param([string]$Requested, [string]$Configured = $env:AZD_CONTAINER_RUNTIME)
     foreach ($value in @($Requested, $Configured)) {
         if ($value -and $value -cnotin @('docker', 'podman')) {
-            throw [ArgumentException]::new('ContainerEngine/AZD_CONTAINER_RUNTIME 값은 docker 또는 podman이어야 합니다.')
+            throw [ArgumentException]::new('ContainerEngine/AZD_CONTAINER_RUNTIME must be docker or podman.')
         }
     }
     if ($Requested -and $Configured -and $Requested -cne $Configured) {
-        throw [ArgumentException]::new('ContainerEngine과 AZD_CONTAINER_RUNTIME이 다릅니다. 현재 셸의 값을 먼저 일치시키세요.')
+        throw [ArgumentException]::new('ContainerEngine and AZD_CONTAINER_RUNTIME differ. Set matching values in the current shell first.')
     }
     if ($Requested) { return $Requested }
     if ($Configured) { return $Configured }
@@ -52,38 +52,38 @@ function Test-AzureProvider {
     param([string]$Provider)
     $state = Invoke-ToolProbe az @('provider', 'show', '--namespace', $Provider, '--query', 'registrationState', '--output', 'tsv')
     if ($state.Code -eq 0 -and $state.Text -eq 'Registered') { Add-Check PASS $Provider 'Registered' }
-    else { Add-Check FAIL $Provider "등록을 확인하지 못했습니다 (종료 코드 $($state.Code)): $($state.Text). 설치 도우미에서 등록하거나 조회 오류를 해결하세요." }
+    else { Add-Check FAIL $Provider "Could not verify registration (exit code $($state.Code)): $($state.Text). Register through the installer or resolve the query error." }
 }
 
 function Show-AzureIdentity {
     $identity = Invoke-ToolProbe az @('account', 'show', '--query', '[[id,name]]', '--output', 'tsv')
     if ($identity.Code -ne 0 -or -not $identity.Text) {
-        Add-Check WARN 'azure-subscription' '현재 구독 정보를 조회하지 못했습니다. 대상 구독과 테넌트를 직접 확인하세요.'
+        Add-Check WARN 'azure-subscription' 'Could not query the current subscription. Manually verify the target subscription and tenant.'
         return
     }
     $subscription = $identity.Text -split "`t", 2
     if ($subscription.Count -ne 2 -or -not $subscription[0] -or -not $subscription[1]) {
-        Add-Check WARN 'azure-subscription' '현재 구독 ID와 이름을 해석하지 못했습니다. 대상 구독을 직접 확인하세요.'
+        Add-Check WARN 'azure-subscription' 'Could not parse the current subscription ID and name. Manually verify the target subscription.'
         return
     }
-    Add-Check MANUAL 'azure-subscription' "구독 이름: $($subscription[1]) / 구독 ID: $($subscription[0])"
+    Add-Check MANUAL 'azure-subscription' "Subscription name: $($subscription[1]) / Subscription ID: $($subscription[0])"
     $tenant = Invoke-ToolProbe az @('account', 'show', '--query', 'tenantId', '--output', 'tsv')
     $tenantId = [guid]::Empty
     if ($tenant.Code -ne 0 -or -not [guid]::TryParse($tenant.Text, [ref]$tenantId)) {
-        Add-Check WARN 'azure-tenant' '현재 테넌트 ID를 조회하지 못해 테넌트 이름을 확인할 수 없습니다.'
+        Add-Check WARN 'azure-tenant' 'Could not query the current tenant ID, so the tenant name cannot be verified.'
         return
     }
     $cloud = Invoke-ToolProbe az @('cloud', 'show', '--query', 'endpoints.resourceManager', '--output', 'tsv')
     if ($cloud.Code -ne 0 -or $cloud.Text -notmatch '^https://') {
-        Add-Check WARN 'azure-tenant' "테넌트 ID: $tenantId. Azure 클라우드 엔드포인트를 조회하지 못해 테넌트 이름을 확인할 수 없습니다."
+        Add-Check WARN 'azure-tenant' "Tenant ID: $tenantId. Could not query the Azure cloud endpoint, so the tenant name cannot be verified."
         return
     }
     $url = $cloud.Text.TrimEnd('/') + '/tenants?api-version=2022-12-01'
     $name = Invoke-ToolProbe az @('rest', '--method', 'get', '--url', $url, '--query', "value[?tenantId=='$tenantId'].displayName | [0]", '--output', 'tsv', '--only-show-errors')
     if ($name.Code -eq 0 -and $name.Text -and $name.Text -notin @('None', 'null')) {
-        Add-Check MANUAL 'azure-tenant' "테넌트 이름: $($name.Text) / 테넌트 ID: $tenantId"
+        Add-Check MANUAL 'azure-tenant' "Tenant name: $($name.Text) / Tenant ID: $tenantId"
     }
-    else { Add-Check WARN 'azure-tenant' "테넌트 ID: $tenantId. 테넌트 이름을 조회하지 못했습니다. 권한, 네트워크 및 Azure Portal을 확인하세요." }
+    else { Add-Check WARN 'azure-tenant' "Tenant ID: $tenantId. Could not query the tenant name. Check permissions, network access, and Azure Portal." }
 }
 
 function Test-MinimumVersion {
@@ -96,70 +96,70 @@ function Test-ContainerRuntime {
     param([string]$Engine)
     $version = Invoke-ToolProbe $Engine @('--version')
     if ($version.Code -ne 0) {
-        Add-Check FAIL 'container-cli' "$Engine 실행 실패 (종료 코드 $($version.Code)). 해당 트랙의 준비 문서를 확인하세요."
+        Add-Check FAIL 'container-cli' "$Engine failed (exit code $($version.Code)). See the setup guide for your track."
         return
     }
-    Add-Check PASS 'container-cli' "$Engine CLI 실행: $($version.Text)"
+    Add-Check PASS 'container-cli' "$Engine CLI output: $($version.Text)"
     $format = if ($Engine -eq 'docker') { '{{.OSType}}' } else { '{{.Host.OS}}' }
     $info = Invoke-ToolProbe $Engine @('info', '--format', $format)
     if ($info.Code -ne 0) {
-        Add-Check FAIL 'container-engine' "$Engine 연결 실패. 엔진 또는 Podman machine 상태와 권한을 확인하세요. 자동으로 시작하거나 다른 엔진을 사용하지 않습니다."
+        Add-Check FAIL 'container-engine' "Could not connect to $Engine. Check engine or Podman machine status and permissions. This script will not start the engine or switch to another one automatically."
     }
     elseif ($info.Text.Trim() -ne 'linux') {
-        Add-Check FAIL 'container-engine' '선택한 엔진의 Linux 환경을 확인하지 못했습니다.'
+        Add-Check FAIL 'container-engine' 'Could not verify a Linux environment for the selected engine.'
     }
-    else { Add-Check PASS 'container-engine' "$Engine CLI가 Linux 컨테이너 엔진에 연결했습니다. 엔진의 설치 위치는 이 검사로 확인하지 않습니다." }
+    else { Add-Check PASS 'container-engine' "$Engine CLI connected to a Linux container engine. This check does not verify where the engine is installed." }
     if ($Engine -eq 'docker') {
         $builder = Invoke-ToolProbe docker @('build', '--help')
-        if ($builder.Code -eq 0 -and $builder.Text -match '--platform') { Add-Check PASS 'builder-command' 'Docker CLI 도움말에서 --platform 옵션을 확인했습니다. 실제 빌드는 아직 확인하지 않았습니다.' }
-        else { Add-Check FAIL 'builder-command' 'Docker --platform 빌드 기능을 확인하지 못했습니다.' }
+        if ($builder.Code -eq 0 -and $builder.Text -match '--platform') { Add-Check PASS 'builder-command' 'Found --platform in Docker CLI help. An actual build has not been verified.' }
+        else { Add-Check FAIL 'builder-command' 'Could not verify Docker --platform build support.' }
         $buildx = Invoke-ToolProbe docker @('buildx', 'version')
-        if ($buildx.Code -eq 0) { Add-Check PASS 'builder' 'Docker CLI에서 Buildx 버전 조회에 성공했습니다. 실제 빌드는 아직 확인하지 않았습니다.' }
-        else { Add-Check WARN 'builder' 'Buildx를 확인하지 못했습니다. 실제 azd package 단계에서 빌드 지원을 확인해야 합니다.' }
+        if ($buildx.Code -eq 0) { Add-Check PASS 'builder' 'Docker CLI returned the Buildx version. An actual build has not been verified.' }
+        else { Add-Check WARN 'builder' 'Could not verify Buildx. Verify build support during the actual azd package step.' }
     }
     else {
         if ($IsWindows -or $IsMacOS) {
             $machines = Invoke-ToolProbe podman @('machine', 'list')
-            if ($machines.Code -eq 0) { Add-Check PASS 'podman-machine' "Podman machine 목록 (선택된 연결은 별도로 확인): $($machines.Text)" }
-            else { Add-Check WARN 'podman-machine' 'Podman machine 목록을 조회하지 못했습니다. machine과 연결 설정을 직접 확인하세요.' }
+            if ($machines.Code -eq 0) { Add-Check PASS 'podman-machine' "Podman machine list (verify the selected connection separately): $($machines.Text)" }
+            else { Add-Check WARN 'podman-machine' 'Could not list Podman machines. Manually check the machine and connection settings.' }
         }
         $builder = Invoke-ToolProbe podman @('build', '--help')
         if ($builder.Code -eq 0 -and $builder.Text -match '--platform') {
-            Add-Check PASS 'builder' 'Podman CLI 도움말에서 --platform 옵션을 확인했습니다. 실제 빌드는 아직 확인하지 않았습니다. Docker Buildx는 필요하지 않습니다.'
+            Add-Check PASS 'builder' 'Found --platform in Podman CLI help. An actual build has not been verified. Docker Buildx is not required.'
         }
-        else { Add-Check FAIL 'builder' 'Podman의 --platform 빌드 기능을 확인하지 못했습니다.' }
+        else { Add-Check FAIL 'builder' 'Could not verify Podman --platform build support.' }
     }
-    Add-Check MANUAL 'container-workload' '이 실습 셸에서 실제 linux/amd64 이미지 빌드, 컨테이너 포트 접근과 ACR 게시를 실습 중 확인하세요. 위 PASS는 실제 워크로드 성공을 보장하지 않습니다.'
+    Add-Check MANUAL 'container-workload' 'During the workshop, verify an actual linux/amd64 image build, container port access, and publishing to ACR from this shell. The PASS results above do not guarantee that the actual workload will succeed.'
 }
 
 function Test-CommonTools {
     param([string]$Engine, [string]$SelectedTrack)
     $git = Invoke-ToolProbe git @('--version')
     if ($git.Code -eq 0) { Add-Check PASS git $git.Text }
-    else { Add-Check FAIL git 'Git을 설치하고 PATH를 확인하세요.' }
+    else { Add-Check FAIL git 'Install Git and check PATH.' }
     $node = Invoke-ToolProbe node @('--version')
     if ($node.Code -eq 0 -and (Test-MinimumVersion $node.Text '22.0.0')) { Add-Check PASS node $node.Text }
-    else { Add-Check FAIL node 'Node.js 22 이상의 안정 버전이 필요합니다.' }
+    else { Add-Check FAIL node 'A stable version of Node.js 22 or later is required.' }
     $modernize = Invoke-ToolProbe modernize @('--version')
     if ($modernize.Code -eq 0 -and $modernize.Text) { Add-Check PASS modernize $modernize.Text }
-    else { Add-Check FAIL modernize 'Modernize CLI 설치와 PATH를 확인하세요.' }
+    else { Add-Check FAIL modernize 'Check the Modernize CLI installation and PATH.' }
     $gh = Invoke-ToolProbe gh @('--version')
     if ($gh.Code -eq 0 -and (Test-MinimumVersion $gh.Text '2.45.0')) {
         Add-Check PASS gh $gh.Text
         $auth = Invoke-ToolProbe gh @('auth', 'status')
-        if ($auth.Code -eq 0) { Add-Check PASS 'gh-login' 'GitHub CLI 로그인 상태를 확인했습니다. Copilot 모델 사용 권한은 별도입니다.' }
-        else { Add-Check FAIL 'gh-login' 'gh auth login을 직접 실행하거나 인증 오류를 해결하세요.' }
+        if ($auth.Code -eq 0) { Add-Check PASS 'gh-login' 'Verified GitHub CLI authentication. Copilot model access is separate.' }
+        else { Add-Check FAIL 'gh-login' 'Run gh auth login manually or resolve the authentication error.' }
     }
-    else { Add-Check FAIL gh 'GitHub CLI 2.45.0 이상이 필요합니다.' }
+    else { Add-Check FAIL gh 'GitHub CLI 2.45.0 or later is required.' }
     $az = Invoke-ToolProbe az @('version', '--output', 'json')
     if ($az.Code -eq 0) {
-        Add-Check PASS az 'Azure CLI를 실행할 수 있습니다.'
+        Add-Check PASS az 'Azure CLI is available.'
         $extension = Invoke-ToolProbe az @('extension', 'show', '--name', 'containerapp', '--query', 'version', '--output', 'tsv')
-        if ($extension.Code -eq 0 -and $extension.Text) { Add-Check PASS 'az-containerapp' "확장 버전: $($extension.Text)" }
-        else { Add-Check FAIL 'az-containerapp' '설치 도우미에서 containerapp 확장을 설치하거나 조회 오류를 해결하세요.' }
+        if ($extension.Code -eq 0 -and $extension.Text) { Add-Check PASS 'az-containerapp' "Extension version: $($extension.Text)" }
+        else { Add-Check FAIL 'az-containerapp' 'Install the containerapp extension through the installer or resolve the query error.' }
         $account = Invoke-ToolProbe az @('account', 'show', '--query', 'state', '--output', 'tsv')
         if ($account.Code -eq 0 -and $account.Text -eq 'Enabled') {
-            Add-Check PASS 'az-login' '선택된 활성 구독이 있습니다.'
+            Add-Check PASS 'az-login' 'An enabled subscription is selected.'
             Show-AzureIdentity
             $providers = @('Microsoft.App', 'Microsoft.OperationalInsights', 'Microsoft.Storage', 'Microsoft.ContainerRegistry', 'Microsoft.ServiceBus')
             $providers += if ($SelectedTrack -eq 'java') { 'Microsoft.DBforPostgreSQL' } else { 'Microsoft.Sql' }
@@ -167,56 +167,56 @@ function Test-CommonTools {
                 Test-AzureProvider $provider
             }
         }
-        else { Add-Check FAIL 'az-login' 'az login 및 활성 구독 선택이 필요하거나 구독 조회에 실패했습니다.' }
+        else { Add-Check FAIL 'az-login' 'Run az login and select an enabled subscription, or resolve the subscription query error.' }
     }
-    else { Add-Check FAIL az 'Azure CLI를 설치하거나 실행 오류를 해결하세요.' }
+    else { Add-Check FAIL az 'Install Azure CLI or resolve the execution error.' }
     $azd = Invoke-ToolProbe azd @('version')
     if ($azd.Code -eq 0 -and (Test-MinimumVersion $azd.Text '1.37.3')) {
         Add-Check PASS azd $azd.Text
         $login = Invoke-ToolProbe azd @('auth', 'login', '--check-status')
-        if ($login.Code -eq 0) { Add-Check PASS 'azd-login' 'azd 로그인 상태를 확인했습니다.' }
-        else { Add-Check FAIL 'azd-login' 'azd auth login을 직접 실행하거나 인증 오류를 해결하세요. az 로그인과는 별개입니다.' }
+        if ($login.Code -eq 0) { Add-Check PASS 'azd-login' 'Verified azd authentication.' }
+        else { Add-Check FAIL 'azd-login' 'Run azd auth login manually or resolve the authentication error. This is separate from az authentication.' }
     }
-    else { Add-Check FAIL azd '워크샵 기준 azd 1.37.3 이상이 필요합니다. 자동 업데이트하지 않습니다.' }
+    else { Add-Check FAIL azd 'This workshop requires azd 1.37.3 or later. This script will not update it automatically.' }
     Test-ContainerRuntime $Engine
-    Add-Check MANUAL 'copilot-app' 'Copilot app의 로그인, 라이선스, 조직 정책과 터미널 접근을 확인하세요.'
-    Add-Check MANUAL 'azure-access' '위에서 조회한 Azure CLI의 구독이 실습 대상인지 확인하고, 해당 구독의 리전, 쿼터, 역할 할당 및 데이터베이스 Entra 관리자 설정 권한을 확인하세요.'
+    Add-Check MANUAL 'copilot-app' 'Check Copilot app sign-in, license, organization policies, and terminal access.'
+    Add-Check MANUAL 'azure-access' 'Confirm that the Azure CLI subscription shown above is the workshop target. Check its regions, quotas, and permissions for role assignments and database Entra administrator configuration.'
 }
 
 function Test-DotnetTools {
     try {
         $feature = Get-CimInstance Win32_OptionalFeature -Filter "Name='MSMQ-Server'" -ErrorAction Stop
-        if ($feature -and $feature.InstallState -eq 1) { Add-Check PASS msmq-feature 'MSMQ Server 기능이 활성화되어 있습니다.' }
-        else { Add-Check FAIL msmq-feature 'MSMQ Server 기능을 활성화하고 필요한 재시작을 완료하세요.' }
+        if ($feature -and $feature.InstallState -eq 1) { Add-Check PASS msmq-feature 'The MSMQ Server feature is enabled.' }
+        else { Add-Check FAIL msmq-feature 'Enable the MSMQ Server feature and complete any required restart.' }
     }
-    catch { Add-Check FAIL msmq-feature "MSMQ 기능 조회 실패: $($_.Exception.Message)" }
+    catch { Add-Check FAIL msmq-feature "Could not query the MSMQ feature: $($_.Exception.Message)" }
     $service = Get-Service MSMQ -ErrorAction SilentlyContinue
-    if ($service -and $service.Status -eq 'Running') { Add-Check PASS msmq-service 'MSMQ 서비스가 실행 중입니다.' }
-    else { Add-Check FAIL msmq-service 'MSMQ 서비스가 없거나 실행 중이 아닙니다.' }
+    if ($service -and $service.Status -eq 'Running') { Add-Check PASS msmq-service 'The MSMQ service is running.' }
+    else { Add-Check FAIL msmq-service 'The MSMQ service is missing or not running.' }
     try {
         $tools = Get-DotnetFrameworkBuildTools
         $msbuild = Invoke-ToolProbe $tools.MSBuild @('-version', '-nologo')
-        if ($msbuild.Code -ne 0) { throw 'MSBuild.exe를 실행할 수 없습니다.' }
-        Add-Check PASS framework-build "IDE 실행 없이 빌드 가능: $($tools.MSBuild) / 웹 타깃: $($tools.WebTools)"
+        if ($msbuild.Code -ne 0) { throw 'Could not run MSBuild.exe.' }
+        Add-Check PASS framework-build "Build tools available without launching the IDE: $($tools.MSBuild) / Web targets: $($tools.WebTools)"
     }
     catch { Add-Check FAIL framework-build $_.Exception.Message }
     try {
         $release = Get-ItemPropertyValue -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction Stop
-        if ($release -ge 528040) { Add-Check PASS framework-runtime '.NET Framework 4.8 이상 런타임이 있습니다.' }
-        else { Add-Check FAIL framework-runtime '.NET Framework 4.8 이상 런타임이 필요합니다.' }
+        if ($release -ge 528040) { Add-Check PASS framework-runtime '.NET Framework runtime 4.8 or later is installed.' }
+        else { Add-Check FAIL framework-runtime '.NET Framework runtime 4.8 or later is required.' }
     }
-    catch { Add-Check FAIL framework-runtime "런타임 레지스트리 조회 실패: $($_.Exception.Message)" }
+    catch { Add-Check FAIL framework-runtime "Could not query the runtime registry: $($_.Exception.Message)" }
     $references = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8'
     if ((Test-Path -LiteralPath (Join-Path $references 'mscorlib.dll')) -and (Test-Path -LiteralPath (Join-Path $references 'RedistList\FrameworkList.xml'))) {
-        Add-Check PASS framework-targeting '.NET Framework 4.8 참조 어셈블리가 있습니다.'
+        Add-Check PASS framework-targeting '.NET Framework 4.8 reference assemblies are installed.'
     }
-    else { Add-Check FAIL framework-targeting '4.8 Targeting Pack이 필요합니다. 런타임 설치만으로는 충분하지 않습니다.' }
+    else { Add-Check FAIL framework-targeting 'The 4.8 Targeting Pack is required. Installing only the runtime is not sufficient.' }
     $sdks = Invoke-ToolProbe dotnet @('--list-sdks')
-    if ($sdks.Code -eq 0 -and $sdks.Text -match '(?m)^10\.\d+\.\d+\s+\[') { Add-Check PASS dotnet-sdk '.NET 10 안정 SDK가 있습니다.' }
-    else { Add-Check FAIL dotnet-sdk '.NET 10 SDK가 필요합니다. 런타임만 설치된 경우는 통과하지 않습니다.' }
+    if ($sdks.Code -eq 0 -and $sdks.Text -match '(?m)^10\.\d+\.\d+\s+\[') { Add-Check PASS dotnet-sdk 'A stable .NET 10 SDK is installed.' }
+    else { Add-Check FAIL dotnet-sdk 'The .NET 10 SDK is required. A runtime-only installation does not pass this check.' }
     try {
         $iis = Get-WorkshopIisExpress
-        Add-Check PASS iis-express "IIS Express 실행 파일과 구성 템플릿: $($iis.Exe)"
+        Add-Check PASS iis-express "IIS Express executable and configuration template found: $($iis.Exe)"
     }
     catch { Add-Check FAIL iis-express $_.Exception.Message }
     $localdb = Get-Command SqlLocalDB -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
@@ -226,17 +226,17 @@ function Test-DotnetTools {
     }
     if ($localdb) {
         $db = Invoke-ToolProbe $localdb @('versions')
-        if ($db.Code -eq 0 -and $db.Text) { Add-Check PASS localdb 'SQL Server LocalDB 설치를 확인했습니다.' }
-        else { Add-Check FAIL localdb 'LocalDB 실행 실패. 설치 또는 권한을 확인하세요.' }
+        if ($db.Code -eq 0 -and $db.Text) { Add-Check PASS localdb 'Verified the SQL Server LocalDB installation.' }
+        else { Add-Check FAIL localdb 'LocalDB failed to run. Check its installation and permissions.' }
     }
-    else { Add-Check FAIL localdb 'SQL Server Express LocalDB를 설치하세요.' }
+    else { Add-Check FAIL localdb 'Install SQL Server Express LocalDB.' }
 }
 
 function Test-JavaTools {
     foreach ($major in @(8, 25)) {
         $jdk = Find-WorkshopJava -Major $major
-        if ($jdk) { Add-Check PASS "jdk-$major" "Temurin java와 javac 확인: $($jdk.Home)" }
-        else { Add-Check FAIL "jdk-$major" "실행 가능한 Temurin JDK $major 가 필요합니다. 설치 도우미와 Java 준비 문서를 확인하세요." }
+        if ($jdk) { Add-Check PASS "jdk-$major" "Verified Temurin java and javac: $($jdk.Home)" }
+        else { Add-Check FAIL "jdk-$major" "A working Temurin JDK $major is required. See the installer and Java setup guide." }
     }
 }
 
@@ -245,15 +245,15 @@ function Invoke-PrerequisiteMain {
         Write-Host './scripts/check-prerequisites.ps1 -Track java|dotnet [-ContainerEngine docker|podman]'
         return 0
     }
-    if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] -Track java 또는 -Track dotnet을 지정하세요.'; return 2 }
+    if ($Track -cnotin @('java', 'dotnet')) { Write-Host '[FAIL] Specify -Track java or -Track dotnet.'; return 2 }
     try { $engine = Resolve-ContainerEngine $ContainerEngine }
     catch [ArgumentException] { Write-Host "[FAIL] $($_.Exception.Message)"; return 2 }
     $script:CheckResults = [Collections.Generic.List[object]]::new()
-    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell 진입점은 Windows 전용입니다. Java 트랙은 ./scripts/check-prerequisites.sh를 실행하세요.'; return 1 }
-    $script:CheckContext = 'Windows 호스트'
+    if (-not $IsWindows) { Write-Host '[FAIL] PowerShell entrypoints are Windows-only. For the Java track, run ./scripts/check-prerequisites.sh.'; return 1 }
+    $script:CheckContext = 'Windows host'
     if ($PSVersionTable.PSVersion.Major -ge 7) { Add-Check PASS pwsh "PowerShell $($PSVersionTable.PSVersion)" }
-    else { Add-Check FAIL pwsh 'PowerShell 7이 필요합니다.' }
-    Write-Host "트랙: $Track / 엔진: $engine / 실행 환경: Windows"
+    else { Add-Check FAIL pwsh 'PowerShell 7 is required.' }
+    Write-Host "Track: $Track / Engine: $engine / Environment: Windows"
     $previous = $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL
     try {
         $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = 'no'
@@ -262,7 +262,7 @@ function Invoke-PrerequisiteMain {
     }
     finally { $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL = $previous }
     $failures = @($script:CheckResults | Where-Object Status -eq 'FAIL').Count
-    Write-Host "필수 실패: $failures. MANUAL 항목은 자동 확인되지 않았습니다. azd 실행 전 현재 셸에서 AZD_CONTAINER_RUNTIME=$engine 을 지정하세요."
+    Write-Host "Required checks failed: $failures. MANUAL items have not been verified automatically. Set AZD_CONTAINER_RUNTIME=$engine in the current shell before running azd."
     if ($failures -gt 0) { return 1 }
     return 0
 }

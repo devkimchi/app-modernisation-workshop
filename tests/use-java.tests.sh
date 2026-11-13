@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-    printf '%s\n' '[FAIL] ./tests/use-java.tests.sh로 실행하세요.' >&2
+    printf '%s\n' '[FAIL] Run ./tests/use-java.tests.sh.' >&2
     return 2 2>/dev/null || exit 2
 fi
 set -e

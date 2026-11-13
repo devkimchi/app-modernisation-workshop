@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-    printf '%s\n' '[FAIL] ./tests/shell-portability.tests.sh로 실행하세요.' >&2
+    printf '%s\n' '[FAIL] Run ./tests/shell-portability.tests.sh.' >&2
     return 2 2>/dev/null || exit 2
 fi
 set -e

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-    printf '%s\n' '[FAIL] ./tests/scripts.tests.sh로 실행하세요.' >&2
+    printf '%s\n' '[FAIL] Run ./tests/scripts.tests.sh.' >&2
     return 2 2>/dev/null || exit 2
 fi
 set -e
@@ -121,10 +121,10 @@ container_output=$(
     CHECK_FAILURES=0
     check_container docker
 )
-assert 'container CLI path shown' grep -q 'PASS.*container-cli.*CLI 실행.*경로: /usr/bin/docker' <<< "$container_output"
-assert 'server location not inferred' grep -q 'PASS.*container-engine.*설치 위치는 이 검사로 확인하지 않습니다' <<< "$container_output"
-assert 'buildx is only version lookup' grep -q 'PASS.*builder:.*버전 조회.*실제 빌드는 아직 확인하지 않았습니다' <<< "$container_output"
-assert 'workload manual verification' grep -q 'MANUAL.*container-workload.*실제 워크로드 성공을 보장하지 않습니다' <<< "$container_output"
+assert 'container CLI path shown' grep -q 'PASS.*container-cli.*CLI is available.*path: /usr/bin/docker' <<< "$container_output"
+assert 'server location not inferred' grep -q 'PASS.*container-engine.*does not verify where the engine is installed' <<< "$container_output"
+assert 'buildx is only version lookup' grep -q 'PASS.*builder:.*Retrieved the Buildx version.*An actual build has not been tested' <<< "$container_output"
+assert 'workload manual verification' grep -q 'MANUAL.*container-workload.*do not guarantee that the workload will succeed' <<< "$container_output"
 
 common_output=$(
     CHECK_CONTEXT='Linux Bash'
@@ -154,13 +154,13 @@ common_output=$(
     check_common docker
 )
 assert 'Azure identity shown for manual confirmation' grep -q 'MANUAL.*azure-subscription.*subscription-id' <<< "$common_output"
-assert 'Azure subscription format' grep -Fxq '[MANUAL] [Linux Bash] azure-subscription: 구독 이름: Subscription name / 구독 ID: subscription-id' <<< "$common_output"
-assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [Linux Bash] azure-tenant: 테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
+assert 'Azure subscription format' grep -Fxq '[MANUAL] [Linux Bash] azure-subscription: Subscription name: Subscription name / Subscription ID: subscription-id' <<< "$common_output"
+assert 'Azure tenant name and ID require confirmation' grep -Fxq '[MANUAL] [Linux Bash] azure-tenant: Tenant name: Example tenant / Tenant ID: 11111111-2222-3333-4444-555555555555' <<< "$common_output"
 if grep 'azure-subscription' <<< "$common_output" | grep -q '11111111-2222-3333-4444-555555555555'; then exit 1; else PASSED=$((PASSED + 1)); fi
 assert 'Azure CLI path identified' grep -q 'PASS.*Linux Bash.*az.*usr/bin/az' <<< "$common_output"
 assert 'Java PostgreSQL provider checked' grep -q 'PASS.*Microsoft.DBforPostgreSQL' <<< "$common_output"
-assert 'Copilot app requires manual terminal check' grep -q 'MANUAL.*copilot-app:.*터미널 접근' <<< "$common_output"
-assert 'Azure permissions manual check scoped to Azure' grep -Fq '[MANUAL] [Azure (수동 확인)] azure-access:' <<< "$common_output"
+assert 'Copilot app requires manual terminal check' grep -q 'MANUAL.*copilot-app:.*terminal access' <<< "$common_output"
+assert 'Azure permissions manual check scoped to Azure' grep -Fq '[MANUAL] [Azure (manual check)] azure-access:' <<< "$common_output"
 
 for scenario in minimum supported old unavailable unrecognized; do
     glibc_output=$(
@@ -184,13 +184,13 @@ for scenario in minimum supported old unavailable unrecognized; do
     esac
     assert "glibc prerequisite $scenario" grep -q "^failures=$expected$" <<< "$glibc_output"
 done
-assert 'unrecognized glibc gives supported-distro guidance' grep -q 'FAIL.*glibc.*확인하지 못했습니다.*지원되는 glibc 기반 Linux' <<< "$glibc_output"
+assert 'unrecognized glibc gives supported-distro guidance' grep -q 'FAIL.*glibc.*Could not determine the glibc version.*supported glibc-based Linux distribution' <<< "$glibc_output"
 old_glibc_output=$(
     probe() { PROBE_CODE=0; PROBE_TEXT='glibc 2.26'; }
     CHECK_FAILURES=0
     check_glibc
 )
-assert 'old glibc gives safe remediation' grep -q 'FAIL.*glibc.*2.27 이상.*별도로 설치하지 말고 지원되는' <<< "$old_glibc_output"
+assert 'old glibc gives safe remediation' grep -q 'FAIL.*glibc.*2.27 or later.*Do not install glibc separately; use a supported Linux distribution' <<< "$old_glibc_output"
 
 missing_output=$(
     CHECK_CONTEXT='Linux Bash'
@@ -205,8 +205,8 @@ missing_output=$(
     CHECK_FAILURES=0
     check_common docker
 )
-assert 'missing Node is scoped' grep -q 'FAIL.*Linux Bash.*node.*이 Bash 환경의 PATH' <<< "$missing_output"
-assert 'missing azd is scoped' grep -q 'FAIL.*Linux Bash.*azd.*이 Bash 환경의 PATH' <<< "$missing_output"
+assert 'missing Node is scoped' grep -q 'FAIL.*Linux Bash.*node.*PATH.*Bash environment' <<< "$missing_output"
+assert 'missing azd is scoped' grep -q 'FAIL.*Linux Bash.*azd.*PATH.*Bash environment' <<< "$missing_output"
 
 for scenario in ready missing-modernize broken-modernize missing-gh old-gh broken-gh unauthenticated; do
     tool_output=$(
@@ -238,7 +238,7 @@ hidden_modernize=$(
     CHECK_FAILURES=0
     check_modernize_tools
 )
-assert 'installed Modernize outside PATH explains reload' grep -q 'FAIL.*modernize.*새 터미널' <<< "$hidden_modernize"
+assert 'installed Modernize outside PATH explains reload' grep -q 'FAIL.*modernize.*new terminal' <<< "$hidden_modernize"
 for code in 0 1 127; do
     brew_output=$(
         probe() { PROBE_CODE="$code"; PROBE_TEXT='Homebrew fixture'; }
@@ -344,7 +344,7 @@ sequence_output=$(SDKMAN_DIR="$java_selector_fixture" bash -c '
     source "$1" --jdk 25
 ' _ "$ROOT/scripts/use-java.sh" "$java_selector_fixture/app" 2>&1)
 for major in 8 25; do
-    assert "select and verify JDK $major" grep -q "SDKMAN JDK $major 선택: $major.0-test" <<< "$sequence_output"
+    assert "select and verify JDK $major" grep -q "Selected SDKMAN JDK $major: $major.0-test" <<< "$sequence_output"
 done
 assert 'baseline reports Java version check' grep -q '\[INFO\] java -version' <<< "$sequence_output"
 assert 'baseline reports compiler version check' grep -q '\[INFO\] javac -version' <<< "$sequence_output"

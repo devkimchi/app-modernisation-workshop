@@ -2,7 +2,7 @@
 
 ## 적용 범위와 주의사항
 
-이 문서는 2026년 11월 12일 GitHub Copilot Modernization 플러그인 `1.24.0`을 Windows에서 사용하면서 발생한 문제와 로컬 수정 방법을 기록한다. 평가 대상은 워크숍 루트의 `java` 폴더였고, Java와 AppCAT은 기존 WSL2 Ubuntu의 Bash와 SDKMAN에서 실행했다.
+이 문서는 2026년 11월 12일과 13일 GitHub Copilot Modernization 플러그인 `1.24.0`을 Windows에서 사용하면서 발생한 문제와 로컬 수정 방법을 기록한다. 평가 대상은 워크숍 루트의 `java` 폴더였고, Java와 AppCAT은 기존 WSL2 Ubuntu의 Bash와 SDKMAN에서 실행했다.
 
 아래 수정은 당시 **설치된 로컬 플러그인**에 적용한 임시 수정이다. 플러그인 업데이트로 덮어쓰일 수 있고, 다른 버전에서는 함수와 훅 형식이 다를 수 있다. 같은 오류가 다시 발생하거나 이 수정이 여전히 필요한지는 보장할 수 없다. 이미 수정된 항목은 다시 적용하지 말고, 버전이나 코드가 다르면 원인을 확인한 뒤 해당 버전에 맞게 변경한다.
 
@@ -38,6 +38,9 @@ Test-Path (Join-Path $plugin 'skills/assessment/scripts/assess-cli.mjs')
 | `skills/assessment/scripts/assess-runtime.mjs` | AppCAT 누락 오류의 실행 파일 경로 |
 | `skills/assessment/scripts/assess-cli.mjs` | 완료 표식 |
 | `skills/assessment/scripts/assess-cli.test.mjs` | 완료 표식과 AppCAT 오류 테스트 |
+| `skills/create-modernization-plan/tasks-schema.json` | 작업 필드 결합과 `kbId` |
+| `skills/create-modernization-plan/SKILL.md` | 명시적 작업 순서와 승인 조건 |
+| `com.github.copilot/agents/planning-coordinator.agent.md` | 계획 순서와 스키마 예시 |
 
 다음 항목을 적용하기 전에 기존 내용을 별도 안전한 위치에 백업하고, 변경 전후 차이를 확인한다. 백업에 자격 증명이나 사용자 프로젝트 파일을 포함하지 않는다. 다음에 서로 다른 환경에서 수행한다면 WSL 배포판을 임의로 고르지 말고 사용자에게 지정받는다.
 
@@ -289,3 +292,51 @@ config: {"analysisCoverage":"full"}
 후속 실행 `20261112073449`는 `analysisCoverage: "full"`, `coverageSource: "explicit-user"`로 산출물 검증을 통과했다. 영수증에는 AppCAT 보고서와 여섯 사실 문서가 기록됐고, 출력에는 이슈 유형 13개, 발생 사례 34개, 예상 작업량 143포인트가 표시됐다.
 
 다만 AppCAT 로그에 `unable to get dependency output. use source analysis result only`가 있었다. 원인과 영향은 조사하지 않았으며, 영수증 통과만으로 AppCAT 의존성 분석이 완전했다고 판단할 수 없다. 실제 앱 동작, 보안과 테스트 수행 여부도 산출물 검증만으로 증명되지 않는다. 최종 요약에는 여섯 사실 문서 경로와 이 엔진 한계가 표시되지 않았으므로 별도로 확인해 보고해야 한다.
+
+## 11. 계획 작업 스키마의 필드 충돌
+
+**증상:** 평가 후 규칙 문서는 작성됐지만 `plan.md`와 `tasks.json`은 생성되지 않았다. 최소 `setupBaseline`과 `upgrade` 작업도 스키마 검증에 실패했다.
+
+**원인:** `skills/create-modernization-plan/tasks-schema.json`은 `allOf`로 공통 `taskBase`와 작업 유형별 필드를 결합하면서 양쪽에 `additionalProperties: false`를 두었다. 유형별 정의가 필수 공통 필드 `id`, `description`, `requirements`를 거부하고, 공통 정의도 `snapshotFolder`나 `successCriteria` 같은 유형별 필드를 거부했다. 계획과 실행 코디네이터가 사용하는 `kbId`도 스키마에 없었다.
+
+**수정:** JSON Schema draft 2020-12를 지원하는 검증기를 전제로, `taskBase`와 각 유형의 `allOf` 안쪽 객체에서 `additionalProperties: false`를 제거한다. 대신 `transformTask`, `upgradeTask`, `integrationTestTask`, `containerizationTask`, `deploymentTask`, `securityTask`, `infrastructureTask`, `setupBaselineTask` 각각의 `allOf`와 같은 수준에 `unevaluatedProperties: false`를 둔다. 다른 중첩 객체의 `additionalProperties: false`는 유지한다.
+
+```json
+"setupBaselineTask": {
+  "unevaluatedProperties": false,
+  "allOf": [
+    { "$ref": "#/$defs/taskBase" },
+    {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "setupBaseline" },
+        "snapshotFolder": { "type": "string" }
+      }
+    }
+  ]
+}
+```
+
+위 예시는 구조를 보여 주는 발췌다. 실제 유형에 있는 `successCriteria` 등 기존 속성과 설명은 삭제하지 않는다. `taskBase.properties`에는 평가 결과의 식별자를 그대로 담을 수 있도록 선택적 필드를 추가한다.
+
+```json
+"kbId": {
+  "type": ["string", "null"],
+  "description": "Knowledge base identifier from the selected assessment solution, or null when no knowledge base is available."
+}
+```
+
+`planning-coordinator.agent.md`의 JSON 예시도 실제 스키마에 맞춘다. 최상위 `$schema`와 `description`, `successCriteria`의 필수 세 필드를 포함하고, 스키마에서 허용하지 않는 `environmentConfiguration: null`과 `upgrade`의 `skills` 예시는 제거한다. `kbId`는 기존 평가 결과에 있는 값만 사용하고 추측하지 않는다.
+
+**확인:** 당시 Python의 기존 `jsonschema` `Draft202012Validator`로 여덟 작업 유형, 문자열과 `null` `kbId`, 필수 필드 누락과 미정의 필드 거부, 코디네이터 예시를 확인했다. 별도의 지속적인 회귀 테스트 파일은 추가하지 않았다. 다른 검증기가 draft 2020-12를 지원하지 않으면 이 변경이 의도대로 적용되는지 확인해야 한다.
+
+## 12. 계획의 기본 순서와 사용자 요구 충돌
+
+**증상:** 기본 계획 지침은 업그레이드를 첫 작업으로 두고 기준 동작과 병렬 실행하며, 통합 테스트를 컨테이너화 전에 배치했다. 사용자는 기준 동작 테스트를 먼저 수행하고 배포 후 기능을 검증하도록 요청했다.
+
+**수정:** `skills/create-modernization-plan/SKILL.md`와 `planning-coordinator.agent.md`에서 사용자가 명시한 순서와 rulebook을 기본 병렬 규칙보다 우선한다. 필요한 순서는 목록 위치뿐 아니라 `dependencies`에도 기록한다. 기준 동작이 먼저라면 해당 업그레이드와 후속 작업이 `setupBaseline`에 직접 또는 간접 의존하게 하고, 배포 후 검증이 명시됐다면 해당 검증이 배포에 의존하게 한다. 별도 사전 배포 테스트가 요청된 경우도 유지한다.
+
+리소스 생성, 비용 발생과 삭제에 필요한 별도 승인 조건을 계획에 남기며, 계획 생성이나 계획 확인을 실행 승인으로 취급하지 않는다. `tasks-schema.json`의 `integrationTest` 설명도 기본 순서와 명시적 배포 후 검증을 구분하도록 수정했다.
+
+**확인과 한계:** 기준 동작 우선과 배포 후 검증 의존성을 가진 예시 작업이 스키마를 통과했다. 실제 계획 생성은 수정 후 재실행하지 않았으므로 이 변경이 실제 생성 계획에 반영되는지는 아직 확인되지 않았다. 이 수정만으로 리소스 생성이나 배포가 승인되는 것은 아니다.

@@ -161,6 +161,53 @@ probe had succeeded. This was an assistant judgment error, not an observed
 plugin execution failure; a subsequent explicit request started a new
 assessment.
 
+### 9. Planning task schema rejected required fields
+
+**Symptom:** A planning attempt following the verified assessment produced the
+requested rulebook but no `plan.md` or `tasks.json`. Even minimal
+`setupBaseline` and `upgrade` tasks failed schema validation.
+
+**Cause:** In `skills/create-modernization-plan/tasks-schema.json`, each task
+used `allOf` to combine the common `taskBase` with type-specific fields.
+Both branches independently used `additionalProperties: false`. The
+type-specific branch therefore rejected required common fields such as `id`,
+`description`, and `requirements`; the common branch also rejected
+type-specific fields such as `snapshotFolder` and `successCriteria`. The
+schema also omitted `kbId`, although the planning and execution coordinators
+support that field.
+
+**Local resolution:** Removed the conflicting branch-level restrictions and
+put `unevaluatedProperties: false` on each of the eight combined task
+definitions. This preserves rejection of unknown fields while allowing common
+and type-specific properties together. Added optional string-or-null `kbId`
+to `taskBase` and corrected the planning coordinator's example to match the
+schema. A validator must support JSON Schema draft 2020-12.
+
+**Verification:** Local checks with Python's existing `jsonschema`
+`Draft202012Validator` accepted all eight task types and string or null
+`kbId`, rejected unknown and missing fields, and validated the coordinator's
+example. These were local checks, not a persisted regression suite.
+
+### 10. Default plan ordering conflicted with the user's requirements
+
+**Symptom:** The planning skill's default instructions placed the upgrade
+first, allowed it to run in parallel with the baseline, and placed integration
+testing before containerization. The user had requested a baseline before
+changes and final validation after deployment.
+
+**Local resolution:** Updated `skills/create-modernization-plan/SKILL.md` and
+`com.github.copilot/agents/planning-coordinator.agent.md` to prioritize
+explicit user and rulebook ordering over defaults. Required order is expressed
+as task dependencies; baseline-first and post-deployment validation are
+handled when requested. The instructions also preserve separate approval
+gates for resource creation, cost-incurring actions, and deletion. Updated the
+integration-test schema description to match.
+
+**Verification and limit:** A representative dependency-ordered task fixture
+passed schema validation, but the planner was not rerun. These instruction and
+schema changes do not themselves approve or execute any deployment, and their
+end-to-end effect on a generated plan remains unverified.
+
 ## Final outcome and remaining limits
 
 The subsequent full-coverage run, `20261112073449`, completed artifact

@@ -35,63 +35,46 @@ git status --short
 
 ## JDK 8과 빌드 확인
 
-Windows PowerShell 7:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 8
-./mvnw.cmd -version
-./mvnw.cmd clean verify
-```
-
-macOS와 Linux의 Bash 또는 Zsh:
+JDK 8을 선택하고 빌드가 제대로 되는지 확인합니다.
 
 ```bash
+# zsh/bash
 source ../scripts/use-java.sh --jdk 8
 ./mvnw -version
 ./mvnw clean verify
 ```
 
-JDK 도우미는 현재 셸의 `JAVA_HOME`과 `PATH`만 바꿉니다. Java/Javac와 Maven이 모두 8을 사용하는지 확인합니다. 빌드 실패 시 현대화를 시작하지 않습니다.
-
-Copilot app 채팅에 빌드를 맡긴다면 다음 조건을 함께 전달합니다. 앱 대화의 실행 프로세스가 터미널의 JDK 선택을 자동으로 상속하지는 않습니다.
-
-Windows용:
-
-```text
-이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘. 소스나 런타임은 바꾸지 마.
-PowerShell 7에서 . ../scripts/use-java.ps1 -Jdk 8을 먼저 적용하고
-./mvnw.cmd를 사용해 줘.
-같은 셸에서 버전과 clean verify 결과를 기록해 줘. 설치는 별도 승인을 받아 줘.
+```powershell
+# PowerShell
+. ../scripts/use-java.ps1 -Jdk 8
+./mvnw.cmd -version
+./mvnw.cmd clean verify
 ```
 
-macOS와 Linux용:
+또는 아래와 같이 Copilot app 채팅에 빌드를 요청합니다.
 
 ```text
-이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘. 소스나 런타임은 바꾸지 마.
-Bash 또는 Zsh에서 source ../scripts/use-java.sh --jdk 8을 먼저 적용하고
-./mvnw를 사용해 줘.
-같은 셸에서 버전과 clean verify 결과를 기록해 줘. 설치는 별도 승인을 받아 줘.
+이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘.
+소스나 런타임은 바꾸지 마.
+JDK 8을 먼저 적용하고 mvnw 명령어를 사용해 줘.
+같은 셸에서 버전과 clean verify 결과를 기록해 줘.
+빌드에 문제가 생겼을 경우 임의로 수정하기 전에 별도 승인을 받아줘.
+설치가 필요할 경우에도 별도 승인을 받아 줘.
 ```
 
 ## 로컬 서비스와 앱 실행
 
 개인 정보가 없는 실제 PNG 파일을 준비합니다. 확장자만 바꾼 텍스트나 손상된 이미지는 사용하지 않습니다. 원본 시작 스크립트는 Docker 컨테이너를 만들고 web/worker를 `dev` 프로필로 실행합니다. 파일은 로컬 `storage`에 저장하고 RabbitMQ로 썸네일 작업을 보냅니다.
 
-기존 `assets-postgres`, `assets-rabbitmq`와 포트 충돌 여부를 먼저 확인합니다. 공유 장비 또는 Podman 사용자는 [루프백 수동 실행](08-troubleshooting.md#루프백-수동-실행)을 사용합니다. 원본 스크립트는 `docker` 명령을 호출하므로 Podman만 설치한 환경에서 그대로 실행하지 않습니다.
-
-Windows:
-
-```powershell
-./scripts/startapp.cmd
-```
-
-macOS와 Linux:
-
 ```bash
+# zsh/bash
 ./scripts/startapp.sh
 ```
 
-샘플 `.sh`는 자체 shebang인 `#!/bin/bash`로 실행됩니다. Windows에서는 **Web Module**, **Worker Module**이라는 별도 `cmd` 창이 열리며 해당 창에서 로그를 확인합니다.
+```powershell
+# PowerShell
+./scripts/startapp.cmd
+```
 
 ## 현재 앱 동작 확인
 

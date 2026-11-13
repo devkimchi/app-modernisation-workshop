@@ -66,11 +66,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 | 결과 | 색상 | 할 일 |
 | --- | --- | --- |
-| `PASS` | 초록 | 점검 통과. 앱 실행이나 배포까지 확인한 것은 아님 |
-| `FAIL` | 빨강 | 누락된 도구를 설치하거나 설정을 보완한 뒤 다시 점검 |
-| `WARN` | 노랑 | 경고 내용과 점검 범위를 확인 |
-| `MANUAL` | 청록 | Copilot 로그인과 라이선스, 조직 정책, 터미널 접근 권한, Azure 권한을 직접 확인 |
-| `INFO` | 파랑 | 참고 정보 |
+| ![PASS](https://img.shields.io/badge/PASS-green) | 초록 | 점검 통과. 앱 실행이나 배포까지 확인한 것은 아님 |
+| ![FAIL](https://img.shields.io/badge/FAIL-red) | 빨강 | 누락된 도구를 설치하거나 설정을 보완한 뒤 다시 점검 |
+| ![WARN](https://img.shields.io/badge/WARN-yellow) | 노랑 | 경고 내용과 점검 범위를 확인 |
+| ![MANUAL](https://img.shields.io/badge/MANUAL-cyan) | 청록 | Copilot 로그인과 라이선스, 조직 정책, 터미널 접근 권한, Azure 권한을 직접 확인 |
+| ![INFO](https://img.shields.io/badge/INFO-blue) | 파랑 | 참고 정보 |
 
 모든 스크립트에 같은 색상을 사용합니다. 파일이나 파이프로 출력할 때는 색상을 넣지 않습니다. 색상을 끄려면 `NO_COLOR` 환경 변수에 값을 지정합니다.
 

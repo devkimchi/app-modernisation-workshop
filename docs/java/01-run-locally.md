@@ -55,11 +55,21 @@ JDK 도우미는 현재 셸의 `JAVA_HOME`과 `PATH`만 바꿉니다. Java/Javac
 
 Copilot app 채팅에 빌드를 맡긴다면 다음 조건을 함께 전달합니다. 앱 대화의 실행 프로세스가 터미널의 JDK 선택을 자동으로 상속하지는 않습니다.
 
+Windows용:
+
 ```text
 이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘. 소스나 런타임은 바꾸지 마.
-Windows는 PowerShell 7에서 . ../scripts/use-java.ps1 -Jdk 8을 먼저 적용하고
-./mvnw.cmd를 사용해 줘. macOS와 Linux는 Bash 또는 Zsh에서
-source ../scripts/use-java.sh --jdk 8을 먼저 적용하고 ./mvnw를 사용해 줘.
+PowerShell 7에서 . ../scripts/use-java.ps1 -Jdk 8을 먼저 적용하고
+./mvnw.cmd를 사용해 줘.
+같은 셸에서 버전과 clean verify 결과를 기록해 줘. 설치는 별도 승인을 받아 줘.
+```
+
+macOS와 Linux용:
+
+```text
+이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘. 소스나 런타임은 바꾸지 마.
+Bash 또는 Zsh에서 source ../scripts/use-java.sh --jdk 8을 먼저 적용하고
+./mvnw를 사용해 줘.
 같은 셸에서 버전과 clean verify 결과를 기록해 줘. 설치는 별도 승인을 받아 줘.
 ```
 

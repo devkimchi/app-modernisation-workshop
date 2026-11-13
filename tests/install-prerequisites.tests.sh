@@ -394,10 +394,12 @@ assert 'concurrent Node never overwritten' test "${node_concurrent#*nvm-call: us
 node_latest=$(MOCK_NODE_BEFORE=v22.99.1 node_update_case 2>&1)
 assert 'latest Node skipped' grep -q 'already current' <<< "$node_latest"
 assert 'latest Node not reinstalled' test "${node_latest#*nvm-call: install}" = "$node_latest"
+assert 'latest Node never prompts' test "${node_latest#*approval:}" = "$node_latest"
 node_no_update=$(MOCK_UPDATE=0 node_update_case 2>&1)
 assert 'no update preserves existing Node without prompts' test "${node_no_update#*approval:}" = "$node_no_update"
 node_ahead=$(MOCK_REMOTE=v22.0.0 node_update_case 2>&1)
 assert 'older remote release never downgrades Node' test "${node_ahead#*nvm-call: install}" = "$node_ahead"
+assert 'newer local Node never prompts' test "${node_ahead#*approval:}" = "$node_ahead"
 node_old=$(MOCK_NODE_BEFORE=v20.1.0 node_update_case 2>&1)
 assert 'unsupported major uses latest 22' grep -q 'nvm-call: install --no-use v22.99.1' <<< "$node_old"
 node_old_decline=$(MOCK_NODE_BEFORE=v20.1.0 MOCK_ACTIVATE=0 node_update_case 2>&1)
@@ -405,6 +407,7 @@ assert 'unsupported Node without activation fails' grep -q 'EXPECTED FAILURE' <<
 node_reuse=$(MOCK_REUSE=1 node_update_case 2>&1)
 assert 'existing inactive release reused without reinstall' test "${node_reuse#*nvm-call: install}" = "$node_reuse"
 assert 'existing inactive release still needs activation' grep -q 'approval: Activate Node.js v22.99.1' <<< "$node_reuse"
+assert 'existing inactive release never asks to reinstall' test "$(grep -c '^approval:' <<< "$node_reuse")" = 1
 for setting in MOCK_REMOTE_FAILURE=1 MOCK_REMOTE=v23.0.0 MOCK_REMOTE=v22.9.0-rc.1 MOCK_NODE_BEFORE=invalid MOCK_UPDATE_FAILURE=1 MOCK_INSTALLED_VERSION=v22.0.0 MOCK_NVM_USE_FAILURE=1 MOCK_NODE_AFTER=v22.1.0 MOCK_NPM_FAILURE=1; do
     node_failed=$(export "$setting"; node_update_case 2>&1)
     assert "Node error propagates: $setting" grep -q 'EXPECTED FAILURE' <<< "$node_failed"
@@ -490,6 +493,10 @@ azure_update_case() (
         case "$1" in
             --prefix) printf '%s/brew\n' "$test_dir" ;;
             list) return 0 ;;
+            outdated)
+                [[ "${MOCK_BREW_LOOKUP_FAILURE:-0}" == 0 ]] || return 1
+                [[ "${MOCK_BREW_CURRENT:-0}" == 1 ]] || printf '%s\n' "$package"
+                return 0 ;;
             upgrade) printf 'brew-upgrade: %s\n' "$2"; changed=1; return "${MOCK_AZURE_FAILURE:-0}" ;;
         esac
     }
@@ -500,12 +507,16 @@ azure_update_case() (
             -S:*) printf '%s: %s\n' "${MOCK_OWNER:-azure-cli}" "$2" ;;
         esac
     }
-    dpkg() { [[ "${MOCK_APT_DOWNGRADE:-0}" == 0 ]]; }
+    dpkg() {
+        [[ "${MOCK_APT_DOWNGRADE:-0}" == 0 ]] || return 1
+        [[ "$3" != eq || "$2" == "$4" ]]
+    }
     apt-cache() {
         [[ "${MOCK_APT_POLICY_FAILURE:-0}" == 0 ]] || return 1
         local origin="${MOCK_APT_ORIGIN:-packages.microsoft.com}"
         if (( changed )); then origin="${MOCK_APT_UPDATED_ORIGIN:-$origin}"; fi
-        printf 'azure-cli:\n  Installed: 2.1.0-1\n  Candidate: 2.2.0-1\n  Version table:\n     2.2.0-1 500\n        500 https://%s/repos/azure-cli stable/main amd64 Packages\n *** 2.1.0-1 100\n        100 /var/lib/dpkg/status\n' "$origin"
+        local candidate="${MOCK_APT_CANDIDATE:-2.2.0-1}"
+        printf 'azure-cli:\n  Installed: 2.1.0-1\n  Candidate: %s\n  Version table:\n     %s 500\n        500 https://%s/repos/azure-cli stable/main amd64 Packages\n *** 2.1.0-1 100\n        100 /var/lib/dpkg/status\n' "$candidate" "$candidate" "$origin"
     }
     apt-get() { printf 'UNEXPECTED DIRECT APT\n'; return 1; }
     sudo() { printf 'sudo-call: %s\n' "$*"; changed=1; return "${MOCK_AZURE_FAILURE:-0}"; }
@@ -528,6 +539,17 @@ for tool in az azd; do
     assert "foreign $tool path untouched" grep -q MANUAL <<< "$foreign_tool"
     assert "foreign $tool no package update" test "${foreign_tool#*brew-upgrade:}" = "$foreign_tool"
 done
+brew_current=$(MOCK_BREW_CURRENT=1 azure_update_case Darwin az "$test_dir/brew/bin/az")
+assert 'current Homebrew package skips prompts and updates' test "${brew_current#*approval:}" = "$brew_current"
+assert 'current Homebrew package not upgraded' test "${brew_current#*brew-upgrade:}" = "$brew_current"
+assert 'current Homebrew package succeeds' grep -q '^SUCCESS$' <<< "$brew_current"
+brew_lookup_failed=$(MOCK_BREW_LOOKUP_FAILURE=1 azure_update_case Darwin az "$test_dir/brew/bin/az")
+assert 'Homebrew lookup failure never prompts' test "${brew_lookup_failed#*approval:}" = "$brew_lookup_failed"
+assert 'Homebrew lookup failure is explicit' grep -q 'EXPECTED FAILURE' <<< "$brew_lookup_failed"
+apt_current=$(MOCK_APT_CANDIDATE=2.1.0-1 azure_update_case Linux az "$test_dir/foreign/bin/az")
+assert 'current APT package skips prompts' test "${apt_current#*approval:}" = "$apt_current"
+assert 'current APT package never refreshes or installs packages' test "${apt_current#*sudo-call:}" = "$apt_current"
+assert 'current APT package succeeds' grep -q '^SUCCESS$' <<< "$apt_current"
 apt_azd=$(MOCK_OWNER=azd azure_update_case Linux azd "$test_dir/foreign/bin/azd")
 assert 'APT azd targeted package updated' grep -q 'sudo-call: apt-get install --only-upgrade --no-remove -y azd=2.2.0-1' <<< "$apt_azd"
 apt_gh=$(MOCK_OWNER=gh MOCK_APT_ORIGIN=cli.github.com azure_update_case Linux gh "$test_dir/foreign/bin/az")
@@ -839,14 +861,71 @@ mac_modernize=$(
 assert 'Modernize tap registered' grep -q 'brew-call: tap microsoft/modernize https://github.com/microsoft/modernize-cli' <<< "$mac_modernize"
 assert 'Modernize full cask name used' grep -q 'brew-call: install --cask microsoft/modernize/modernize' <<< "$mac_modernize"
 assert 'Modernize never trusts entire tap' test "${mac_modernize#*brew-call: trust}" = "$mac_modernize"
+mkdir -p "$test_dir/modernize-cask/1.0.76"
+touch "$test_dir/modernize-cask/1.0.76/modernize"
+for scenario in current outdated lookup-failed; do
+    mac_modernize_update=$(
+        brew() {
+            case "$1" in
+                (--caskroom) printf '%s/modernize-cask\n' "$test_dir" ;;
+                (list) return 0 ;;
+                (outdated)
+                    [[ "$scenario" != lookup-failed ]] || return 1
+                    [[ "$scenario" != outdated ]] || printf 'microsoft/modernize/modernize\n'
+                    return 0 ;;
+                (*) printf 'brew-change: %s\n' "$*" ;;
+            esac
+        }
+        modernize() { printf 'modernize 1.0.76\n'; }
+        confirm_install() { printf 'approval: %s\n' "$1"; return 0; }
+        if install_modernize Darwin 1 "$test_dir/modernize-cask/1.0.76/modernize"; then printf 'SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    )
+    if [[ "$scenario" == outdated ]]; then
+        assert 'outdated Modernize cask still requires consent' grep -q '^approval:' <<< "$mac_modernize_update"
+        assert 'outdated Modernize cask upgraded' grep -q 'brew-change: upgrade --cask' <<< "$mac_modernize_update"
+    else
+        assert "Modernize cask $scenario never prompts" test "${mac_modernize_update#*approval:}" = "$mac_modernize_update"
+        assert "Modernize cask $scenario never changes packages" test "${mac_modernize_update#*brew-change:}" = "$mac_modernize_update"
+        if [[ "$scenario" == current ]]; then
+            assert 'current Modernize cask succeeds' grep -q '^SUCCESS$' <<< "$mac_modernize_update"
+        else
+            assert 'Modernize cask metadata failure is explicit' grep -q 'EXPECTED FAILURE' <<< "$mac_modernize_update"
+        fi
+    fi
+done
 modernize_update=$(
     HOME="$test_dir/modernize-home"
     confirm_install() { return 0; }
     run_remote_installer() { printf 'installer: %s %s %s\n' "$1" "$2" "$3"; }
     modernize() { printf 'modernize 1.0.76\n'; }
+    curl() { printf '{"tag_name":"v1.0.77"}\n'; }
     install_modernize Linux 1 "$HOME/.local/bin/modernize"
 )
 assert 'Modernize update reruns official installer' grep -q 'installer: .*modernize-cli/main/scripts/install.sh user sh' <<< "$modernize_update"
+for remote_tag in v1.0.76 v1.0.75; do
+    modernize_current=$(
+        HOME="$test_dir/modernize-home"
+        modernize() { printf 'modernize 1.0.76\n'; }
+        curl() { printf '{"tag_name":"%s"}\n' "$remote_tag"; }
+        confirm_install() { printf 'UNEXPECTED APPROVAL\n'; return 0; }
+        run_remote_installer() { printf 'UNEXPECTED INSTALL\n'; }
+        install_modernize Linux 1 "$HOME/.local/bin/modernize"
+    )
+    assert "Modernize $remote_tag skips prompts and reinstall" test "${modernize_current#*UNEXPECTED}" = "$modernize_current"
+    assert "Modernize $remote_tag reports already current" grep -q 'already current' <<< "$modernize_current"
+done
+for scenario in metadata-failed metadata-invalid; do
+    modernize_lookup_failed=$(
+        HOME="$test_dir/modernize-home"
+        modernize() { printf 'modernize 1.0.76\n'; }
+        curl() { [[ "$scenario" != metadata-failed ]] || return 1; printf '{"tag_name":"v1.0.77-preview.1"}\n'; }
+        confirm_install() { printf 'UNEXPECTED APPROVAL\n'; return 0; }
+        run_remote_installer() { printf 'UNEXPECTED INSTALL\n'; return 1; }
+        if install_modernize Linux 1 "$HOME/.local/bin/modernize"; then printf 'UNEXPECTED SUCCESS\n'; else printf 'EXPECTED FAILURE\n'; fi
+    )
+    assert "Modernize $scenario never prompts or installs" test "${modernize_lookup_failed#*UNEXPECTED}" = "$modernize_lookup_failed"
+    assert "Modernize $scenario fails explicitly" grep -q 'EXPECTED FAILURE' <<< "$modernize_lookup_failed"
+done
 for scenario in declined installer-failed version-failed; do
     modernize_failed=$(
         confirm_install() { [[ "$scenario" != declined ]]; }

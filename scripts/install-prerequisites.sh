@@ -263,10 +263,6 @@ update_node_with_nvm() {
             return $?
         fi
     fi
-    if ! confirm_install "Node.js $major: Query the latest stable version with nvm and install it if needed. Existing versions will be preserved."; then
-        [[ -n "$current" ]] && version_not_older "${current#v}" 22.0.0
-        return $?
-    fi
     latest=$(nvm version-remote "$major") || { workshop_status_printf '[FAIL] Could not retrieve the latest Node.js %s version.\n' "$major" >&2; return 1; }
     if [[ ! "$latest" =~ ^v$major\.[0-9]+\.[0-9]+$ ]]; then
         workshop_status_printf '[FAIL] Could not verify a stable Node.js %s identifier.\n' "$major" >&2; return 1
@@ -275,17 +271,23 @@ update_node_with_nvm() {
         npm --version || return 1
         workshop_status_printf '[INFO] Keeping Node.js %s (already current; no downgrade).\n' "$current"; return 0
     fi
-    if [[ $(type -t nvm_ensure_default_set) != function ]]; then
-        workshop_status_printf '%s\n' '[MANUAL] Could not verify how this nvm preserves the default alias. Update manually.'
-        return 1
-    fi
     installed="$NVM_DIR/versions/node/$latest/bin"
     # nvm install의 자동 default alias 생성은 설치 하위 셸에서만 막는다.
-    if [[ $(nvm version "$latest") != "$latest" ]] && ! (
-        nvm_ensure_default_set() { return 0; }
-        nvm install --no-use "$latest"
-    ); then
-        workshop_status_printf '%s\n' '[FAIL] Node.js installation failed.' >&2; return 1
+    if [[ $(nvm version "$latest") != "$latest" ]]; then
+        if [[ $(type -t nvm_ensure_default_set) != function ]]; then
+            workshop_status_printf '%s\n' '[MANUAL] Could not verify how this nvm preserves the default alias. Update manually.'
+            return 1
+        fi
+        if ! confirm_install "Node.js $major: Install $latest with nvm. Existing versions will be preserved."; then
+            [[ -n "$current" ]] && version_not_older "${current#v}" 22.0.0
+            return $?
+        fi
+        if ! (
+            nvm_ensure_default_set() { return 0; }
+            nvm install --no-use "$latest"
+        ); then
+            workshop_status_printf '%s\n' '[FAIL] Node.js installation failed.' >&2; return 1
+        fi
     fi
     if [[ $("$installed/node" --version) != "$latest" ]] || ! PATH="$installed:$PATH" "$installed/npm" --version; then
         workshop_status_printf '%s\n' '[FAIL] Could not verify the installed Node.js or npm executable.' >&2; return 1
@@ -521,7 +523,7 @@ install_linux_azd() (
 )
 
 update_azure_tool() {
-    local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed origin=packages.microsoft.com
+    local os="$1" tool="$2" path="$3" package prefix managed='' before after candidate installed outdated origin=packages.microsoft.com
     case "$tool" in az) package=azure-cli ;; azd) package=azd ;; gh) package=gh; origin=cli.github.com ;; esac
     if [[ "$os" == Darwin ]] && command -v brew >/dev/null 2>&1; then
         [[ "$tool" != azd ]] || package=azure/azd/azd
@@ -557,6 +559,16 @@ update_azure_tool() {
         return 0
     fi
     if ! before=$(azure_tool_version "$tool"); then workshop_status_printf '[FAIL] Could not run %s to verify its version.\n' "$tool" >&2; return 1; fi
+    if [[ "$managed" == brew ]]; then
+        if ! outdated=$(HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --quiet "$package"); then
+            workshop_status_printf '[FAIL] Could not query Homebrew updates for %s.\n' "$tool" >&2; return 1
+        fi
+        if [[ -z "$outdated" ]]; then
+            workshop_status_printf '[INFO] Keeping %s %s (current in available Homebrew metadata).\n' "$tool" "$before"; return 0
+        fi
+    elif dpkg --compare-versions "$candidate" eq "$installed"; then
+        workshop_status_printf '[INFO] Keeping %s %s (current in available APT metadata).\n' "$tool" "$before"; return 0
+    fi
     if ! confirm_install "$tool $before: Update the verified $managed package $package and required dependencies. Network access and administrator privileges may be required. This will not upgrade the entire OS."; then return 0; fi
     if [[ "$managed" == brew ]]; then
         if ! brew upgrade "$package"; then workshop_status_printf '[FAIL] %s update failed.\n' "$tool" >&2; return 1; fi
@@ -725,7 +737,7 @@ install_linux_gh() (
 )
 
 install_modernize() {
-    local os="$1" update="$2" path="${3:-}" before='' after cask_root
+    local os="$1" update="$2" path="${3:-}" before='' after cask_root outdated release latest
     if [[ -n "$path" ]]; then
         if [[ "$os" == Darwin ]]; then
             cask_root=$(brew --caskroom microsoft/modernize/modernize) &&
@@ -740,6 +752,25 @@ install_modernize() {
             fi
         fi
         before=$(azure_tool_version modernize) || return 1
+        if [[ "$os" == Darwin ]]; then
+            if ! outdated=$(HOMEBREW_NO_AUTO_UPDATE=1 brew outdated --cask --greedy --quiet microsoft/modernize/modernize); then
+                workshop_status_printf '%s\n' '[FAIL] Could not query Homebrew updates for Modernize CLI.' >&2; return 1
+            fi
+            if [[ -z "$outdated" ]]; then
+                workshop_status_printf '[INFO] Keeping Modernize CLI %s (current in available Homebrew metadata).\n' "$before"; return 0
+            fi
+        else
+            if ! release=$(curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --max-time 30 'https://api.github.com/repos/microsoft/modernize-cli/releases/latest'); then
+                workshop_status_printf '%s\n' '[FAIL] Could not query the latest Modernize CLI release.' >&2; return 1
+            fi
+            latest=$(printf '%s\n' "$release" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\{0,1\}\([0-9][0-9.]*\)".*/\1/p')
+            if ! version_not_older "$latest" 0.0.0; then
+                workshop_status_printf '%s\n' '[FAIL] Could not verify a stable Modernize CLI release version.' >&2; return 1
+            fi
+            if version_not_older "$before" "$latest"; then
+                workshop_status_printf '[INFO] Keeping Modernize CLI %s (already current; no downgrade).\n' "$before"; return 0
+            fi
+        fi
     fi
     if [[ "$os" == Darwin ]]; then
         if ! confirm_install 'Modernize CLI: Add the Homebrew tap microsoft/modernize and install/update the microsoft/modernize/modernize cask. Network access and disk space are required. Source: https://github.com/microsoft/modernize-cli'; then return 0; fi

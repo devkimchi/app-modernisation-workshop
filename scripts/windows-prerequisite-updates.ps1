@@ -153,15 +153,15 @@ function Install-WorkshopNode {
         return $current.Major -ge 22
     }
     $major = if ($current -and $current.Major -ge 22) { $current.Major } else { 22 }
-    if (-not (Confirm-ToolInstall "Query the latest Node.js $major.x release through nvm and install it if needed. Existing versions will be preserved.")) {
-        return ($current -and $current.Major -ge 22)
-    }
     try { $latest = Get-WorkshopNodeRelease $major }
     catch { Write-WorkshopMessage "[FAIL] Could not query Node.js releases: $($_.Exception.Message)"; return $false }
     if (-not $latest -or $latest.Major -ne $major) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js release.'; return $false }
     if ($current -and $current -ge $latest) { Write-WorkshopMessage "[PASS] Keeping Node.js $current (no downgrade)."; return $true }
     $installedNode = Join-Path $root "v$latest\node.exe"
     if (-not (Test-Path -LiteralPath $installedNode -PathType Leaf)) {
+        if (-not (Confirm-ToolInstall "Install Node.js $latest through nvm. Existing versions will be preserved.")) {
+            return ($current -and $current.Major -ge 22)
+        }
         $install = Invoke-ToolProbe nvm @('install', "$latest")
         if ($install.Code -ne 0) { Write-WorkshopMessage "[FAIL] nvm install failed: $($install.Text)"; return $false }
     }

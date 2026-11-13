@@ -62,10 +62,20 @@ try {
         $script:Installed = $false; $script:Consent = $false; $script:Interactive = $true
         $script:InstallerCode = 0; $script:VerifyInstall = $true
         $script:JavaCalls = [Collections.Generic.List[string]]::new()
+        $script:JavaPrompts = [Collections.Generic.List[string]]::new()
+        $script:JavaInstalledVersion = '8.0.472.8'
+        $script:JavaLatestVersion = '8.0.482.8'
+        $script:JavaCatalogCode = 0
         function Test-WorkshopBootstrapInteractive { return $script:Interactive }
         function Find-WorkshopJava { param($Major); if ($script:Installed) { return [pscustomobject]@{ Home='fixture'; Major=$Major } } }
         function Get-Command { [CmdletBinding()]param($Name,$CommandType); return [pscustomobject]@{Source='fixture-winget'} }
-        function Confirm-ToolInstall { param($Description); return $script:Consent }
+        function Confirm-ToolInstall { param($Description); $script:JavaPrompts.Add($Description); return $script:Consent }
+        function Invoke-ToolProbe {
+            param($Name, $Arguments)
+            $text = if ($Arguments[0] -eq 'list') { "$($Arguments[2]) $script:JavaInstalledVersion" }
+                else { $script:JavaLatestVersion }
+            return [pscustomobject]@{ Code=$script:JavaCatalogCode; Text=$text }
+        }
         function winget {
             $script:JavaCalls.Add(($args -join ' '))
             $script:Installed = $script:VerifyInstall
@@ -83,6 +93,16 @@ try {
         Assert-Java ($script:JavaCalls.Count -eq 1) 'no implicit JDK update'
         Assert-Java (Install-WorkshopJava 8 -Update) 'explicit update'
         Assert-Java ($script:JavaCalls[-1] -like 'upgrade --id EclipseAdoptium.Temurin.8.JDK*') 'update selects exact major'
+        $prompts = $script:JavaPrompts.Count; $calls = $script:JavaCalls.Count
+        $script:JavaInstalledVersion = $script:JavaLatestVersion
+        Assert-Java (Install-WorkshopJava 8 -Update) 'current JDK package retained'
+        $script:JavaInstalledVersion = '8.0.492.8'
+        Assert-Java (Install-WorkshopJava 8 -Update) 'newer JDK package retained'
+        Assert-Java ($script:JavaPrompts.Count -eq $prompts -and $script:JavaCalls.Count -eq $calls) 'current and newer JDK packages never prompt or upgrade'
+        $script:JavaCatalogCode = 1; $script:Consent = $false
+        Assert-Java (Install-WorkshopJava 8 -Update) 'unknown JDK metadata can be declined'
+        Assert-Java ($script:JavaPrompts.Count -eq $prompts + 1 -and $script:JavaCalls.Count -eq $calls) 'unverified metadata never silently authorizes an update'
+        $script:JavaCatalogCode = 0; $script:Consent = $true
         $script:Installed=$false; $script:VerifyInstall=$false
         Assert-Java (-not (Install-WorkshopJava 25)) 'successful installer without JDK fails verification'
         $script:InstallerCode=1

@@ -226,6 +226,23 @@ function Install-WorkshopJava {
         return $true
     }
     $package = "EclipseAdoptium.Temurin.$Major.JDK"
+    if ($existing -and $Update) {
+        $list = Invoke-ToolProbe winget @('list', '--id', $package, '--exact', '--source', 'winget', '--disable-interactivity')
+        $show = Invoke-ToolProbe winget @('show', '--id', $package, '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
+        $versions = @([regex]::Matches($show.Text, "(?m)^\s*($Major\.\d+\.\d+(?:\.\d+)?)\s*$") |
+            ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
+        if ($list.Code -eq 0 -and $show.Code -eq 0 -and $versions.Count -and
+            $list.Text -match "$([regex]::Escape($package))\s+($Major\.\d+\.\d+(?:\.\d+)?)(?:\s|$)") {
+            $installed = [version]$Matches[1]
+            if ($installed -ge $versions[0]) {
+                Write-WorkshopMessage "[INFO] Keeping Temurin JDK $Major package $installed (already current; no downgrade)."
+                return $true
+            }
+        }
+        else {
+            Write-WorkshopMessage "[WARN] Could not verify the installed/latest Temurin JDK $Major package versions. Update approval is still required."
+        }
+    }
     if (-not (Confirm-ToolInstall "Temurin JDK $Major`: install or update winget package $package. Administrator approval is required. ADDLOCAL=FeatureMain leaves system PATH, JAVA_HOME, and file associations unchanged.")) {
         Write-WorkshopMessage "[INFO] Skipping Temurin JDK $Major installation or update."
         return $true

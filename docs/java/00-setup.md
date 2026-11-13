@@ -74,7 +74,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 ### 도구 설치 및 업데이트
 
-누락된 도구를 설치합니다. 업데이트를 선택하면 **각 항목에서 `y`를 입력해 승인한 도구만** 업데이트합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다.
+누락된 도구를 설치합니다. 업데이트를 선택하면 **각 항목에서 `y`를 입력해 승인한 도구만** 업데이트합니다. 최신 버전으로 확인된 도구는 묻지 않고 건너뜁니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다.
 
 ```bash
 # zsh/bash

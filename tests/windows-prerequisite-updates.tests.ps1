@@ -122,7 +122,8 @@ try {
     Assert-True ($script:Calls.Count -eq 2 -and $script:Prompts.Count -eq 0) 'default only verifies nvm and current Node'
     Reset-Fixture; $script:Approvals.Enqueue($false)
     Assert-True (Install-WorkshopNode -Update) 'decline update preserves supported Node'
-    Assert-True ($script:Calls.Count -eq 2) 'decline never contacts release service'
+    Assert-True ($script:Calls -contains 'release 22' -and
+        $script:Calls -notcontains 'nvm install 22.9.0' -and $script:Calls -notcontains 'nvm use 22.9.0') 'decline follows read-only lookup without installing or activating'
     Reset-Fixture
     Assert-True (Install-WorkshopNode -Update) 'installs and activates latest same major'
     Assert-True ($script:Calls -contains 'release 22' -and $script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') 'exact nvm commands'
@@ -130,12 +131,14 @@ try {
     Assert-True (@($script:Calls | Where-Object { $_ -match 'uninstall|delete|OpenJS|azd|AzureCLI' }).Count -eq 0) 'no removals or unrelated tools'
     Assert-True (Install-WorkshopNode -Update) 'repeat latest succeeds'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'nvm install 22.9.0' }).Count -eq 1) 'repeat no reinstall'
+    Assert-True ($script:Prompts.Count -eq 2) 'repeat current Node never prompts again'
     Reset-Fixture; $script:Current = '24.1.0'; $script:Latest = [version]'24.9.0'; $script:InstalledVersion = '24.9.0'
     Assert-True (Install-WorkshopNode -Update) 'newer major updated in place'
     Assert-True ($script:Calls -contains 'release 24' -and $script:Calls -notcontains 'release 22') 'never select 22 for active 24'
     Reset-Fixture; $script:Current = '22.10.0'
     Assert-True (Install-WorkshopNode -Update) 'ahead of catalog retained'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') 'no downgrade'
+    Assert-True ($script:Prompts.Count -eq 0) 'newer local Node never prompts'
     Reset-Fixture; $script:Current = '20.19.0'
     Assert-True (Install-WorkshopNode -Update) 'unsupported major moves to 22'
     Reset-Fixture; $script:Current = '20.19.0'
@@ -145,6 +148,7 @@ try {
     Reset-Fixture; $script:ExistingRelease = $true
     Assert-True (Install-WorkshopNode -Update) 'existing inactive release reused'
     Assert-True ($script:Calls -notcontains 'nvm install 22.9.0') 'no reinstall installed release'
+    Assert-True ($script:Prompts.Count -eq 1 -and $script:Prompts[0] -like 'Run nvm use *') 'installed inactive release only asks for activation'
     Reset-Fixture; $script:Approvals.Enqueue($true); $script:Approvals.Enqueue($false)
     Assert-True (Install-WorkshopNode -Update) 'declined activation preserves old supported active version'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0' -and $script:Current -eq '22.1.0') 'activation separately optional'
@@ -164,6 +168,7 @@ try {
     Assert-True (-not (Install-WorkshopNode -Update)) 'invalid active version fails'
     Reset-Fixture; $script:FailLookup = $true
     Assert-True (-not (Install-WorkshopNode -Update)) 'release lookup failure'
+    Assert-True ($script:Prompts.Count -eq 0) 'failed release lookup never asks to install'
     Reset-Fixture; $script:Owned = $false
     Assert-True (-not (Install-WorkshopNode -Update)) 'unknown ownership manual'
     Assert-True ($script:Prompts.Count -eq 0) 'unknown ownership never prompts takeover'

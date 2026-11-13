@@ -53,7 +53,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 ### 도구 설치와 업데이트
 
-누락된 도구를 설치하고 업데이트 가능한 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `-Update`를 생략합니다. CI와 비대화형 환경에서는 설치를 승인하지 않습니다.
+누락된 도구를 설치하고 업데이트 가능한 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 최신 버전으로 확인된 도구는 묻지 않고 건너뜁니다. 누락된 도구만 설치하려면 `-Update`를 생략합니다. CI와 비대화형 환경에서는 설치를 승인하지 않습니다.
 
 ```powershell
 ./scripts/install-prerequisites.ps1 -Track dotnet -Update

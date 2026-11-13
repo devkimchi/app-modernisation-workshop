@@ -4,14 +4,17 @@
 
 ## 목표와 시작 조건
 
-Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`**에서 Dockerfile, `azure.yaml`, Bicep을 준비합니다. Docker Desktop은 Linux containers 모드여야 합니다. 이 단계에서는 리소스를 만들지 않습니다.
+Azure 의존성 코드가 준비된 **앱 루트**, Copilot app PowerShell 7 터미널에서 Modernize CLI로 Dockerfile, `azure.yaml`, Bicep을 준비합니다. Docker Desktop은 Linux containers 모드여야 합니다. 이 단계에서는 리소스를 만들지 않습니다.
 
-## 배포 산출물 프롬프트
+## 배포 산출물 계획
+
+다음 입력을 앱 루트의 `ws05-azd-assets-input.txt`에 UTF-8로 저장합니다.
 
 ```text
-현재 .NET 10 앱을 Linux Azure Container Apps에 azd로 배포할 산출물을 만들어 줘.
-현재 앱 루트에 azure.yaml, Dockerfile, .dockerignore와 infra/ Bicep을 생성해 줘.
-기존 기능을 유지하고 배포/리소스 생성은 아직 실행하지 마.
+.github/skills/dotnet-aca-workshop/SKILL.md와 실제 Azure 코드/환경 변수 계약을 읽고
+.NET 10 앱을 Linux Azure Container Apps에 배포할 산출물 생성을 계획해 줘.
+대상은 앱 루트의 azure.yaml, Dockerfile, .dockerignore와 infra/ Bicep이다.
+지금은 계획만 작성하고 기존 기능을 유지해 줘.
 
 - 웹 서비스 이름은 web, language: docker, host: containerapp으로 설정한다.
 - 로컬 Docker 엔진을 사용하고 AZD_CONTAINER_RUNTIME=docker로 맞춘다.
@@ -33,6 +36,7 @@ Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`
 - azd-service-name 태그 또는 resourceName으로 web과 ACA 리소스를 연결한다.
 - DB Entra 관리자, SQL 내부 사용자/권한과 migration을 준비할 별도 절차를
   생성한다. 기존 DB를 삭제하거나 덮어쓰는 hook은 만들지 않는다.
+  이 계획은 절차 작성까지만 포함하고 DB 사용자/권한/migration은 실제 실행하지 않는다.
 - Data Protection 키는 private Blob 등에 지속하고 새 revision에서도 재사용한다.
 - 로컬 참가자와 ACA에서 SQL까지 실제 연결되는 네트워크 경로를 설계한다.
   공개 DB라면 확인한 클라이언트/egress IP만 허용한다. 전체 IP 허용은 금지한다.
@@ -41,7 +45,32 @@ Azure 의존성 코드가 준비된 **앱 루트**, Copilot app의 **`modernize`
 - .azure/, 비밀, 로그와 로컬 빌드 산출물을 Git/이미지 컨텍스트에서 제외한다.
 
 리전/SKU/쿼터/비용, 역할 할당과 DB 관리 권한, 이미지 태그 정책을 설명해 줘.
-생성한 hooks를 모두 보여 주고 구문/단위 검사를 한 뒤 승인 전 멈춰 줘.
+hooks와 호출 스크립트 검토, 구문/단위 검사를 계획에 포함해 줘.
+이미지 게시, 프로비저닝, DB 변경, 배포와 삭제는 작업 목록에 넣지 마.
+참가자가 별도 승인 후 직접 실행할 작업으로 구분해 줘.
+```
+
+```powershell
+$goal = Get-Content ./ws05-azd-assets-input.txt -Raw -Encoding utf8
+modernize plan create $goal --source . --language dotnet --plan-name ws05-azd-assets
+```
+
+실제 `plan.md`와 `tasks.json`을 함께 읽고 산출물 작성과 로컬 검증 범위를 승인합니다. 무관한 변경과 비밀이 없는지 확인하고 실행 전 커밋을 기록합니다.
+
+```powershell
+git status --short
+$before = git rev-parse HEAD
+modernize plan execute "승인한 ws05-azd-assets와 워크숍 스킬에 따라 파일 작성과 로컬 검증만 수행해 줘. 프로비저닝, DB 변경, 이미지 게시, 배포와 삭제는 실행하지 마." --source . --language dotnet --plan-name ws05-azd-assets --delegate local
+```
+
+실행 후 자동 커밋과 미커밋 변경을 함께 검토합니다. 앱 외부 파일, 생성물과 비밀도 확인합니다.
+
+```powershell
+git status --short
+git log --oneline "$before..HEAD"
+git diff "$before..HEAD"
+git diff
+git diff --cached
 ```
 
 ## azure.yaml과 컨테이너 검토
@@ -64,6 +93,8 @@ services:
 Dockerfile의 `dotnet publish` 대상과 ENTRYPOINT DLL이 생성된 프로젝트 구조와 일치해야 합니다. `net10.0-windows`, Windows 전용 DLL 또는 IIS Express 설정으로 컨테이너를 실행하지 않습니다. 빌드 성공과 Linux 실행 성공은 다릅니다.
 
 이미지 태그는 `latest` 반복 사용 대신 빌드별 고유 식별자를 사용합니다. ACR pull 인증과 push 인증은 주체가 다릅니다. `azure.yaml`의 web과 Bicep 태그/출력의 연결도 확인합니다.
+
+루트/서비스 수준의 **모든 azd hooks와 호출 스크립트**를 읽습니다. 명령 수준 hook은 앱 루트, 서비스 수준 hook은 `project` 경로에서 실행됩니다. 셸과 상대 경로를 확인하고 DB 초기화나 자동 배포를 `postprovision`에 숨기지 않습니다. 오류를 숨기는 `continueOnError: true`를 기본값으로 두지 않습니다. 생성된 산출물을 `azd init --from-code`로 다시 생성하지 않습니다.
 
 ## 비용과 배포 승인
 

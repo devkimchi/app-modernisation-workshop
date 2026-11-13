@@ -4,13 +4,15 @@
 
 ## 목표와 시작 조건
 
-.NET 10 업그레이드 결과와 남은 의존성을 확인한 뒤, 같은 **앱 루트**에서 Copilot app의 **`modernize`**로 전환합니다. Upgrade가 만든 결과와 검사 로그를 전달합니다. 이 단계에서는 Azure 리소스를 아직 만들지 않습니다.
+.NET 10 업그레이드 결과와 남은 의존성을 확인한 뒤, 같은 **앱 루트**의 Copilot app PowerShell 7 터미널에서 Modernize CLI를 사용합니다. 이 단계에서는 Azure 리소스를 아직 만들지 않습니다.
 
-## 이전 프롬프트
+## 이전 계획과 실행
+
+다음 입력을 앱 루트의 `ws04-azure-code-input.txt`에 UTF-8로 저장하고 실제 평가/업그레이드 결과 경로를 추가합니다.
 
 ```text
-Upgrade 에이전트가 현재 앱을 .NET 10/ASP.NET Core로 전환했다.
-평가/계획과 실제 diff를 읽고 Azure 서비스 이전 코드만 실행해 줘.
+.github/skills/dotnet-aca-workshop/SKILL.md와 실제 .NET 10 업그레이드 결과를 읽고
+Azure 서비스 이전 코드와 테스트만 계획해 줘. 지금은 실행하지 마.
 기존 사용자 동작과 .NET 10을 유지하고 최종 Linux 실행을 준비해 줘.
 
 - LocalDB를 Azure SQL로 바꾸고 Microsoft.Data.SqlClient/EF Core의
@@ -31,8 +33,21 @@ Upgrade 에이전트가 현재 앱을 .NET 10/ASP.NET Core로 전환했다.
 - DB 내부 사용자와 역할, 스키마 준비, Azure 데이터 역할과 환경 변수를 문서화한다.
 - 단위 검사와 외부 Azure가 필요한 통합 검사를 분리하고 필요한 테스트를 추가한다.
 
-현재는 코드/테스트만 수행하고 리소스 생성이나 배포는 하지 마.
-실제 검증 결과와 아직 검증하지 못한 외부 연결을 구분해서 보고해 줘.
+코드/테스트만 작업 목록에 넣고 리소스 생성, 실제 DB 변경/데이터 이전,
+이미지 게시와 배포는 제외해 줘. 실제 검증과 미실행 통합 항목을 구분해 줘.
+```
+
+```powershell
+$goal = Get-Content ./ws04-azure-code-input.txt -Raw -Encoding utf8
+modernize plan create $goal --source . --language dotnet --plan-name ws04-azure-code
+```
+
+실제 `plan.md`와 `tasks.json`을 함께 읽고 코드/단위 검사 범위를 승인합니다. 무관한 작업 트리 변경과 비밀이 없는지 확인한 뒤 실행 전 커밋을 기록합니다.
+
+```powershell
+git status --short
+$before = git rev-parse HEAD
+modernize plan execute "승인한 ws04-azure-code와 워크숍 스킬의 코드/테스트만 실행해 줘. Windows 의존성 제거와 Data Protection을 포함하고 Azure/DB 변경과 배포는 하지 마. 미실행 통합 검사를 구분해 줘." --source . --language dotnet --plan-name ws04-azure-code --delegate local
 ```
 
 ## 권한과 데이터 검토
@@ -44,12 +59,18 @@ Service Bus 송신/수신 역할과 Blob 데이터 역할은 실제 책임과 �
 **앱 루트의 Windows PowerShell 7**에서 실제 솔루션 경로로 실행합니다.
 
 ```powershell
-dotnet restore <실제-솔루션-경로>
-dotnet build <실제-솔루션-경로> --no-restore
-dotnet test <실제-솔루션-경로> --no-build
-git diff --stat
+dotnet restore "<실제-솔루션-경로>"
+dotnet build "<실제-솔루션-경로>" --no-restore
+dotnet test "<실제-솔루션-경로>" --no-build
+git status --short
+git log --oneline "$before..HEAD"
+git diff --stat "$before..HEAD"
+git diff "$before..HEAD"
 git diff
+git diff --cached
 ```
+
+명령별 종료 코드와 실제 테스트 수를 확인하고 실패하면 멈춥니다. 자동 커밋에 앱 외부 파일, 생성물과 비밀이 포함되지 않았는지도 검토합니다.
 
 아직 Azure 리소스가 없으므로 클라우드 통합 검사 통과를 주장하지 않습니다. 실제 Azure 리소스를 요구하는 로컬 실행은 실습 6의 프로비저닝/DB 초기화 후 수행할 수 있습니다.
 

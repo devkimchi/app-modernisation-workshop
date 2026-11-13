@@ -72,8 +72,6 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 | ![MANUAL](https://img.shields.io/badge/MANUAL-cyan) | 청록 | Copilot 로그인과 라이선스, 조직 정책, 터미널 접근 권한, Azure 권한을 직접 확인 |
 | ![INFO](https://img.shields.io/badge/INFO-blue) | 파랑 | 참고 정보 |
 
-모든 스크립트에 같은 색상을 사용합니다. 파일이나 파이프로 출력할 때는 색상을 넣지 않습니다. 색상을 끄려면 `NO_COLOR` 환경 변수에 값을 지정합니다.
-
 ### 도구 설치 및 업데이트
 
 누락된 도구를 설치합니다. 업데이트를 선택하면 **각 항목에서 `y`를 입력해 승인한 도구만** 업데이트합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다.

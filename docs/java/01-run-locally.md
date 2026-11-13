@@ -4,7 +4,7 @@
 
 ## 목표
 
-Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성을 확인합니다. 이 결과가 업그레이드 후 비교 기준입니다.
+Java 8 기반의 원본 앱을 빌드하고 이미지 업로드와 비동기 썸네일 생성을 확인합니다. 업그레이드 후에는 이 결과를 기준으로 앱의 동작을 비교합니다.
 
 ## 사전 준비
 
@@ -33,9 +33,9 @@ git branch --show-current
 git status --short
 ```
 
-## JDK 8과 빌드 확인
+## JDK 8 선택과 원본 빌드
 
-JDK 8을 선택하고 빌드가 제대로 되는지 확인합니다.
+JDK 8을 선택한 뒤 빌드가 정상적으로 완료되는지 확인합니다.
 
 ```bash
 # zsh/bash
@@ -51,15 +51,15 @@ source ../scripts/use-java.sh --jdk 8
 ./mvnw.cmd clean verify
 ```
 
-또는 아래와 같이 Copilot app 채팅에 빌드를 요청합니다.
+직접 명령을 실행하는 대신 Copilot app 채팅에 다음과 같이 빌드를 요청해도 됩니다.
 
 ```text
-이 세션의 실제 java 앱 루트에서 원본을 빌드해 줘.
+이 세션의 java 앱 루트에서 원본 앱을 빌드해 줘.
 소스나 런타임은 바꾸지 마.
-JDK 8을 먼저 적용하고 mvnw 명령어를 사용해 줘.
-같은 셸에서 버전과 clean verify 결과를 기록해 줘.
-빌드에 문제가 생겼을 경우 임의로 수정하기 전에 별도 승인을 받아줘.
-설치가 필요할 경우에도 별도 승인을 받아 줘.
+JDK 8을 먼저 선택하고 mvnw로 빌드해 줘.
+같은 셸에서 버전 정보와 clean verify 실행 결과를 기록해 줘.
+빌드 중 문제가 생기면 임의로 수정하지 말고, 수정 전에 별도로 승인을 받아 줘.
+설치가 필요할 때도 별도로 승인을 받아 줘.
 ```
 
 ## 로컬 서비스와 앱 실행
@@ -74,17 +74,17 @@ JDK 8을 먼저 적용하고 mvnw 명령어를 사용해 줘.
 ./scripts/startapp.cmd
 ```
 
-## 현재 앱 동작 확인
+## 현재 앱의 동작 확인
 
 브라우저에서 `http://localhost:8080`을 열고 다음을 확인합니다.
 
 - 개인 정보가 없는 PNG 파일을 업로드하고 원본과 썸네일이 화면에 표시되는지 확인합니다.
 - RabbitMQ 관리 화면 `http://localhost:15672`에서 로컬 데모 계정 `guest`/`guest`로 로그인합니다. **Queues and Streams**의 `image-processing` 큐에서 Ready, Unacked, Consumers를 확인합니다.
-- Ready가 0이라는 사실만으로 성공을 판단하지 않습니다. worker의 `Successfully generated thumbnail` 로그와 실제 썸네일을 함께 확인합니다.
-- web 로그의 `HikariPool-1 - Start completed`와 이후 오류를 확인합니다. 시작 시 연결 성공이 현재 DB 연결까지 보장하지는 않습니다.
-- `dev` 업로드는 DB에 이미지 메타데이터를 기록하지 않습니다. 화면과 `storage`에 파일이 있어도 DB에 행이 없는 것이 정상입니다. `dev` 외 S3 경로의 메타데이터는 다음 평가 단계에서 구분합니다.
+- Ready가 0인 것만으로 처리가 성공했다고 판단하지 않습니다. worker의 `Successfully generated thumbnail` 로그와 실제 썸네일을 함께 확인합니다.
+- web 로그에서 `HikariPool-1 - Start completed` 메시지와 그 이후에 발생한 오류를 확인합니다. 앱을 시작할 때 DB에 연결됐더라도 이후 연결 상태는 달라질 수 있습니다.
+- `dev` 프로필에서는 이미지를 업로드해도 DB에 메타데이터를 기록하지 않습니다. 화면에 이미지가 표시되고 `storage`에 파일이 저장되어도 DB에 해당 이미지의 메타데이터가 없는 것이 정상입니다. `dev` 프로필이 아닌 S3 처리 경로의 메타데이터는 다음 평가 단계에서 따로 확인합니다.
 
-macOS와 Linux에서는 앱 루트의 로그를 확인합니다.
+macOS와 Linux에서는 앱 루트에 있는 로그 파일을 확인합니다.
 
 ```bash
 tail -n 100 logs/worker.log
@@ -92,7 +92,7 @@ grep -n -F 'HikariPool-1 - Start completed' logs/web.log
 grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
 ```
 
-Windows의 원본 `.cmd`는 각 창에 로그를 표시합니다. 별도로 로그 파일을 저장한 경우에만 실제 경로로 다음을 실행합니다.
+Windows에서는 시작 스크립트가 연 창에서 로그를 확인합니다. 로그를 파일로 따로 저장한 경우에만 다음 명령의 경로를 해당 파일 경로로 바꿔 실행합니다.
 
 ```powershell
 Get-Content "<worker-로그-경로>" -Tail 100
@@ -100,7 +100,7 @@ Select-String -Path "<web-로그-경로>" -SimpleMatch 'HikariPool-1 - Start com
 Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection refused|connection timed out' -Context 3,3
 ```
 
-홈 화면이나 업로드 완료 메시지만으로 비동기 처리가 끝났다고 판단하지 않습니다. DB 또는 worker 오류가 있으면 해결 후 다시 확인합니다.
+홈 화면이나 업로드 완료 메시지만으로 비동기 처리가 끝났다고 판단하지 않습니다. DB 또는 worker에서 오류가 발생하면 해결한 뒤 다시 확인합니다.
 
 ## 로컬 앱 종료
 
@@ -122,7 +122,7 @@ Windows의 Web Module과 Worker Module 프로세스가 끝났는지 확인하고
 
 ## 원본 앱 상태 커밋
 
-개인 실습 복제본의 기준선을 기록합니다. 앱 폴더 안에 별도 `.git`을 만들지 않습니다. 기존 제외 규칙을 보존하고 생성물과 비밀을 제외합니다. `local.storage.directory`를 바꿨다면 그 경로도 제외합니다.
+개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 앱 폴더 안에 별도의 `.git`을 만들지 않습니다. 기존 제외 규칙을 유지하면서 빌드 결과물과 비밀 정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
 
 Windows:
 
@@ -136,7 +136,7 @@ macOS와 Linux:
 printf '\n.azure/\nlogs/\npids/\n/storage/\n**/target/\n**/uploads/\n.env\n.env.*\n' >> .gitignore
 ```
 
-다음 명령은 두 환경에서 같습니다. `git add .`는 앱 루트에서 실행하고 스테이징된 전체 범위를 검토합니다.
+다음 Git 명령은 두 환경에서 동일하게 실행합니다. 앱 루트에서 `git add .`를 실행한 뒤 커밋에 포함될 변경 사항을 모두 검토합니다.
 
 ```text
 git status --short
@@ -145,13 +145,13 @@ git diff --cached --stat
 git diff --cached
 ```
 
-업로드 파일, 로그, 토큰이나 연결 비밀이 있으면 스테이징에서 제외하고 다시 검토합니다. 검토가 끝났을 때만 커밋합니다.
+업로드한 파일, 로그, 토큰이나 비밀 정보가 담긴 연결 설정이 있으면 커밋 대상에서 제외하고 다시 검토합니다. 검토를 마친 뒤 문제가 없을 때만 커밋합니다.
 
 ```text
 git commit -m "Baseline: verified Java 8 sample"
 ```
 
-Git 신원이 없다면 참가자가 이 저장소에만 사용할 값을 설정한 뒤 다시 커밋합니다.
+Git 커밋 작성자 정보가 설정되어 있지 않다면 이 저장소에서만 사용할 이름과 이메일을 설정한 뒤 다시 커밋합니다.
 
 ```text
 git config user.name "Your Name"
@@ -164,6 +164,6 @@ git config user.email "you@example.com"
 - [ ] web/worker 실행을 확인했습니다.
 - [ ] PostgreSQL/RabbitMQ 연결을 확인했습니다.
 - [ ] 이미지 업로드와 썸네일 생성을 확인했습니다.
-- [ ] 원본 앱의 기준선을 커밋했습니다.
+- [ ] 원본 앱의 상태를 커밋으로 남겼습니다.
 
 위 항목을 모두 마쳤다면 다음 단계인 [2. 평가하고 계획 승인하기](02-assess-and-plan.md)로 이동합니다.

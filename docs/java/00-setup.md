@@ -37,7 +37,7 @@ cd <저장소-이름>
 Get-ExecutionPolicy
 ```
 
-`Restricted`이면 다음 명령을 실행해 **현재 PowerShell 창에서만** 실행 정책을 변경합니다. 창을 닫으면 변경 전 설정으로 돌아옵니다. 다른 창에서도 필요하면 명령을 다시 실행하세요. 시스템이나 사용자 범위의 정책은 바꾸지 않습니다. 조직 정책 때문에 변경할 수 없다면 관리자에게 문의하세요.
+`Restricted`이면 다음 명령을 실행해 **현재 PowerShell 창에서만** 실행 정책을 변경합니다.
 
 ```powershell
 # PowerShell
@@ -74,7 +74,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 ### 도구 설치 및 업데이트
 
-누락된 도구를 설치합니다. 업데이트를 선택하면 **각 항목에서 `y`를 입력해 승인한 도구만** 업데이트합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다. CI나 비대화형 환경에서는 설치를 자동으로 승인하지 않습니다.
+누락된 도구를 설치합니다. 업데이트를 선택하면 **각 항목에서 `y`를 입력해 승인한 도구만** 업데이트합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다.
 
 ```bash
 # zsh/bash
@@ -135,7 +135,7 @@ modernize plan execute --help
 
 ## 샘플 다운로드하기
 
-같은 **워크숍 루트**에서 실행합니다.
+같은 **워크숍 루트**에서 실행합니다. 다운로드 대상인 `java` 폴더는 없거나 비어 있어야 합니다.
 
 ```bash
 # zsh/bash
@@ -146,8 +146,6 @@ modernize plan execute --help
 # PowerShell
 ./scripts/download-sample.ps1 -Track java
 ```
-
-다운로드 대상인 `java` 폴더는 없거나 비어 있어야 합니다.
 
 ## 완료 및 다음 단계
 

@@ -2,9 +2,13 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 준비](00-setup.md) | [다음: 평가와 계획](02-assess-and-plan.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 작업 경로
+## 목표
 
-Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성을 확인합니다. 이 결과가 업그레이드 후 비교 기준입니다. 사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
+Java 8 원본을 빌드하고 이미지 업로드와 비동기 썸네일 생성을 확인합니다. 이 결과가 업그레이드 후 비교 기준입니다.
+
+## 작업 경로
+
+사전 점검과 다운로드를 완료하고 앱 루트에 `pom.xml`, `web`, `worker`, `mvnw`, `mvnw.cmd`, `.mvn`이 있는지 확인합니다.
 
 Copilot app에서 다운로드한 앱 폴더를 열고 **Current checkout**을 사용합니다. Windows는 **This computer**의 PowerShell 7 터미널을 엽니다. 워크숍 루트에서 시작했다면 다음 명령으로 앱 루트에 이동합니다.
 

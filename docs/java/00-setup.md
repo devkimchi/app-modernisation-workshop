@@ -116,6 +116,14 @@ gh auth login
 >
 > `az login`을 실행할 때 실습에 사용할 구독을 선택합니다.
 
+다음 명령으로 선택한 Azure 구독과 각 도구의 로그인 상태를 확인합니다.
+
+```text
+az account show
+azd auth login --check-status
+gh auth status
+```
+
 ## Copilot app과 Modernize CLI 준비
 
 Copilot app에서 터미널을 열고 워크숍 루트로 이동합니다. 다음 명령으로 도구가 설치되어 있는지, GitHub에 로그인되어 있는지 확인하고 Modernize CLI의 주요 명령을 살펴봅니다.

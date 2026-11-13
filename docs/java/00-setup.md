@@ -4,35 +4,23 @@
 
 ## 실행 환경
 
-Windows에서는 **PowerShell**, macOS와 Linux 데스크톱에서는 **Bash 또는 Zsh 터미널**을 사용합니다. Windows PowerShell 5.1에서 준비 스크립트를 직접 실행하면 PowerShell 7에 위임합니다. 앱 실습과 JDK 선택은 PowerShell 7에서 진행합니다.
-
-macOS와 Linux의 `.sh`는 직접 실행하면 shebang에 따라 Bash로 실행됩니다. macOS 기본 `/bin/bash` 3.2를 지원하며 Homebrew Bash는 필요하지 않습니다. `use-java.sh`만 현재 Bash 또는 Zsh에서 source합니다.
+Windows에서는 **PowerShell**, macOS에서는 **Bash** 또는 **Zsh** 를 사용합니다.
 
 ### 사전 설치 항목
 
-- [GitHub Copilot app](https://gh.io/app), [Git](https://git-scm.com/downloads)
-- Windows: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows). 없으면 설치 도우미가 별도 동의를 받아 설치를 제안합니다.
-- macOS: [Homebrew](https://brew.sh). 필수이며 설치 도우미가 설치를 제안합니다. 관리자 승인과 Xcode Command Line Tools 다운로드 시간이 필요할 수 있습니다.
-- Linux: Ubuntu와 Debian 계열의 `apt-get`, `sudo`가 있으면 설치 도우미가 설치를 제안합니다. 다른 배포판은 아래 공식 안내로 직접 설치한 뒤 같은 점검 스크립트를 사용합니다.
+- [GitHub Copilot app](https://gh.io/app)
+- Windows: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)
+- macOS: [Homebrew](https://brew.sh)
 
 ## 템플릿으로 저장소 만들고 클론하기
 
-1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택합니다.
+1. [워크숍 템플릿](https://github.com/devkimchi/app-modernisation-workshop)에서 **Use this template > Create a new repository**를 선택하거나 [![GitHub에서 템플릿으로 저장소 만들기](https://img.shields.io/badge/GitHub-Create%20repository%20from%20template-2ea44f?style=flat&logo=github&logoColor=white)](https://github.com/new?template\_name=app-modernisation-workshop&template\_owner=devkimchi)을 클릭합니다.
 2. Owner는 본인 **개인 계정**으로 지정합니다. 공개할 계획이 없다면 **Private**을 선택하고 **Include all branches**는 선택하지 않습니다.
-3. 저장소 URL을 복사해 아래 값을 바꿔 실행합니다. GitHub CLI를 아직 설치하지 않았다면 Git을 사용합니다.
-
-Windows:
-
-```powershell
-git clone "https://github.com/<본인-계정>/<저장소-이름>.git"
-Set-Location "<저장소-이름>"
-```
-
-macOS와 Linux:
+3. 저장소를 만든 뒤 GitHub CLI(`gh`)를 사용할 수 있는 터미널에서 복제합니다. 아래 값을 실제 계정과 저장소 이름으로 바꾸세요. (예: `octocat/app-modernisation-workshop`)
 
 ```bash
-git clone "https://github.com/<본인-계정>/<저장소-이름>.git"
-cd "<저장소-이름>"
+gh repo clone <본인-계정>/<저장소-이름>
+cd <저장소-이름>
 ```
 
 복제한 폴더가 **워크숍 루트**입니다. 템플릿 자체를 직접 클론하거나 포크하지 않습니다. 템플릿으로 만든 저장소는 독립된 이력을 가지며 원본의 이후 변경을 자동으로 받지 않습니다.
@@ -81,15 +69,13 @@ macOS와 Linux:
 
 누락된 도구를 설치하고 업데이트 가능한 도구는 **항목별로 `y`로 승인한 경우에만** 갱신합니다. 누락된 도구만 설치하려면 `-Update` 또는 `--update`를 생략합니다. CI와 비대화형 환경에서는 설치를 승인하지 않습니다.
 
-Windows:
-
 ```powershell
+# PowerShell
 ./scripts/install-prerequisites.ps1 -Track java -Update
 ```
 
-macOS와 Linux:
-
 ```bash
+# zsh/bash
 ./scripts/install-prerequisites.sh --track java --update
 ```
 
@@ -98,7 +84,7 @@ macOS와 Linux:
 | [Node.js](https://nodejs.org/) 22 이상 | Windows는 [nvm-windows](https://github.com/nvm-windows/nvm), macOS와 Linux는 [nvm](https://github.com/nvm-sh/nvm). 없거나 22 미만이면 22.x를 설치하고 업데이트 시 현재 메이저의 최신 정식 버전을 추가 |
 | 정식 JDK 8, 25 | Windows는 winget의 [Temurin](https://adoptium.net/installation/windows), macOS와 Linux는 [SDKMAN](https://sdkman.io/install/) |
 | [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), [azd](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) | Windows는 winget으로 누락된 도구 설치, macOS는 Homebrew, Linux는 공식 설치 경로. Windows의 기존 설치본 업데이트는 원래 설치 관리자로 직접 수행 |
-| [GitHub CLI](https://cli.github.com/) 2.45.0 이상 | Windows는 winget `GitHub.cli`, macOS는 Homebrew, Linux는 공식 apt 저장소 |
+| [GitHub CLI](https://cli.github.com/) | Windows는 winget `GitHub.cli`, macOS는 Homebrew, Linux는 공식 apt 저장소 |
 | [Modernize CLI](https://github.com/microsoft/modernize-cli) | Windows는 winget `GitHub.Copilot.modernization.agent`, macOS는 Homebrew cask, Linux는 공식 `install.sh` |
 
 Node.js와 npm은 Modernize CLI의 Java 업그레이드와 배포 도구 서버를 `npx`로 실행하기 위해 준비합니다. 워크숍의 최소 기준은 Node.js 22이며, CLI 실행 파일 설치만으로 Node가 준비되지는 않습니다.
@@ -107,7 +93,7 @@ Windows Temurin 설치는 `EclipseAdoptium.Temurin.8.JDK`, `EclipseAdoptium.Temu
 
 macOS는 Homebrew를 먼저 준비한 뒤 az, azd, gh와 Modernize CLI를 설치합니다. Modernize는 `brew tap microsoft/modernize https://github.com/microsoft/modernize-cli`와 전체 이름 `brew install --cask microsoft/modernize/modernize`를 사용합니다. tap 전체를 신뢰하는 설정은 요구하지 않습니다. 설치 후 출력된 `brew shellenv` 명령을 로그인 셸 설정(`~/.zprofile` 또는 `~/.bash_profile`)에 직접 반영하고 새 터미널에서 확인합니다. SDKMAN 설치기는 macOS에서 Zsh로 실행합니다.
 
-macOS와 Linux에서 설치한 Node를 현재 터미널에서도 쓰려면 출력된 nvm 초기화와 `nvm use` 명령을 실행합니다. 설치 스크립트는 부모 셸의 Node 선택을 바꾸지 않습니다. Linux Modernize 설치기는 셸 설정에 `~/.local/bin`을 추가하므로 새 터미널을 열거나 해당 설정 파일을 다시 읽습니다. Linux는 glibc 2.27 이상이 필요합니다.
+macOS와 Linux에서 설치한 Node를 현재 터미널에서도 쓰려면 출력된 nvm 초기화와 `nvm use` 명령을 실행합니다. 설치 스크립트는 부모 셸의 Node 선택을 바꾸지 않습니다. Linux Modernize 설치기는 셸 설정에 `~/.local/bin`을 추가하므로 새 터미널을 열거나 해당 설정 파일을 다시 읽습니다. Linux 사전 점검은 glibc 2.27 이상인지 확인하며, 미달하거나 버전을 확인할 수 없으면 지원되는 Linux 배포판을 사용하세요.
 
 ### 직접 준비할 항목
 

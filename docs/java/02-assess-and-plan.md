@@ -32,7 +32,7 @@ modernize --model auto
 
 | 화면 | 항목 | 선택값 |
 | --- | --- | --- |
-| 초기 화면 | Modernization option | Assess |
+| Initial screen | Modernization option | Assess |
 | Choose source type | Source | Current folder (`java` 앱 루트) |
 | Select assessment domains | Modernization domains | Upgrade, Cloud Readiness, Security |
 | Configure assessment | Analysis Coverage | Full analysis |

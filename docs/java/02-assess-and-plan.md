@@ -62,15 +62,20 @@ modernize --model auto
 
 ## Rulebook 만들기
 
-Modernize CLI의 `rulebook create` 명령은 문서 파일을 기준으로 현대화 rulebook을 생성합니다. 앱 루트에서 [워크숍 기준 문서](modernize-rulebook-source.md)를 입력으로 지정합니다. 기본 출력 위치는 `.github/modernize/rulebook/`입니다.
+Modernize CLI의 TUI에서 룰북 생성 화면으로 이동하고 아래 항목을 입력합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
-Windows PowerShell 7, macOS와 Linux에서 같은 명령을 실행합니다.
+| 항목 | 선택값 또는 입력값 |
+| --- | --- |
+| How would you like to modernize your app? | Rulebook |
+| Create a rulebook | 선택 |
+| Source | `../docs/java/modernize-rulebook-source.md` |
+| Use default templates | 선택 안 함 |
+| Push to Git URL | 입력하지 않음 |
+| 실행 | Generate modernization rulebook from source document |
 
-```text
-modernize rulebook create "Create a concise rulebook from the source document. Preserve its requirements and apply them to modernization plans and execution." --file-path ../docs/java/modernize-rulebook-source.md --output-path .github/modernize/rulebook
-```
+`Source`에는 GitHub 이슈 URL이나 파일 경로를 입력할 수 있습니다. 이 실습에서는 앱 루트 기준 상대 경로로 [워크숍 기준 문서](modernize-rulebook-source.md)를 지정합니다. 기준 문서에 워크숍 제약이 모두 있으므로 기본 템플릿은 사용하지 않고, 룰북을 원격 저장소에 푸시하지 않습니다.
 
-생성된 rulebook을 열어 제약과 예외가 빠지거나 달라지지 않았는지 검토합니다. Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다. 앱 루트의 생성 파일은 `java/` 아래에 있으므로 커밋하지 않습니다.
+생성 작업을 시작하기 전에 입력 경로와 선택 항목을 확인합니다. 기본 출력 위치는 `.github/modernize/rulebook/`입니다. 생성된 rulebook을 열어 제약과 예외가 빠지거나 달라지지 않았는지 검토합니다. Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다. 앱 루트의 생성 파일은 `java/` 아래에 있으므로 커밋하지 않습니다.
 
 ## 계획 생성
 

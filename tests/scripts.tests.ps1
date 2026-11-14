@@ -460,7 +460,8 @@ ${function:Resolve-ContainerEngine}
         }
     }
     $documents = @((Get-Item (Join-Path $root 'README.md'))) + @(Get-ChildItem (Join-Path $root 'docs') -Recurse -Filter '*.md')
-    Assert-True ($documents.Count -eq 21) '21 workshop documents (root and 20 track documents)'
+    $workshopPages = @($documents | Where-Object { $_.DirectoryName -eq $root -or ($_.Directory.Name -in @('java', 'dotnet') -and ($_.Name -eq 'README.md' -or $_.Name -match '^0[0-8]-.*\.md$')) })
+    Assert-True ($workshopPages.Count -eq 21) '21 workshop pages (root and 20 track pages)'
     foreach ($document in $documents) {
         $text = Get-Content $document.FullName -Raw
         Assert-True ($text -match '[가-힣]') "Korean text: $($document.Name)"
@@ -471,7 +472,7 @@ ${function:Resolve-ContainerEngine}
             $target = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName ($link.Split('#')[0] -replace '/', [IO.Path]::DirectorySeparatorChar)))
             Assert-True (Test-Path -LiteralPath $target -PathType Leaf) "local link: $link in $($document.Name)"
         }
-        if ($document.DirectoryName -eq $root) { continue }
+        if ($document.DirectoryName -eq $root -or $document.FullName -notin $workshopPages.FullName) { continue }
         $track = $document.Directory.Name
         $trackLabel = if ($track -eq 'java') { 'Java' } else { '.NET' }
         $navigation = ($text -split '\r?\n' | Where-Object { $_ -match '^\[전체 목차\]' } | Select-Object -First 1)

@@ -10,7 +10,9 @@
 
 로컬에서 원본 앱의 동작을 확인하고, 업그레이드 전 앱 상태를 커밋해 둡니다. [실습 1: 원본 앱을 로컬에서 실행하기](01-run-locally.md)에서 사용한 터미널을 계속 사용합니다.
 
-## 앱 평가
+## 앱 평가(Assessment)
+
+modernize CLI를 실행시켜 앱 평가를 시작합니다.
 
 ```text
 modernize
@@ -18,7 +20,8 @@ modernize
 
 > [!NOTE]
 >
-> 모델 기본값은 `auto`입니다. 다른 모델 대신 `auto`를 명시하려면 `modernize --model auto`를 실행합니다.
+> modernize CLI를 실행시킨 후 기본값으로 정해진 모델을 바꾸려면 화면에서 `M`키를 눌러 모델을 변경합니다. 또는
+> 기본값 대신 `auto`를 명시적으로 선택해서 실행하려면 `modernize --model auto`를 실행합니다.
 
 **Assess**와 **Current folder**를 선택한 뒤 평가 도메인 설정으로 이동해 다음 항목을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다. `local`은 UI에서 선택하는 항목이 아니라 아래 CLI 명령의 `--delegate` 값입니다.
 

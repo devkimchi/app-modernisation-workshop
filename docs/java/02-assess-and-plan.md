@@ -62,7 +62,7 @@ modernize --model auto
 
 ## Rulebook 만들기
 
-Modernize CLI의 TUI에서 룰북 생성 화면으로 이동하고 아래 항목을 입력합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
 | 항목 | 선택값 또는 입력값 |
 | --- | --- |
@@ -73,9 +73,11 @@ Modernize CLI의 TUI에서 룰북 생성 화면으로 이동하고 아래 항목
 | Push to Git URL | 입력하지 않음 |
 | 실행 | Generate modernization rulebook from source document |
 
-`Source`에는 GitHub 이슈 URL이나 파일 경로를 입력할 수 있습니다. 이 실습에서는 앱 루트 기준 상대 경로로 [워크숍 기준 문서](modernize-rulebook-source.md)를 지정합니다. 기준 문서에 워크숍 제약이 모두 있으므로 기본 템플릿은 사용하지 않고, 룰북을 원격 저장소에 푸시하지 않습니다.
+Rulebook은 `java/.github/modernize/rulebook` 아래 생성되었으니 문서를 열어 검토합니다.
 
-생성 작업을 시작하기 전에 입력 경로와 선택 항목을 확인합니다. 기본 출력 위치는 `.github/modernize/rulebook/`입니다. 생성된 rulebook을 열어 제약과 예외가 빠지거나 달라지지 않았는지 검토합니다. Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다. 앱 루트의 생성 파일은 `java/` 아래에 있으므로 커밋하지 않습니다.
+> [!CAUTION]
+>
+> Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다.
 
 ## 계획 생성
 
@@ -114,7 +116,7 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 
 이후 프롬프트를 통해 에이전트가 뭔가를 물어보면 잘 읽어보고 권장 옵션을 선택하거나, 별도 프롬프트를 작성합니다.
 
-생성된 계획의 이름과 경로를 기록합니다. 계획 생성 후에는 바로 실행하지 않고 메인 메뉴로 돌아가 결과를 검토합니다.
+계획 문서는 `.github/modernize/modernization-plan` 아래에서 `plan.md`, `tasks.json` 파일이 생성되었으니 문서를 열어 검토합니다.
 
 ## 검토와 완료 기준
 

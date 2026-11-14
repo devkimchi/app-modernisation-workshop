@@ -12,7 +12,7 @@
 
 ## 앱 평가(Assessment)
 
-modernize CLI를 실행시켜 앱 평가를 시작합니다.
+앱 루트에서 modernize CLI를 실행시켜 앱 평가를 시작합니다.
 
 ```bash
 modernize
@@ -32,8 +32,8 @@ modernize --model auto
 
 | 항목 | 선택값 |
 | --- | --- |
-| How would you like to modernize your app | Assess |
-| Choose source type | Current folder (`java` 앱 루트) |
+| How would you like to modernize your app? | Assess |
+| Choose source type | Current folder |
 | Select assessment domains | Upgrade, Cloud Readiness, Security |
 | Analysis Coverage | Full analysis |
 | Minimum CVE Severity | High |
@@ -41,8 +41,9 @@ modernize --model auto
 | Target Compute Services | Azure Container Apps (ACA) |
 | Target Operating System | Linux |
 | Containerization | Enabled |
-
-이후 `Continue`를 선택해서 다음 단계로 이동합니다.
+| Continue? | Continue |
+| How would you like to assess? | Assess locally |
+| Additional assessment context |  |
 
 앱 소스와 패키지 변경, Azure 리소스 생성과 배포는 평가 범위에 넣지 않습니다. 추가 설치가 필요하면 대상과 영향을 확인하고 별도로 승인합니다. 종료 후 보고서의 실제 경로, 실패/미분석 항목과 `git status --short`를 확인합니다. 도움말의 기본 출력은 `.github/modernize/assessment`이지만 실제 보고서 파일명을 추측하지 않습니다.
 

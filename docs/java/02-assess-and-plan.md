@@ -60,14 +60,6 @@ modernize --model auto
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
 
-Overview는 평가 결과 요약입니다. 이 보고서에서는 Java 앱 1개에서 99개 항목이 발견됐으며, 필수 해결 항목 84개, 잠재 위험 7개, 선택적 개선 8개로 나뉩니다. 항목별 근거는 `Business App Assessments` 탭에서 확인합니다.
-
-`Cost Estimate` 탭의 금액은 사전 선택한 개발/테스트 SKU를 기준으로 한 참고 추정치입니다. 이 보고서에서는 평가 대상으로 Azure Container Apps를 선택했지만, 비용 탭에는 Azure App Service B1이 표시됩니다. 이를 실제 배포 대상이나 확정 비용으로 해석하지 않습니다.
-
-평가가 끝나면 보고서의 실제 경로와 실패/미분석 항목을 확인합니다.
-
-보고서에서 web/worker, 화면과 API, 환경 설정과 비밀 관리, PostgreSQL/RabbitMQ 의존성, 테스트와 업그레이드 위험의 근거 파일을 확인합니다. `dev`의 로컬 파일 저장은 메타데이터를 DB에 기록하지 않으며 `dev` 외 S3 경로의 기록/조회와 구분해야 합니다. 보고서 생성만으로 평가 완료를 선언하지 않습니다.
-
 ## 워크숍 제약 기록
 
 앱 루트에 `.github/skills/java-aca-workshop/SKILL.md`를 만들고 다음을 저장합니다. Copilot app 채팅에 이 파일의 작성만 맡겨도 됩니다. 샘플 앱 안의 파일이며 워크숍 자료 루트에 만들지 않습니다.

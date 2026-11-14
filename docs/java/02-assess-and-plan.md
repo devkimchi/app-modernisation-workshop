@@ -28,19 +28,19 @@ modernize
 modernize --model auto
 ```
 
-화면마다 다음 항목을 선택합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
-| 화면 | 항목 | 선택값 |
-| --- | --- | --- |
-| Initial screen | Modernization option | Assess |
-| Choose source type | Source | Current folder (`java` 앱 루트) |
-| Select assessment domains | Modernization domains | Upgrade, Cloud Readiness, Security |
-| Configure assessment | Analysis Coverage | Full analysis |
-| Security | Minimum CVE Severity | High |
-| Java - Upgrade | Target Runtime | OpenJDK 25 |
-| Cloud Readiness | Target Compute Services | Azure Container Apps (ACA) |
-| Cloud Readiness | Target Operating System | Linux |
-| Cloud Readiness | Containerization | Enabled |
+| 항목 | 선택값 |
+| --- | --- |
+| Modernization option | Assess |
+| Source | Current folder (`java` 앱 루트) |
+| Modernization domains | Upgrade, Cloud Readiness, Security |
+| Analysis Coverage | Full analysis |
+| Minimum CVE Severity | High |
+| Target Runtime | OpenJDK 25 |
+| Target Compute Services | Azure Container Apps (ACA) |
+| Target Operating System | Linux |
+| Containerization | Enabled |
 
 앱 소스와 패키지 변경, Azure 리소스 생성과 배포는 평가 범위에 넣지 않습니다. 추가 설치가 필요하면 대상과 영향을 확인하고 별도로 승인합니다. 종료 후 보고서의 실제 경로, 실패/미분석 항목과 `git status --short`를 확인합니다. 도움말의 기본 출력은 `.github/modernize/assessment`이지만 실제 보고서 파일명을 추측하지 않습니다.
 

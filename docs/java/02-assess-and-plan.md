@@ -2,11 +2,15 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 원본 실행](01-run-locally.md) | [다음: 업그레이드](03-upgrade.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
-원본 동작과 기준선 커밋이 있는 **앱 루트(`java`)**에서 Copilot app의 `/terminal`을 엽니다. Windows는 PowerShell 7, macOS와 Linux는 Bash 또는 Zsh를 사용합니다. 평가와 계획은 Modernize CLI에 전달하며 앱 채팅의 맥락이나 승인 상태가 CLI에 자동 공유된다고 가정하지 않습니다.
+앱 소스를 변경하지 않고 현재 구조와 업그레이드 위험을 평가한 뒤, 변경 범위와 제약 조건을 반영한 실행 계획을 작성합니다.
 
-CLI 실행 중에는 Copilot app 채팅에 같은 파일 수정을 맡기지 않습니다. 앱의 Plan 모드도 별도 CLI의 실행 권한을 제한하지 않습니다. 설치, 외부 서비스 사용과 모델 사용량을 확인하고 필요한 동의를 받은 뒤 시작합니다.
+## 시작 조건
+
+로컬에서 원본 앱의 동작을 확인하고, 비교 기준이 될 커밋을 준비합니다. **앱 루트(`java`)**에서 Copilot app의 `/terminal`을 엽니다. Windows는 PowerShell 7, macOS와 Linux는 Bash 또는 Zsh를 사용합니다.
+
+평가와 계획은 Modernize CLI에서 진행합니다. 앱 채팅의 맥락이나 승인 상태가 CLI에 자동 공유되지는 않습니다. CLI 실행 중에는 Copilot app 채팅에 같은 파일 수정을 맡기지 않습니다. 앱의 Plan 모드도 CLI의 실행 권한을 제한하지 않습니다. 설치, 외부 서비스 사용과 모델 사용량을 확인하고 필요한 동의를 받은 뒤 시작합니다.
 
 ## 앱 평가
 

@@ -92,7 +92,7 @@ Rulebook은 `java/.github/modernize/rulebook` 아래 생성되었으니 문서�
 | Create modernization plan / Plan name | modernization-plan (기본값) |
 | Create modernization plan / Prompt | 아래 프롬프트 참조 |
 
-`Plan` 흐름의 `Create modernization plan`에서 프롬프트를 입력하는 화면에 다음 내용을 입력합니다.
+`Create modernization plan`에서 프롬프트를 입력하는 화면에 다음 내용을 입력합니다.
 
 ```text
 `.github/modernize/rulebook/`의 생성된 rulebook과 평가 보고서를 읽고
@@ -126,7 +126,5 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 - [ ] 테스트 조건, 파일 범위와 중단/복구 기준이 명확합니다.
 - [ ] 앱 외부 파일, 생성물과 비밀이 커밋되지 않도록 범위를 검토했습니다.
 - [ ] 계획 범위를 바꿨다면 `plan.md`와 `tasks.json`을 함께 수정하고 다시 검토했습니다.
-
-출력 경로는 버전과 실행 결과를 따르며 서로 다른 디렉터리에 임의로 복제하지 않습니다. 실제 Azure 배포는 계획 실행과 분리합니다.
 
 위 항목을 모두 마쳤다면 다음 단계인 [3. JDK 25로 업그레이드하기](03-upgrade.md)로 이동해 Modernize CLI의 `Execute` 메뉴로 계획을 실행합니다.

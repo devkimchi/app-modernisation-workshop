@@ -43,7 +43,7 @@ modernize --model auto
 | Containerization | Enabled |
 | Continue? | Continue |
 | How would you like to assess? | Assess locally |
-| Additional assessment context | 평가 보고서는 한국어로 작성해줘 |
+| Additional assessment context |  |
 | Enter output path | 기본값 |
 
 평가가 끝나면 아래와 같은 화면이 표시됩니다. 곧바로 다음 계획 생성 단계로 넘어가는 대신 메인 메뉴로 돌아갑니다.

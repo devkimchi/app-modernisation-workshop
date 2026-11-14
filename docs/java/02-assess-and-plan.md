@@ -43,9 +43,20 @@ modernize --model auto
 | Containerization | Enabled |
 | Continue? | Continue |
 | How would you like to assess? | Assess locally |
-| Additional assessment context |  |
+| Additional assessment context | 평가 보고서는 한국어로 작성해줘 |
 | Enter output path | 기본값 |
 
+평가가 끝나면 아래와 같은 화면이 표시됩니다. 곧바로 다음 계획 생성 단계로 넘어가는 대신 메인 메뉴로 돌아갑니다.
+
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to continue? | Return to main menu |
+
+평가 보고서는 `java/.github/modernize/assessment` 아래 생성되었으니 보고서를 열어 검토합니다.
+
+```text
+방금 `java/.github/modernize/assessment` 디렉토리에 생성된 평가 보고서를 열어줘
+```
 
 평가가 끝나면 보고서의 실제 경로와 실패/미분석 항목을 확인합니다.
 

@@ -44,6 +44,8 @@ modernize --model auto
 | Continue? | Continue |
 | How would you like to assess? | Assess locally |
 | Additional assessment context |  |
+| Enter output path | 기본값 |
+
 
 앱 소스와 패키지 변경, Azure 리소스 생성과 배포는 평가 범위에 넣지 않습니다. 추가 설치가 필요하면 대상과 영향을 확인하고 별도로 승인합니다. 종료 후 보고서의 실제 경로, 실패/미분석 항목과 `git status --short`를 확인합니다. 도움말의 기본 출력은 `.github/modernize/assessment`이지만 실제 보고서 파일명을 추측하지 않습니다.
 

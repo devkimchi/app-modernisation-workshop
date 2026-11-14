@@ -27,10 +27,9 @@ modernize
 | 항목 | 선택과 확인 |
 | --- | --- |
 | 대상 | `pom.xml`, `web`, `worker`가 있는 현재 앱 폴더 하나 |
-| 도메인 | Upgrade, Cloud Readiness |
+| 도메인 | Upgrade, Cloud Readiness, Security |
 | 분석 범위 | Full analysis. Architecture, API Contracts, Configuration, Business Workflows, Dependencies, Data Model 포함 여부 확인 |
 | 목표 | 정식 OpenJDK 25, Azure Container Apps와 Linux 컨테이너 |
-| 추가 보안 평가 | 필요한 경우에만 별도 범위와 사용량을 확인해 선택 |
 
 명령형 진입은 다음과 같습니다. 이 한 줄만으로 Full analysis와 목표 설정까지 지정되지는 않으므로 실제 설정을 확인합니다.
 

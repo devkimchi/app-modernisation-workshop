@@ -28,10 +28,12 @@ modernize
 modernize --model auto
 ```
 
-**Assess**와 **Current folder**를 선택하고 평가 도메인에서 세 항목을 모두 선택합니다. 설정 화면에서는 워크숍 목표에 맞게 다음 값을 지정합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+화면마다 다음 항목을 선택합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
-| 설정 화면 | 항목 | 선택값 |
+| 화면 | 항목 | 선택값 |
 | --- | --- | --- |
+| 초기 화면 | Modernization option | Assess |
+| Choose source type | Source | Current folder (`java` 앱 루트) |
 | 평가 도메인 | Modernization domains | Upgrade, Cloud Readiness, Security |
 | Configure assessment | Analysis Coverage | Full analysis |
 | Security | Minimum CVE Severity | High |

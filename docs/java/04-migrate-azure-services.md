@@ -14,13 +14,13 @@ JDK 25 빌드와 로컬 기준 동작이 통과한 **앱 루트**, Copilot app �
 
 원본 `dev` 업로드 경로에는 DB 메타데이터 행 생성이 없으므로 로컬 기준선에 이를 추가해 해석하지 않습니다. `dev` 외 S3 구현의 메타데이터 로직은 코드에서 평가해 Azure 이전 범위에 포함합니다.
 
-## 코드 이전 계획
+## 코드 이전 요구사항 확인
 
-다음 입력을 앱 루트의 `ws04-azure-code-input.txt`에 UTF-8로 저장합니다. 평가 보고서와 앞 단계의 실제 결과 경로를 추가합니다.
+실습 2에서 만든 계획의 Azure 코드 작업은 실습 3에서 함께 실행했습니다. 별도 계획을 만들지 않고, 다음 요구사항이 생성된 코드와 테스트에 반영됐는지 확인합니다.
 
 ```text
 .github/skills/java-aca-workshop/SKILL.md와 실제 업그레이드 결과를 읽고
-Azure 서비스 이전 코드와 테스트만 계획해 줘. 지금은 실행하지 마.
+Azure 서비스 이전 코드와 테스트를 검토해 줘. 파일을 변경하거나 실행하지 마.
 JDK 25와 현재 Spring Boot 버전을 유지하고 web/worker의 기존 기능을 보존해 줘.
 
 PostgreSQL은 Flexible Server와 TLS로 연결하도록 구성하고
@@ -48,39 +48,19 @@ dev 외 경로의 S3 코드와 설정을 Blob으로 대체하고 그 경로의 D
 이미지 게시와 배포는 작업 목록에 넣지 마.
 ```
 
-Windows PowerShell 7:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 25
-$goal = Get-Content ./ws04-azure-code-input.txt -Raw -Encoding utf8
-modernize plan create $goal --source . --language java --plan-name ws04-azure-code
-```
-
-macOS와 Linux:
-
-```bash
-source ../scripts/use-java.sh --jdk 25
-goal=$(cat ws04-azure-code-input.txt)
-modernize plan create "$goal" --source . --language java --plan-name ws04-azure-code
-```
-
-실제 `plan.md`와 `tasks.json`에 코드/테스트 작업만 있는지 확인하고 승인합니다. 작업 트리에 무관한 변경과 비밀이 없는지 확인한 뒤 실행 전 커밋을 기록합니다.
+## 코드 검증
 
 Windows:
 
 ```powershell
-git status --short
-$before = git rev-parse HEAD
-modernize plan execute "승인한 ws04-azure-code와 워크숍 스킬에 따라 코드와 단위 테스트만 실행해 줘. Azure/DB 변경과 배포는 하지 말고 실제 결과와 미실행 통합 검사를 구분해 줘." --source . --language java --plan-name ws04-azure-code --delegate local
+. ../scripts/use-java.ps1 -Jdk 25
 ./mvnw.cmd clean verify
 ```
 
 macOS와 Linux:
 
 ```bash
-git status --short
-before=$(git rev-parse HEAD)
-modernize plan execute "승인한 ws04-azure-code와 워크숍 스킬에 따라 코드와 단위 테스트만 실행해 줘. Azure/DB 변경과 배포는 하지 말고 실제 결과와 미실행 통합 검사를 구분해 줘." --source . --language java --plan-name ws04-azure-code --delegate local
+source ../scripts/use-java.sh --jdk 25
 ./mvnw clean verify
 ```
 

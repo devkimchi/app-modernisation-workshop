@@ -23,6 +23,6 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 25**로 업그레이드하고 Azure 서�
 
 Windows는 PowerShell 7, macOS와 Linux 데스크톱은 Bash 또는 Zsh 터미널에서 진행합니다. `.sh`는 직접 실행하면 Bash로 실행되며 macOS 기본 Bash 3.2도 지원합니다. JDK 선택 도우미만 현재 셸에 source 또는 dot-source합니다.
 
-Copilot app 터미널에서 평가하고 네 계획을 단계별로 검토합니다. 코드 변경은 Modernize CLI가 수행하고, 실제 Azure 배포와 정리는 참가자가 azd로 실행합니다.
+Copilot app 터미널에서 평가하고 하나의 현대화 계획을 검토합니다. Modernize CLI의 UI에서 계획을 생성하고 실행하며, 실제 Azure 배포와 정리는 참가자가 azd로 실행합니다.
 
 각 실습의 완료 조건에 따라 실제 앱 동작을 확인하세요. 문제가 생기면 [문제 해결](08-troubleshooting.md)을 참고하세요.

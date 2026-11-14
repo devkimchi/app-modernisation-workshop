@@ -4,16 +4,16 @@
 
 ## 목표와 시작 조건
 
-Azure 서비스 코드가 준비된 **앱 루트**, Copilot app 터미널에서 Modernize CLI로 Dockerfile, `azure.yaml`, Bicep을 생성하고 검토합니다. 실제 코드와 선택한 엔진에 맞춰 산출물을 만들되 이 단계에서는 리소스를 만들지 않습니다.
+Azure 서비스 코드가 준비된 **앱 루트**에서 실습 3의 계획 실행으로 생성된 Dockerfile, `azure.yaml`, Bicep을 검토합니다. 실제 코드와 선택한 엔진에 맞는지 확인하되 이 단계에서는 리소스를 만들지 않습니다.
 
-## 배포 산출물 계획
+## 배포 산출물 요구사항 확인
 
-다음 입력을 앱 루트의 `ws05-azd-assets-input.txt`에 UTF-8로 저장합니다.
+별도 계획을 만들지 않고, 다음 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
 
 ```text
 .github/skills/java-aca-workshop/SKILL.md와 실제 Azure 코드/환경 변수 계약을 읽고
-현재 앱 루트의 Azure Developer CLI 배포 산출물 생성을 계획해 줘.
-지금은 계획만 작성하고 배포나 Azure 리소스 생성은 작업 목록에 넣지 마.
+현재 앱 루트의 Azure Developer CLI 배포 산출물을 검토해 줘.
+파일을 변경하거나 배포, Azure 리소스 생성을 실행하지 마.
 
 - azure.yaml과 infra/의 Bicep을 만들고 서비스 이름은 web, worker로 정해 줘.
 - 두 서비스는 language: docker, host: containerapp이다.
@@ -43,46 +43,12 @@ Azure 서비스 코드가 준비된 **앱 루트**, Copilot app 터미널에서 
   이 계획은 절차 작성까지만 포함하고 실제 DB 사용자/권한/migration은 실행하지 마.
 
 구독/리전/SKU/비용, 권한, 네트워크와 이미지 태그 정책을 설명해 줘.
-템플릿 구문 검증과 단위 빌드를 계획하고 미실행 통합 항목을 구분해 줘.
+템플릿 구문 검증과 단위 빌드 결과, 미실행 통합 항목을 구분해 줘.
 azd hooks와 호출 스크립트를 모두 검토 대상으로 포함해 줘.
 이미지 게시, 프로비저닝, migration 실행과 배포는 참가자가 별도 승인 후 직접 실행한다.
 ```
 
-Windows PowerShell 7:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 25
-$goal = Get-Content ./ws05-azd-assets-input.txt -Raw -Encoding utf8
-modernize plan create $goal --source . --language java --plan-name ws05-azd-assets
-```
-
-macOS와 Linux:
-
-```bash
-source ../scripts/use-java.sh --jdk 25
-goal=$(cat ws05-azd-assets-input.txt)
-modernize plan create "$goal" --source . --language java --plan-name ws05-azd-assets
-```
-
-실제 `plan.md`와 `tasks.json`을 읽고 산출물 작성/로컬 검증만 승인합니다. 무관한 작업 트리 변경과 비밀을 확인한 뒤 기준 커밋을 기록하고 실행합니다.
-
-Windows:
-
-```powershell
-git status --short
-$before = git rev-parse HEAD
-modernize plan execute "승인한 ws05-azd-assets와 워크숍 스킬에 따라 파일 작성과 로컬 검증만 수행해 줘. 프로비저닝, DB 변경, 이미지 게시, 배포와 삭제는 실행하지 마." --source . --language java --plan-name ws05-azd-assets --delegate local
-```
-
-macOS와 Linux:
-
-```bash
-git status --short
-before=$(git rev-parse HEAD)
-modernize plan execute "승인한 ws05-azd-assets와 워크숍 스킬에 따라 파일 작성과 로컬 검증만 수행해 줘. 프로비저닝, DB 변경, 이미지 게시, 배포와 삭제는 실행하지 마." --source . --language java --plan-name ws05-azd-assets --delegate local
-```
-
-실행 후 자동 커밋과 미커밋 변경을 함께 확인합니다.
+실습 3에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
 
 ```text
 git status --short

@@ -12,7 +12,7 @@
 
 ## 앱 평가(Assessment)
 
-앱 루트에서 modernize CLI를 실행시켜 앱 평가를 시작합니다.
+앱 루트에서 Modernize CLI를 실행해 앱 평가를 시작합니다.
 
 ```bash
 modernize
@@ -20,9 +20,9 @@ modernize
 
 > [!NOTE]
 >
-> Modernize CLI가 작업에 사용할 모델을 자동으로 고르게 하려면, 실행 후 화면에서 `M` 키를 눌러 `Auto`를 선택합니다.
+> Modernize CLI가 작업에 사용할 모델을 자동으로 선택하게 하려면 실행 후 화면에서 `M` 키를 눌러 `Auto`를 선택합니다.
 
-또는 아래와 같이 실행시 `auto` 모드를 선택할 수도 있습니다.
+또는 다음과 같이 실행할 때 `auto` 모드를 선택할 수도 있습니다.
 
 ```bash
 modernize --model auto
@@ -46,16 +46,16 @@ modernize --model auto
 | Additional assessment context |  |
 | Enter output path | 기본값 |
 
-평가가 끝나면 아래와 같은 화면이 표시됩니다. 곧바로 다음 계획 생성 단계로 넘어가는 대신 메인 메뉴로 돌아갑니다.
+평가가 끝나면 다음 화면에서 계획을 바로 생성하지 않고 메인 메뉴로 돌아갑니다.
 
 | 항목 | 선택값 |
 | --- | --- |
 | How would you like to continue? | Return to main menu |
 
-평가 보고서는 `java/.github/modernize/assessment` 아래 생성되었으니 보고서를 열어 검토합니다.
+`java/.github/modernize/assessment` 아래에 생성된 평가 보고서를 열어 검토합니다.
 
 ```text
-방금 `java/.github/modernize/assessment` 디렉토리에 생성된 평가 보고서를 열어줘
+방금 `java/.github/modernize/assessment` 디렉터리에 생성된 평가 보고서를 열어줘
 ```
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
@@ -73,11 +73,11 @@ modernize --model auto
 | Push to Git URL | 입력하지 않음 |
 | 실행 | Generate modernization rulebook from source document |
 
-Rulebook은 `java/.github/modernize/rulebook` 아래 생성되었으니 문서를 열어 검토합니다.
+`java/.github/modernize/rulebook` 아래에 생성된 rulebook 문서를 열어 검토합니다.
 
 > [!CAUTION]
 >
-> Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다.
+> Rulebook은 작업 지침이지 OS 권한을 제한하거나 비용 발생을 막는 보안 장치가 아닙니다.
 
 ## 계획 생성
 
@@ -88,14 +88,14 @@ Rulebook은 `java/.github/modernize/rulebook` 아래 생성되었으니 문서�
 | How would you like to modernize your app? | Plan |
 | Choose source type | Current folder |
 | How would you like to deliver the plan? | Keep the plan local |
-| Select an assessment report to include (optional) | 작성된 리포트 |
+| Select an assessment report to include (optional) | 생성된 평가 보고서 |
 | Create modernization plan / Plan name | modernization-plan (기본값) |
 | Create modernization plan / Prompt | 아래 프롬프트 참조 |
 
-`Create modernization plan`에서 프롬프트를 입력하는 화면에 다음 내용을 입력합니다.
+`Create modernization plan`의 프롬프트 입력 화면에 다음 내용을 입력합니다.
 
 ```text
-`.github/modernize/rulebook/`의 생성된 rulebook과 평가 보고서를 읽고
+`.github/modernize/rulebook/`에 생성된 rulebook과 평가 보고서를 읽고
 Java 앱을 Linux Azure Container Apps로 현대화하는 하나의 계획을 작성해 줘.
 지금은 계획만 작성하고 실행하지 마.
 
@@ -114,9 +114,9 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 실행 작업에서 제외하고 참가자가 azd로 진행할 별도 절차로 정리해 줘.
 ```
 
-이후 프롬프트를 통해 에이전트가 뭔가를 물어보면 잘 읽어보고 권장 옵션을 선택하거나, 별도 프롬프트를 작성합니다.
+이후 에이전트가 질문하면 내용을 읽고 권장 옵션을 선택하거나 별도로 답변을 입력합니다.
 
-계획 문서는 `.github/modernize/modernization-plan` 아래에서 `plan.md`, `tasks.json` 파일이 생성되었으니 문서를 열어 검토합니다.
+`.github/modernize/modernization-plan` 아래에 생성된 `plan.md`와 `tasks.json`을 열어 검토합니다.
 
 ## 완료 및 다음 단계
 

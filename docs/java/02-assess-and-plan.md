@@ -60,7 +60,7 @@ modernize --model auto
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
 
-## 워크숍 제약 기록
+## 워크숍 스킬 만들기
 
 앱 루트에 `.github/skills/java-aca-workshop/SKILL.md`를 만들고 다음을 저장합니다. Copilot app 채팅에 이 파일의 작성만 맡겨도 됩니다. 샘플 앱 안의 파일이며 워크숍 자료 루트에 만들지 않습니다.
 

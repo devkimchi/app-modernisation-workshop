@@ -20,7 +20,7 @@
 modernize
 ```
 
-**Assess**, **Current folder**, **local**을 선택하고 다음 설정을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다.
+**Assess**와 **Current folder**를 선택한 뒤 평가 도메인 설정으로 이동해 다음 항목을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다. `local`은 UI에서 선택하는 항목이 아니라 아래 CLI 명령의 `--delegate` 값입니다.
 
 | 항목 | 선택과 확인 |
 | --- | --- |

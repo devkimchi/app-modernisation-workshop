@@ -34,7 +34,7 @@ modernize --model auto
 | --- | --- | --- |
 | 초기 화면 | Modernization option | Assess |
 | Choose source type | Source | Current folder (`java` 앱 루트) |
-| 평가 도메인 | Modernization domains | Upgrade, Cloud Readiness, Security |
+| Select assessment domains | Modernization domains | Upgrade, Cloud Readiness, Security |
 | Configure assessment | Analysis Coverage | Full analysis |
 | Security | Minimum CVE Severity | High |
 | Java - Upgrade | Target Runtime | OpenJDK 25 |

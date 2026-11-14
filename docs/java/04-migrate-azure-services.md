@@ -19,7 +19,7 @@ JDK 25 빌드와 로컬 기준 동작이 통과한 **앱 루트**, Copilot app �
 실습 2에서 만든 계획의 Azure 코드 작업은 실습 3에서 함께 실행했습니다. 별도 계획을 만들지 않고, 다음 요구사항이 생성된 코드와 테스트에 반영됐는지 확인합니다.
 
 ```text
-.github/skills/java-aca-workshop/SKILL.md와 실제 업그레이드 결과를 읽고
+`.github/modernize/rulebook/`의 rulebook과 실제 업그레이드 결과를 읽고
 Azure 서비스 이전 코드와 테스트를 검토해 줘. 파일을 변경하거나 실행하지 마.
 JDK 25와 현재 Spring Boot 버전을 유지하고 web/worker의 기존 기능을 보존해 줘.
 

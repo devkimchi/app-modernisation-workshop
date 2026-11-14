@@ -60,54 +60,35 @@ modernize --model auto
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
 
-## 워크숍 스킬 만들기
+## Rulebook 만들기
 
-앱 루트에 `.github/skills/java-aca-workshop/SKILL.md`를 만들고 다음을 저장합니다. Copilot app 채팅에 이 파일의 작성만 맡겨도 됩니다. 샘플 앱 안의 파일이며 워크숍 자료 루트에 만들지 않습니다.
+Modernize CLI의 `rulebook create` 명령은 문서 파일을 기준으로 현대화 rulebook을 생성합니다. 앱 루트에서 [워크숍 기준 문서](modernize-rulebook-source.md)를 입력으로 지정합니다. 기본 출력 위치는 `.github/modernize/rulebook/`입니다.
 
-```markdown
----
-name: java-aca-workshop
-description: Preserve Asset Manager behavior while upgrading to Java 25 and preparing Azure Container Apps deployment.
----
+Windows PowerShell 7, macOS와 Linux에서 같은 명령을 실행합니다.
 
-# 워크숍 제약
-
-- 현재 승인한 계획의 작업 범위만 수행한다. 설치와 외부 서비스 사용은 별도 승인한다.
-- Java 8에서 정식 JDK 25로 업그레이드한다. EA 버전은 사용하지 않는다.
-- Spring Boot 4.1.2를 기준으로 JDK 25와 라이브러리 호환성, 지원 조건을 확인한다.
-  다른 안정 버전이 필요하면 근거와 변경 승인을 받는다. 유료 지원/저장소를 전제하지 않는다.
-- web/worker, 기존 화면, 업로드, 파일 조회와 비동기 썸네일 동작을 유지한다.
-  불필요한 프런트엔드 재작성은 하지 않는다.
-- dev 업로드는 DB에 메타데이터를 기록하지 않는다. dev 외 S3 경로의 DB 기록/조회는
-  별도 이전 대상이며 로컬 기준선에서 확인한 기능과 구분한다.
-- PostgreSQL은 Azure Database for PostgreSQL Flexible Server로,
-  RabbitMQ는 Service Bus로, 로컬 파일과 S3는 private Blob으로 이전한다.
-- 관리 ID, 최소 권한, TLS를 사용한다. 비밀은 코드/설정/Git에 저장하지 않는다.
-  DB 내부 principal/권한과 ARM 역할을 구분하고 migration 주체를 별도로 정한다.
-- 메시지 중복/재시도/dead-letter와 종료 처리를 보존한다. Blob을 공개하거나
-  무기한 SAS URL로 우회하지 않는다. S3 데이터 이전과 AWS 접근은 별도 승인한다.
-- 최종 환경은 Linux Azure Container Apps이다. AKS나 App Service는 사용하지 않는다.
-- azd/Bicep과 로컬 컨테이너 엔진을 사용한다. 원격 빌드, ACR Tasks, az acr build는 금지한다.
-- Windows는 PowerShell 7에서 . ../scripts/use-java.ps1 -Jdk 8 또는 -Jdk 25를,
-  macOS/Linux는 source ../scripts/use-java.sh --jdk 8 또는 --jdk 25를 먼저 적용한다.
-  같은 셸에서 Maven Wrapper를 사용하고 버전/종료 코드/실제 테스트 수를 기록한다.
-- 하나의 계획에 기준 테스트, 업그레이드, Azure 코드, azd 산출물을 순서대로 포함한다.
-  변경 파일, 버전 근거, 검증 명령과 중지/복구 기준을 명시한다.
-- Azure 리소스 생성, DB 변경/데이터 이전, 이미지 게시, 배포와 삭제는
-  계획 실행에 포함하지 않는다. 참가자가 별도 승인 후 직접 실행한다.
-- 테스트를 삭제/건너뛰어 성공시키지 않는다. 실제 결과와 미실행 통합 항목을 구분한다.
+```text
+modernize rulebook create "Create a concise rulebook from the source document. Preserve its requirements and apply them to modernization plans and execution." --file-path ../docs/java/modernize-rulebook-source.md --output-path .github/modernize/rulebook
 ```
 
-계획 입력에 이 파일의 경로를 명시합니다. 스킬은 안내 문서이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다.
+생성된 rulebook을 열어 제약과 예외가 빠지거나 달라지지 않았는지 검토합니다. Rulebook은 작업 지침이지 OS 권한이나 비용 발생을 막는 보안 장치가 아닙니다. 앱 루트의 생성 파일은 `java/` 아래에 있으므로 커밋하지 않습니다.
 
 ## 계획 생성
 
-Modernize CLI의 메인 메뉴에서 `Plan`을 선택합니다. 소스는 현재 앱 폴더를 선택합니다. 평가 보고서를 지정하는 화면이 있으면 앞서 검토한 보고서를 선택합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
-현대화 목표를 입력하는 화면에 다음 내용을 입력합니다. `<실제-평가-보고서>`는 실제 파일 경로로 바꿉니다.
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to modernize your app? | Plan |
+| Choose source type | Current folder |
+| How would you like to deliver the plan? | Keep the plan local |
+| Select an assessment report to include (optional) | 작성된 리포트 |
+| Create modernization plan / Plan name | modernization-plan (기본값) |
+| Create modernization plan / Prompt | 아래 프롬프트 참조 |
+
+`Plan` 흐름의 `Create modernization plan`에서 프롬프트를 입력하는 화면에 다음 내용을 입력합니다.
 
 ```text
-.github/skills/java-aca-workshop/SKILL.md와 <실제-평가-보고서>를 읽고
+`.github/modernize/rulebook/`의 생성된 rulebook과 평가 보고서를 읽고
 Java 앱을 Linux Azure Container Apps로 현대화하는 하나의 계획을 작성해 줘.
 지금은 계획만 작성하고 실행하지 마.
 
@@ -126,11 +107,13 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 실행 작업에서 제외하고 참가자가 azd로 진행할 별도 절차로 정리해 줘.
 ```
 
+이후 프롬프트를 통해 에이전트가 뭔가를 물어보면 잘 읽어보고 권장 옵션을 선택하거나, 별도 프롬프트를 작성합니다.
+
 생성된 계획의 이름과 경로를 기록합니다. 계획 생성 후에는 바로 실행하지 않고 메인 메뉴로 돌아가 결과를 검토합니다.
 
 ## 검토와 완료 기준
 
-실제 생성된 `plan.md`, `tasks.json`과 사용 스킬의 경로를 기록하고 둘을 함께 읽습니다. 출력 경로는 버전과 실행 결과를 따르며 서로 다른 디렉터리에 임의로 복제하지 않습니다.
+실제 생성된 `plan.md`, `tasks.json`과 rulebook의 경로를 기록하고 함께 읽습니다. 출력 경로는 버전과 실행 결과를 따르며 서로 다른 디렉터리에 임의로 복제하지 않습니다.
 
 - 기준 테스트, 업그레이드, Azure 코드와 azd 산출물이 하나의 계획에 순서대로 포함되는가?
 - 외부 도구 설치나 비용 발생 작업, Azure/DB 변경이 섞이지 않았는가?

@@ -11,7 +11,7 @@ Azure 서비스 코드가 준비된 **앱 루트**에서 실습 3의 계획 실�
 별도 계획을 만들지 않고, 다음 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
 
 ```text
-.github/skills/java-aca-workshop/SKILL.md와 실제 Azure 코드/환경 변수 계약을 읽고
+`.github/modernize/rulebook/`의 rulebook과 실제 Azure 코드/환경 변수 계약을 읽고
 현재 앱 루트의 Azure Developer CLI 배포 산출물을 검토해 줘.
 파일을 변경하거나 배포, Azure 리소스 생성을 실행하지 마.
 

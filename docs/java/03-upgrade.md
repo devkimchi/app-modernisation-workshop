@@ -37,7 +37,7 @@ modernize
 추가 실행 지시를 입력하는 화면에서는 다음 내용을 입력합니다.
 
 ```text
-실습 2에서 검토한 계획과 .github/skills/java-aca-workshop/SKILL.md를 따라 실행해 줘.
+실습 2에서 검토한 계획과 `.github/modernize/rulebook/`의 rulebook을 따라 실행해 줘.
 Java 8 기준 테스트를 먼저 확인하고 JDK 25 업그레이드, Azure 코드,
 azd 산출물 준비를 순서대로 진행해 줘. 검증이 실패하면 다음 단계로 진행하지 마.
 실패한 테스트를 삭제하거나 건너뛰지 마.

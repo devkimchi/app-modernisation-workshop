@@ -22,7 +22,7 @@ modernize
 >
 > Modernize CLI가 작업에 사용할 모델을 자동으로 고르게 하려면, 화면에서 `M` 키를 눌러 `Auto`를 선택하거나 `modernize --model auto`를 실행합니다.
 
-**Assess**와 **Current folder**를 선택한 뒤 평가 도메인 설정으로 이동해 다음 항목을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다. `local`은 UI에서 선택하는 항목이 아니라 아래 CLI 명령의 `--delegate` 값입니다.
+**Assess**와 **Current folder**를 선택한 뒤 평가 도메인 설정으로 이동해 다음 항목을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다.
 
 | 항목 | 선택과 확인 |
 | --- | --- |
@@ -30,12 +30,6 @@ modernize
 | 도메인 | Upgrade, Cloud Readiness, Security |
 | 분석 범위 | Full analysis. Architecture, API Contracts, Configuration, Business Workflows, Dependencies, Data Model 포함 여부 확인 |
 | 목표 | 정식 OpenJDK 25, Azure Container Apps와 Linux 컨테이너 |
-
-명령형 진입은 다음과 같습니다. 이 한 줄만으로 Full analysis와 목표 설정까지 지정되지는 않으므로 실제 설정을 확인합니다.
-
-```text
-modernize assess --source . --delegate local --format markdown
-```
 
 앱 소스와 패키지 변경, Azure 리소스 생성과 배포는 평가 범위에 넣지 않습니다. 추가 설치가 필요하면 대상과 영향을 확인하고 별도로 승인합니다. 종료 후 보고서의 실제 경로, 실패/미분석 항목과 `git status --short`를 확인합니다. 도움말의 기본 출력은 `.github/modernize/assessment`이지만 실제 보고서 파일명을 추측하지 않습니다.
 

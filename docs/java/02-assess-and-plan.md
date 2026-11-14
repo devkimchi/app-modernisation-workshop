@@ -14,13 +14,19 @@
 
 modernize CLI를 실행시켜 앱 평가를 시작합니다.
 
-```text
+```bash
 modernize
 ```
 
 > [!NOTE]
 >
-> Modernize CLI가 작업에 사용할 모델을 자동으로 고르게 하려면, 실행 후 화면에서 `M` 키를 눌러 `Auto`를 선택하거나 처음부터 `modernize --model auto`를 실행합니다.
+> Modernize CLI가 작업에 사용할 모델을 자동으로 고르게 하려면, 실행 후 화면에서 `M` 키를 눌러 `Auto`를 선택합니다.
+
+또는 아래와 같이 실행시 `auto` 모드를 선택할 수도 있습니다.
+
+```bash
+modernize --model auto
+```
 
 **Assess**와 **Current folder**를 선택한 뒤 평가 도메인 설정으로 이동해 다음 항목을 확인합니다. UI의 표기는 설치 버전의 안내를 따릅니다.
 

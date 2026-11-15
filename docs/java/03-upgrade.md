@@ -34,7 +34,16 @@ modernize
 >
 > Modernize는 작업별 커밋을 만들 수 있습니다. `$before`에는 실행 직전 커밋을 저장해 두고, 결과 검토 단계에서 실행 중 추가된 커밋과 변경 사항을 확인합니다.
 
-메인 메뉴에서 `Execute`를 선택하고 실습 2에서 생성한 계획을 지정합니다. 실행 방식은 로컬 실행을 선택합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to modernize your app? | Execute |
+| Execute modernization plan | 선택 |
+| Select a plan | `modernization-plan` (java) |
+| Execute the plan | 선택 |
+
+화면의 안내에 따라 계획을 선택하고 `Enter`를 눌러 실행합니다. 실행 방식은 로컬 실행을 선택합니다.
 
 추가 실행 지시를 입력하는 화면에서는 다음 내용을 입력합니다.
 

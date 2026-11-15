@@ -2,9 +2,11 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
 실습 2에서 검토한 하나의 현대화 계획을 실행합니다. 계획에는 Java 8 기준 테스트, JDK 25 업그레이드, Azure 서비스 코드와 azd 산출물 준비가 포함됩니다. 실제 Azure 리소스 생성과 배포는 실습 6에서 별도로 진행합니다.
+
+## 시작 전 준비사항
 
 Copilot app 터미널의 **앱 루트**에서 진행합니다. 이전 web/worker 프로세스는 먼저 멈춥니다. DB/RabbitMQ가 필요한 테스트는 검토한 실행 절차로 서비스를 준비합니다.
 

@@ -124,6 +124,23 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 
 `.github/modernize/modernization-plan` 아래에 생성된 `plan.md`와 `tasks.json`을 열어 검토합니다.
 
+## 생성 문서 커밋하기
+
+앱 루트에서 평가 보고서, 현대화 지침, `plan.md`, `tasks.json`만 추가합니다. 스테이징된 변경을 검토하고 앱 외부 파일이나 비밀정보가 있으면 제외합니다.
+
+```bash
+git add .github/modernize/assessment .github/modernize/rulebook .github/modernize/modernization-plan/plan.md .github/modernize/modernization-plan/tasks.json
+git status --short
+git diff --cached --stat
+git diff --cached
+```
+
+검토를 마친 뒤 문제가 없을 때만 커밋합니다.
+
+```bash
+git commit -m "Modernize: add assessment and plan"
+```
+
 ## 완료 및 다음 단계
 
 - [ ] 지침 파일의 실제 생성 경로를 기록하고 검토했습니다.
@@ -132,6 +149,6 @@ Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
 - [ ] 외부 도구 설치나 비용 발생 작업, Azure/DB 변경이 계획 실행에 포함되지 않았습니다.
 - [ ] 테스트 조건, 파일 범위와 중단/복구 기준이 명확합니다.
 - [ ] 계획 범위를 바꿨다면 `plan.md`와 `tasks.json`을 함께 수정하고 다시 검토했습니다.
-- [ ] 평가 보고서, 현대화 지침, `plan.md`, `tasks.json`을 검토해 커밋했습니다. 앱 외부 파일과 비밀정보는 제외했습니다.
+- [ ] 평가 보고서, 현대화 지침, `plan.md`, `tasks.json`을 커밋하고 앱 외부 파일과 비밀정보는 제외했습니다.
 
 위 항목을 모두 마쳤다면 다음 단계인 [3. JDK 25로 업그레이드하기](03-upgrade.md)로 이동해 Modernize CLI의 `Execute` 메뉴로 계획을 실행합니다.

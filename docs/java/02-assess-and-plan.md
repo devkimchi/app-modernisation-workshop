@@ -60,7 +60,7 @@ modernize --model auto
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
 
-## Rulebook 만들기(Rulebook)
+## 지침 만들기(Rulebook)
 
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
@@ -73,13 +73,13 @@ modernize --model auto
 | Push to Git URL | 입력하지 않음 |
 | 실행 | Generate modernization rulebook from source document |
 
-`java/.github/modernize/rulebook` 아래에 생성된 rulebook 문서를 열어 검토합니다.
+`java/.github/modernize/rulebook` 아래에 생성된 현대화 지침을 열어 검토합니다.
 
 > [!CAUTION]
 >
-> Rulebook은 작업 지침이지 OS 권한을 제한하거나 비용 발생을 막는 보안 장치가 아닙니다.
+> 현대화 지침은 작업 기준일 뿐, 운영체제 권한을 제한하거나 비용 발생을 막는 보안 장치는 아닙니다.
 
-## 계획 생성(Plan)
+## 계획 문서 만들기(Plan)
 
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
@@ -95,7 +95,7 @@ modernize --model auto
 `Create modernization plan`의 프롬프트 입력 화면에 다음 내용을 입력합니다.
 
 ```text
-`.github/modernize/rulebook/`에 생성된 rulebook과 평가 보고서를 읽고
+`.github/modernize/rulebook/`에 생성된 현대화 지침과 평가 보고서를 읽고
 Java 앱을 Linux Azure Container Apps로 현대화하는 하나의 계획을 작성해 줘.
 지금은 계획만 작성하고 실행하지 마.
 

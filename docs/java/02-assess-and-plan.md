@@ -60,7 +60,7 @@ modernize --model auto
 
 ![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
 
-## Rulebook 만들기
+## Rulebook 만들기(Rulebook)
 
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
@@ -79,7 +79,7 @@ modernize --model auto
 >
 > Rulebook은 작업 지침이지 OS 권한을 제한하거나 비용 발생을 막는 보안 장치가 아닙니다.
 
-## 계획 생성
+## 계획 생성(Plan)
 
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 

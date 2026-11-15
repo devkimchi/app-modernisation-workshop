@@ -12,6 +12,8 @@
 
 ## 앱 평가하기(Assessment)
 
+평가의 목적은 앱의 현대화 준비 상태를 파악하는 것입니다. [Microsoft Learn의 CLI 참조](https://learn.microsoft.com/en-us/azure/developer/github-copilot-app-modernization/modernization-agent/cli-commands)에 따르면 평가는 코드, 구성과 종속성을 분석해 결과 보고서를 만듭니다. 이 실습에서는 보고서를 검토해 업그레이드와 클라우드 전환에 필요한 작업 및 위험을 확인하고, 계획을 세울 근거로 삼습니다.
+
 앱 루트에서 Modernize CLI를 실행해 앱 평가를 시작합니다.
 
 ```bash
@@ -62,6 +64,8 @@ modernize --model auto
 
 ## 지침 만들기(Rulebook)
 
+지침을 만드는 목적은 현대화 과정에서 지켜야 할 기준을 정리해 계획과 실행에 일관되게 적용하는 것입니다. [Modernize CLI 개요](https://learn.microsoft.com/en-us/azure/developer/github-copilot-app-modernization/modernization-agent/overview)는 조직의 현대화 표준을 재사용 가능한 방식으로 정의해 여러 앱과 저장소에 일관되게 적용하는 기능을 설명합니다. 이 실습에서는 워크숍 기준 문서를 바탕으로 앱에 적용할 지침을 만듭니다. 다만 현재 공식 문서는 TUI의 `Rulebook` 항목을 별도로 설명하지 않으므로, 아래 화면 항목과 생성 절차는 설치된 CLI에서 확인한 내용입니다.
+
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
 | 항목 | 선택값 또는 입력값 |
@@ -80,6 +84,8 @@ modernize --model auto
 > 현대화 지침은 작업 기준일 뿐, 운영체제 권한을 제한하거나 비용 발생을 막는 보안 장치는 아닙니다.
 
 ## 계획 문서 만들기(Plan)
+
+계획 문서를 만드는 목적은 평가 결과와 현대화 목표를 검토 가능한 작업 순서로 구체화하는 것입니다. [Modernize CLI 개요](https://learn.microsoft.com/en-us/azure/developer/github-copilot-app-modernization/modernization-agent/overview)는 계획이 실행 작업과 성공 기준을 포함하며, 실행 전에 검토하고 다듬을 수 있다고 설명합니다. [CLI 명령 참조](https://learn.microsoft.com/en-us/azure/developer/github-copilot-app-modernization/modernization-agent/cli-commands)는 자연어 목표와 평가 보고서를 바탕으로 `plan.md`와 `tasks.json`을 만든다고 안내합니다. 이 실습에서는 평가 보고서와 앞서 만든 지침을 함께 반영해 계획을 작성한 뒤, 실행 전에 결과를 검토합니다.
 
 화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 

@@ -12,9 +12,10 @@
 
 ## 승인한 계획 실행
 
-Java 8 기준 테스트부터 시작할 수 있도록 현재 셸의 JDK를 선택하고 Modernize CLI를 실행합니다.
+앱 루트에서 Java 8 기준 테스트부터 시작할 수 있도록 현재 셸의 JDK를 선택하고 Modernize CLI를 실행합니다.
 
 ```bash
+# zsh/bash
 source ../scripts/use-java.sh --jdk 8
 git status --short
 before=$(git rev-parse HEAD)
@@ -28,6 +29,10 @@ git status --short
 $before = git rev-parse HEAD
 modernize
 ```
+
+> [!NOTE]
+>
+> Modernize는 작업별 커밋을 만들 수 있습니다. `$before`에는 실행 직전 커밋을 저장해 두고, 결과 검토 단계에서 실행 중 추가된 커밋과 변경 사항을 확인합니다.
 
 메인 메뉴에서 `Execute`를 선택하고 실습 2에서 생성한 계획을 지정합니다. 실행 방식은 로컬 실행을 선택합니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 

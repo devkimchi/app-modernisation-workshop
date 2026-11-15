@@ -14,21 +14,18 @@ Modernize CLI는 작업별 커밋을 만들 수 있습니다. 실행 직전 기�
 
 Java 8 기준 테스트부터 시작할 수 있도록 현재 셸의 JDK를 선택하고 Modernize CLI를 실행합니다.
 
-Windows PowerShell 7:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 8
-git status --short
-$before = git rev-parse HEAD
-modernize
-```
-
-macOS와 Linux:
-
 ```bash
 source ../scripts/use-java.sh --jdk 8
 git status --short
 before=$(git rev-parse HEAD)
+modernize
+```
+
+```powershell
+# PowerShell
+. ../scripts/use-java.ps1 -Jdk 8
+git status --short
+$before = git rev-parse HEAD
 modernize
 ```
 

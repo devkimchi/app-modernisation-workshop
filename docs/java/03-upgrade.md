@@ -8,7 +8,7 @@
 
 ## 실습 범위
 
-실습 3에서는 승인한 Modernize 계획을 실행해 Java와 Spring Boot를 업그레이드하고, Azure 서비스 이전 코드와 배포 산출물을 준비합니다. 여기서 "준비"는 코드를 작성하고 검증한다는 뜻이며, 앱을 Azure에 연결하거나 실제로 기동한다는 뜻은 아닙니다.
+이 실습에서는 승인한 Modernize 계획을 실행해 Java와 Spring Boot를 업그레이드하고, Azure 서비스 이전 코드와 배포 산출물을 준비합니다.
 
 | 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
 | --- | --- | --- |
@@ -83,16 +83,18 @@ source ../scripts/use-java.sh --jdk 25
 아래 명령은 web/worker를 기동하지 않습니다. 외부 서비스를 모의 객체로 대체한 테스트로 동작을 검증합니다.
 
 ```bash
+# zsh/bash
 ./mvnw -pl web,worker -am verify
 ```
 
 ```powershell
+# PowerShell
 ./mvnw.cmd -pl web,worker -am verify
 ```
 
 > [!NOTE]
 >
-> 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다. 실제 Azure 서비스 연결과 앱 기능 확인은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 진행합니다.
+> 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다.
 
 ## 실행 결과 검토
 

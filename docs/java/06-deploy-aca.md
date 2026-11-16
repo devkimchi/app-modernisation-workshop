@@ -40,6 +40,9 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 $env:AZD_NON_INTERACTIVE = 'false'
 ```
 
+> [!NOTE]
+> Podman을 사용하려면 위 `AZD_CONTAINER_RUNTIME` 값을 `podman`으로 바꾸고 앞서 안내한 대체 엔진의 실행 조건을 확인합니다.
+
 Azure CLI와 azd의 로그인은 별개입니다. 필요한 경우 참가자가 직접 로그인하고, 로그인 상태와 선택한 구독을 확인합니다.
 
 ```bash

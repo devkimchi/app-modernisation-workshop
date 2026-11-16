@@ -25,8 +25,6 @@
 | RabbitMQ | Azure Service Bus queue | 생산자/소비자 계약, 처리 결과와 오류 복구 |
 | `dev`의 로컬 파일과 `dev` 외 AWS S3 | private Azure Blob Storage | 업로드 후 조회, 접근 제어와 파일 식별 |
 
-원본 `dev` 업로드 경로에는 DB 메타데이터 행 생성이 없으므로 로컬 기준선에 이를 추가해 해석하지 않습니다. `dev` 외 S3 구현의 메타데이터 로직은 코드에서 평가해 Azure 이전 범위에 포함합니다.
-
 ## 실습 전 확인 사항
 
 이전 실습에서 JDK 25 빌드와 로컬 기준 동작 검증을 마친 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다.

@@ -2,9 +2,32 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: Azure 서비스 이전](04-migrate-azure-services.md) | [다음: ACA 배포](06-deploy-aca.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
-Azure 서비스 코드가 준비된 **앱 루트**에서 실습 3의 계획 실행으로 생성된 Dockerfile, `azure.yaml`, Bicep을 검토합니다. 실제 코드와 선택한 엔진에 맞는지 확인하되 이 단계에서는 리소스를 만들지 않습니다.
+실습 3에서 생성된 Dockerfile, `azure.yaml`, Bicep과 DB 초기화 절차를 실제 앱 코드와 선택한 엔진에 맞춰 검토합니다. 이 단계에서는 Azure 리소스를 만들거나 이미지를 게시하지 않습니다.
+
+## 실습 범위
+
+| 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
+| --- | --- | --- |
+| [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
+| [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md) | 이전된 Azure 서비스 코드와 테스트, 실습 3의 검증 결과 검토 | 코드 변경, Azure 리소스 생성과 실제 연결 |
+| 실습 5: 이 문서 | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
+| [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
+
+## 실습 전 확인 사항
+
+실습 4에서 Azure 서비스 이전 코드와 테스트를 검토한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다. 실습 3에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
+
+```text
+git status --short
+git log --oneline "$before..HEAD"
+git diff "$before..HEAD"
+git diff
+git diff --cached
+```
+
+앱 밖의 변경과 비밀이 없는지 확인합니다. 채팅에 Java 검증을 맡길 때도 해당 셸에 JDK 25 도우미를 먼저 적용하도록 요청합니다.
 
 ## 배포 산출물 요구사항 확인
 
@@ -47,18 +70,6 @@ Azure 서비스 코드가 준비된 **앱 루트**에서 실습 3의 계획 실�
 azd hooks와 호출 스크립트를 모두 검토 대상으로 포함해 줘.
 이미지 게시, 프로비저닝, migration 실행과 배포는 참가자가 별도 승인 후 직접 실행한다.
 ```
-
-실습 3에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
-
-```text
-git status --short
-git log --oneline "$before..HEAD"
-git diff "$before..HEAD"
-git diff
-git diff --cached
-```
-
-앱 밖의 변경과 비밀이 없는지 확인합니다. 채팅에 Java 검증을 맡길 때도 해당 셸에 JDK 25 도우미를 먼저 적용하도록 요청합니다.
 
 ## azure.yaml 검토 포인트
 

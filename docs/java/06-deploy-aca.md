@@ -249,31 +249,62 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
    azd env get-value AZURE_RESOURCE_GROUP
    ```
 
-3. Azure 포털에서 PostgreSQL 서버의 **개요**와 DB 초기화 안내로 서버 FQDN, DB 사용자와 DB 이름을 확인합니다. Storage 계정의 엔드포인트와 컨테이너, Service Bus 네임스페이스의 호스트 이름과 테스트 전용 큐도 포털에서 확인합니다. 로컬 실행 주체에 DB 연결과 테스트 데이터의 읽기 및 쓰기 권한, Blob과 전용 큐에 필요한 데이터 권한이 있어야 합니다. 또한 이 셸의 실행 환경에서 각 서비스로 연결할 네트워크 경로와 PostgreSQL TLS 인증서 신뢰를 확인합니다. 앱 관리 ID에 부여된 권한은 로컬 주체의 권한이 아닙니다.
+3. 테스트 대상과 주체를 실습 5에서 검토한 출력 및 DB 초기화 안내에 대조합니다. 로컬 실행 주체에 DB 연결과 테스트 데이터의 읽기 및 쓰기 권한, Blob과 전용 큐에 필요한 데이터 권한이 있어야 합니다. 또한 이 셸의 실행 환경에서 각 서비스로 연결할 네트워크 경로와 PostgreSQL TLS 인증서 신뢰를 확인합니다. 앱 관리 ID에 부여된 권한은 로컬 주체의 권한이 아닙니다.
 
-   리소스나 권한이 없으면 임의로 만들거나 확대하지 말고 필요한 범위와 비용을 검토한 뒤 별도 승인을 받습니다. 테스트 데이터의 읽기 및 쓰기 범위를 승인한 다음, `<...>`를 확인한 값으로 바꿔 같은 셸에 설정합니다. PostgreSQL 사용자는 Azure CLI 로그인 주체에 연결된 DB 사용자이며, Blob 엔드포인트는 `https://` URL, Service Bus 네임스페이스는 호스트 이름입니다. 토큰이나 연결 문자열은 입력하지 않습니다.
+   리소스나 권한이 없으면 임의로 만들거나 확대하지 말고 필요한 범위와 비용을 검토한 뒤 별도 승인을 받습니다. 테스트 데이터의 읽기 및 쓰기 범위를 승인한 다음, 같은 셸에서 azd 환경의 테스트 대상과 Azure CLI에 로그인한 사용자 이름을 가져옵니다. 이 예시는 Azure CLI의 사용자 계정만 지원합니다. 서비스 주체 등 다른 계정이면 DB 역할 이름을 추측하지 말고 테스트 안내와 인증 방법을 보완합니다. 조회에 실패하면 테스트 변수를 지우고 중단합니다.
 
    ```bash
-   export AZURE_IT_PG_HOST="<PostgreSQL-서버-FQDN>"
-   export AZURE_IT_PG_DATABASE="<테스트-DB-이름>"
-   export AZURE_IT_PG_USER="<Entra-DB-사용자>"
-   export AZURE_IT_BLOB_ENDPOINT="<Blob-서비스-엔드포인트>"
-   export AZURE_IT_BLOB_CONTAINER="<테스트-컨테이너>"
-   export AZURE_IT_SERVICEBUS_NAMESPACE="<Service-Bus-네임스페이스-FQDN>"
-   export AZURE_IT_SERVICEBUS_QUEUE="<테스트-전용-큐>"
+   unset AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
+   if [ "$(az account show --query user.type --output tsv)" = "user" ] &&
+     AZURE_IT_PG_HOST="$(azd env get-value AZURE_IT_PG_HOST)" && [ -n "$AZURE_IT_PG_HOST" ] &&
+     AZURE_IT_PG_DATABASE="$(azd env get-value AZURE_IT_PG_DATABASE)" && [ -n "$AZURE_IT_PG_DATABASE" ] &&
+     AZURE_IT_PG_USER="$(az account show --query user.name --output tsv)" && [ -n "$AZURE_IT_PG_USER" ] &&
+     AZURE_IT_BLOB_ENDPOINT="$(azd env get-value AZURE_IT_BLOB_ENDPOINT)" && [ -n "$AZURE_IT_BLOB_ENDPOINT" ] &&
+     AZURE_IT_BLOB_CONTAINER="$(azd env get-value AZURE_IT_BLOB_CONTAINER)" && [ -n "$AZURE_IT_BLOB_CONTAINER" ] &&
+     AZURE_IT_SERVICEBUS_NAMESPACE="$(azd env get-value AZURE_IT_SERVICEBUS_NAMESPACE)" && [ -n "$AZURE_IT_SERVICEBUS_NAMESPACE" ] &&
+     AZURE_IT_SERVICEBUS_QUEUE="$(azd env get-value AZURE_IT_SERVICEBUS_QUEUE)" && [ -n "$AZURE_IT_SERVICEBUS_QUEUE" ]; then
+     _it_valid=yes
+     for _it_value in "$AZURE_IT_PG_HOST" "$AZURE_IT_PG_DATABASE" "$AZURE_IT_PG_USER" "$AZURE_IT_BLOB_ENDPOINT" "$AZURE_IT_BLOB_CONTAINER" "$AZURE_IT_SERVICEBUS_NAMESPACE" "$AZURE_IT_SERVICEBUS_QUEUE"; do
+       case "$_it_value" in *[![:space:]]*) ;; *) _it_valid=no ;; esac
+       case "$_it_value" in *"<"*|*">"*) _it_valid=no ;; esac
+     done
+     if [ "$_it_valid" = yes ]; then
+       unset _it_valid _it_value
+       export AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
+     else
+       unset _it_valid _it_value AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
+       printf '%s\n' '테스트 대상이 비어 있거나 자리 표시자입니다. 테스트를 실행하지 마세요.' >&2
+       false
+     fi
+   else
+     unset AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
+     printf '%s\n' '테스트 대상 또는 Azure CLI 사용자 확인 실패. 테스트를 실행하지 마세요.' >&2
+     false
+   fi
    ```
 
    ```powershell
-   $env:AZURE_IT_PG_HOST = '<PostgreSQL-서버-FQDN>'
-   $env:AZURE_IT_PG_DATABASE = '<테스트-DB-이름>'
-   $env:AZURE_IT_PG_USER = '<Entra-DB-사용자>'
-   $env:AZURE_IT_BLOB_ENDPOINT = '<Blob-서비스-엔드포인트>'
-   $env:AZURE_IT_BLOB_CONTAINER = '<테스트-컨테이너>'
-   $env:AZURE_IT_SERVICEBUS_NAMESPACE = '<Service-Bus-네임스페이스-FQDN>'
-   $env:AZURE_IT_SERVICEBUS_QUEUE = '<테스트-전용-큐>'
+   & {
+       $names = 'AZURE_IT_PG_HOST', 'AZURE_IT_PG_DATABASE', 'AZURE_IT_BLOB_ENDPOINT', 'AZURE_IT_BLOB_CONTAINER', 'AZURE_IT_SERVICEBUS_NAMESPACE', 'AZURE_IT_SERVICEBUS_QUEUE'
+       foreach ($name in ($names + 'AZURE_IT_PG_USER')) {
+           if (Test-Path "Env:$name") { Remove-Item "Env:$name" }
+       }
+       $userType = az account show --query user.type --output tsv
+       if ($LASTEXITCODE -ne 0 -or $userType -ne 'user') { throw 'Azure CLI 사용자 계정을 확인하지 못했습니다.' }
+       $userName = az account show --query user.name --output tsv
+       if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($userName) -or $userName -match '[<>]') { throw 'Azure CLI 사용자 이름을 확인하지 못했습니다.' }
+       $values = @{}
+       foreach ($name in $names) {
+           $value = azd env get-value $name
+           if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($value) -or $value -match '[<>]') { throw "테스트 대상 확인 실패: $name" }
+           $values[$name] = $value
+       }
+       foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $values[$name], 'Process') }
+       $env:AZURE_IT_PG_USER = $userName
+   }
    ```
 
-   이 환경 변수는 실습 4에서 작성한 테스트의 입력 계약입니다. 생성된 테스트가 같은 이름과 인증 방식을 사용하는지 확인하고 다르면 실습 4에서 보완합니다. 비밀정보를 명령 인자, 셸 기록이나 로그에 남기지 않습니다.
+   이 환경 변수는 실습 4에서 작성한 테스트의 입력 계약입니다. 조회한 값이 승인된 대상과 일치하고 전용 큐가 앱 큐와 다른지 확인합니다. 특히 Azure CLI 사용자 이름이 이 주체에 연결된 PostgreSQL DB 사용자 이름과 일치하지 않으면 실행하지 않습니다. 출력이 없거나 테스트가 같은 이름과 인증 방식을 사용하지 않으면 실습 5의 산출물 또는 실습 4의 테스트를 보완합니다. 비밀정보를 명령 인자, 셸 기록이나 로그에 남기지 않습니다.
 
 4. 같은 앱 루트와 셸에서 다음 명령을 실행합니다. `azure-it` 프로필이나 테스트가 생성되지 않았다면 먼저 실습 4: Azure 서비스로 의존성 이전하기에서 테스트를 준비합니다.
 

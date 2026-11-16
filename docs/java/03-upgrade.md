@@ -51,22 +51,20 @@ modernize
 
 ## 업그레이드 결과 검증
 
-업그레이드 결과를 검증하려면 앱 루트에서 운영체제에 맞는 아래 명령을 실행합니다. 현재 터미널에 JDK 25를 적용한 뒤 Maven Wrapper로 Java 버전을 확인하고 빌드와 테스트를 실행합니다.
-
-Windows:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 25
-./mvnw.cmd -version
-./mvnw.cmd clean verify
-```
-
-macOS와 Linux:
+업그레이드 결과를 검증하려면 앱 루트에서 아래 명령을 실행합니다.
 
 ```bash
+# zsh/bash
 source ../scripts/use-java.sh --jdk 25
 ./mvnw -version
 ./mvnw clean verify
+```
+
+```powershell
+# PowerShell
+. ../scripts/use-java.ps1 -Jdk 25
+./mvnw.cmd -version
+./mvnw.cmd clean verify
 ```
 
 각 명령의 결과를 확인하고 실패하면 다음 명령으로 진행하지 않습니다. Windows는 `$LASTEXITCODE`, macOS와 Linux는 명령 직후 `echo $?`를 확인합니다. Azure 연결이 필요한 통합 검사는 별도로 구분합니다.

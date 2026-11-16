@@ -102,7 +102,7 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
    이 ID가 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
-각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 다음 단계로 진행하지 않습니다. 일부 변경 후 실패할 수 있으므로 재실행하기 전에 DB 상태를 확인합니다.
+각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
 
 초기화 후 승인된 주체로 앱 DB에 `psql`을 연결해 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
 

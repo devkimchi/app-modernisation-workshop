@@ -165,6 +165,8 @@ azd package
 
 ### 배포
 
+앱 루트에서 web과 worker 이미지를 게시하고 Azure Container Apps에 배포합니다.
+
 ```text
 azd deploy
 ```

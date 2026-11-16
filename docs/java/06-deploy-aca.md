@@ -2,9 +2,24 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: azd 준비](05-prepare-azd.md) | [다음: 정리](07-cleanup.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
-검토와 승인이 끝난 산출물로 참가자가 직접 프로비저닝, **로컬 이미지 빌드**, 배포와 기능 검증을 수행합니다. 실행 위치는 Copilot app 터미널의 **앱 루트**입니다. Windows는 PowerShell 7, macOS와 Linux는 Bash 또는 Zsh를 사용합니다. 선택 엔진, JDK 25, 구독, 권한과 네트워크 경로를 확인합니다. Modernize 계획 실행에 실제 Azure 변경을 맡기지 않습니다.
+검토와 승인이 끝난 산출물로 참가자가 직접 프로비저닝, **로컬 이미지 빌드**, 배포와 기능 검증을 수행합니다.
+
+## 실습 범위
+
+| 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
+| --- | --- | --- |
+| [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
+| [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md) | 이전된 Azure 서비스 코드와 테스트 검토, 필요한 수정과 로컬 검증 | Azure 리소스 생성과 실제 연결 |
+| [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 및 수정 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
+| 실습 6: 이 문서 | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
+
+Modernize 계획 실행에 실제 Azure 변경을 맡기지 않습니다.
+
+## 실습 전 확인 사항
+
+[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 산출물을 검토하고 승인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 사용합니다. Windows는 PowerShell 7, macOS와 Linux는 Bash 또는 Zsh를 사용합니다. 선택한 컨테이너 엔진, JDK 25, 구독, 권한과 네트워크 경로를 확인합니다.
 
 ## 환경 설정
 

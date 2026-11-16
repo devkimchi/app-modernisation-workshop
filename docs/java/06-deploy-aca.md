@@ -104,7 +104,13 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
 각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
 
-초기화 후 승인된 주체로 앱 DB에 `psql`을 연결해 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
+초기화 후 DB에 접근할 수 있는 호스트에서 위 인증 안내에 따라 승인된 주체의 Entra 토큰을 `PGPASSWORD`로 전달합니다. `<서버-FQDN>`, `<앱-DB-이름>`과 `<DB-사용자-이름>`을 해당 주체의 값으로 바꿔 앱 DB에 연결합니다.
+
+```text
+psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<DB-사용자-이름>"
+```
+
+연결된 `psql`에서 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
 
 ```text
 SELECT current_database(), session_user, current_user;
@@ -134,6 +140,8 @@ WHERE oid = to_regclass('public.image_metadata');
 web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 마이그레이션 관리 ID여야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다. 이 조회만으로 Entra ID 연결이나 배포된 앱의 실제 인증을 증명하지는 못합니다.
 
 결과를 검토한 초기화 절차의 대상과 권한에 대조하고 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다. ARM/Bicep 성공만으로 DB 초기화가 끝났다고 판단하지 않습니다.
+
+확인을 마치면 `\q`로 `psql`을 종료합니다. 연결 실패 또는 확인 후 셸에서 PowerShell은 `Remove-Item Env:\PGPASSWORD`, Bash와 Zsh는 `unset PGPASSWORD`로 토큰을 지웁니다.
 
 ### 이미지 패키징
 

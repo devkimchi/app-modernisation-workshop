@@ -4,7 +4,7 @@
 
 ## 목표
 
-검토와 승인이 끝난 산출물로 참가자가 직접 프로비저닝, **로컬 이미지 빌드**, 배포와 기능 검증을 수행합니다.
+검토와 승인이 끝난 산출물로 참가자가 직접 프로비저닝, 로컬 이미지 빌드, 배포와 기능 검증을 수행합니다.
 
 ## 실습 범위
 
@@ -15,26 +15,22 @@
 | [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 및 수정 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
 | 실습 6: 이 문서 | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
 
-Modernize 계획 실행에 실제 Azure 변경을 맡기지 않습니다.
-
 ## 실습 전 확인 사항
 
-[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 산출물을 검토하고 승인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 사용합니다. Windows는 PowerShell 7, macOS와 Linux는 Bash 또는 Zsh를 사용합니다. 선택한 컨테이너 엔진, JDK 25, 구독, 권한과 네트워크 경로를 확인합니다.
+[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 산출물을 검토하고 승인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 사용합니다.
 
 ## 환경 설정
 
-Windows:
-
-```powershell
-$env:AZD_CONTAINER_RUNTIME = 'docker'
-$env:AZD_NON_INTERACTIVE = 'false'
-```
-
-macOS와 Linux:
-
 ```bash
+# zsh/bash
 export AZD_CONTAINER_RUNTIME=docker
 export AZD_NON_INTERACTIVE=false
+```
+
+```powershell
+# PowerShell
+$env:AZD_CONTAINER_RUNTIME = 'docker'
+$env:AZD_NON_INTERACTIVE = 'false'
 ```
 
 다음 명령은 두 환경에서 같습니다. `<...>`를 실제 값으로 바꾸고 로그인 상태부터 확인합니다. 필요한 로그인은 참가자가 직접 수행합니다.

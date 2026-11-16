@@ -224,101 +224,21 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 준비한 테스트는 실제 Azure의 DB, Service Bus와 Blob에 연결해 데이터를 읽고 씁니다. 로컬 실행 주체의 권한을 사용하므로, 이 결과만으로 web이나 worker의 관리 ID 인증을 증명할 수 없습니다.
 
-1. 앱 루트의 현재 셸에서 JDK 25를 선택하고 Maven `azure-it` 프로필을 확인합니다. 다음 명령은 테스트를 실행하지 않습니다.
+1. [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 생성한 테스트, `azure-it` 프로필, 실행 스크립트와 안내를 검토합니다. 테스트나 스크립트가 없거나 연결이 불분명하면 해당 실습을 보완하고 진행하지 않습니다.
+2. 테스트 대상과 주체를 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 출력 및 DB 초기화 안내에 대조합니다. Azure CLI 사용자에게 DB, Blob과 테스트 전용 큐의 최소 데이터 권한이 있는지, 네트워크 경로와 PostgreSQL TLS 인증서를 신뢰할 수 있는지 확인합니다. 앱 큐 출력이 실제 배포 설정과 일치하는지 확인하고 앱 큐와 다른 전용 큐만 사용합니다.
+
+   Azure CLI 사용자 이름이 해당 PostgreSQL DB 사용자 이름과 다르거나, 대상, 권한, 비용 또는 데이터 변경 범위가 불분명하면 실행하지 않습니다. 리소스나 권한이 없으면 필요한 범위와 비용을 검토하고 별도 승인을 받습니다. 로그인 상태가 없거나 주체가 다르면 `az login`으로 승인된 사용자 계정에 로그인한 뒤 확인합니다. 서비스 주체의 DB 역할 이름은 추측하지 않습니다.
+3. 앱 루트에서 현재 셸에 맞는 스크립트를 직접 실행합니다. 스크립트가 JDK 25를 선택하고 Azure CLI와 azd에서 대상을 조회합니다. 표시된 구독, 리소스, 사용자와 데이터 읽기 및 쓰기 범위를 앞서 검토한 비용과 함께 확인한 뒤 실행에 명시적으로 동의합니다. CI나 비대화형 환경에서는 실행할 수 없습니다.
 
    ```bash
-   # zsh/bash
-   source ../scripts/use-java.sh --jdk 25
-   ./mvnw -Pazure-it -pl web,worker -am help:active-profiles
+   ./scripts/run-azure-it.sh
    ```
 
    ```powershell
-   # PowerShell
-   . ../scripts/use-java.ps1 -Jdk 25
-   ./mvnw.cmd -Pazure-it -pl web,worker -am help:active-profiles
+   ./scripts/run-azure-it.ps1
    ```
 
-   출력에 `azure-it`가 활성 프로필로 나타나는지 확인합니다. 명령 성공만으로 테스트 연결은 확인되지 않으므로 생성된 테스트 코드와 실행 안내도 검토합니다. 프로필이 없거나 테스트와 연결되지 않았다면 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)를 보완하고 진행하지 않습니다.
-
-   안내에서 테스트 대상과 환경 변수, 실제 사용할 인증 방식과 주체, 필요한 최소 권한, 네트워크 경로와 비용을 확인합니다. 메시지 수신은 다른 메시지를 소비하지 않는 전용 큐에서만 수행합니다. 대상이나 실행 방법이 불분명하면 실행하지 않습니다.
-2. Azure CLI에 로그인한 주체와 구독, azd 환경의 구독 및 리소스 그룹을 확인하고 승인한 대상과 대조합니다. 테스트 코드가 Azure CLI 주체만 사용하도록 `AzureCliCredential`을 사용하는지도 확인합니다. 로그인 상태가 없거나 주체가 다르면 이 셸에서 `az login`으로 승인된 계정에 로그인한 뒤 다시 확인합니다.
-
-   ```text
-   az account show --query "{name:name,id:id,tenant:tenantId,user:user.name}" --output table
-   azd env get-value AZURE_SUBSCRIPTION_ID
-   azd env get-value AZURE_RESOURCE_GROUP
-   ```
-
-3. 테스트 대상과 주체를 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 출력 및 DB 초기화 안내에 대조합니다. 로컬 실행 주체에 DB 연결과 테스트 데이터의 읽기 및 쓰기 권한, Blob과 전용 큐에 필요한 데이터 권한이 있어야 합니다. 또한 이 셸의 실행 환경에서 각 서비스로 연결할 네트워크 경로와 PostgreSQL TLS 인증서 신뢰를 확인합니다. 앱 관리 ID에 부여된 권한은 로컬 주체의 권한이 아닙니다.
-
-   리소스나 권한이 없으면 임의로 만들거나 확대하지 말고 필요한 범위와 비용을 검토한 뒤 별도 승인을 받습니다. 테스트 데이터의 읽기 및 쓰기 범위를 승인한 다음, 같은 셸에서 azd 환경의 테스트 대상과 Azure CLI에 로그인한 사용자 이름을 가져옵니다. 이 예시는 Azure CLI의 사용자 계정만 지원합니다. 서비스 주체 등 다른 계정이면 DB 역할 이름을 추측하지 말고 테스트 안내와 인증 방법을 보완합니다. 조회에 실패하면 테스트 변수를 지우고 중단합니다.
-
-   ```bash
-   unset AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
-   if [ "$(az account show --query user.type --output tsv)" = "user" ] &&
-     AZURE_IT_PG_HOST="$(azd env get-value AZURE_IT_PG_HOST)" && [ -n "$AZURE_IT_PG_HOST" ] &&
-     AZURE_IT_PG_DATABASE="$(azd env get-value AZURE_IT_PG_DATABASE)" && [ -n "$AZURE_IT_PG_DATABASE" ] &&
-     AZURE_IT_PG_USER="$(az account show --query user.name --output tsv)" && [ -n "$AZURE_IT_PG_USER" ] &&
-     AZURE_IT_BLOB_ENDPOINT="$(azd env get-value AZURE_IT_BLOB_ENDPOINT)" && [ -n "$AZURE_IT_BLOB_ENDPOINT" ] &&
-     AZURE_IT_BLOB_CONTAINER="$(azd env get-value AZURE_IT_BLOB_CONTAINER)" && [ -n "$AZURE_IT_BLOB_CONTAINER" ] &&
-     AZURE_IT_SERVICEBUS_NAMESPACE="$(azd env get-value AZURE_IT_SERVICEBUS_NAMESPACE)" && [ -n "$AZURE_IT_SERVICEBUS_NAMESPACE" ] &&
-     AZURE_IT_SERVICEBUS_QUEUE="$(azd env get-value AZURE_IT_SERVICEBUS_QUEUE)" && [ -n "$AZURE_IT_SERVICEBUS_QUEUE" ]; then
-     _it_valid=yes
-     for _it_value in "$AZURE_IT_PG_HOST" "$AZURE_IT_PG_DATABASE" "$AZURE_IT_PG_USER" "$AZURE_IT_BLOB_ENDPOINT" "$AZURE_IT_BLOB_CONTAINER" "$AZURE_IT_SERVICEBUS_NAMESPACE" "$AZURE_IT_SERVICEBUS_QUEUE"; do
-       case "$_it_value" in *[![:space:]]*) ;; *) _it_valid=no ;; esac
-       case "$_it_value" in *"<"*|*">"*) _it_valid=no ;; esac
-     done
-     if [ "$_it_valid" = yes ]; then
-       unset _it_valid _it_value
-       export AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
-     else
-       unset _it_valid _it_value AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
-       printf '%s\n' '테스트 대상이 비어 있거나 자리 표시자입니다. 테스트를 실행하지 마세요.' >&2
-       false
-     fi
-   else
-     unset AZURE_IT_PG_HOST AZURE_IT_PG_DATABASE AZURE_IT_PG_USER AZURE_IT_BLOB_ENDPOINT AZURE_IT_BLOB_CONTAINER AZURE_IT_SERVICEBUS_NAMESPACE AZURE_IT_SERVICEBUS_QUEUE
-     printf '%s\n' '테스트 대상 또는 Azure CLI 사용자 확인 실패. 테스트를 실행하지 마세요.' >&2
-     false
-   fi
-   ```
-
-   ```powershell
-   & {
-       $names = 'AZURE_IT_PG_HOST', 'AZURE_IT_PG_DATABASE', 'AZURE_IT_BLOB_ENDPOINT', 'AZURE_IT_BLOB_CONTAINER', 'AZURE_IT_SERVICEBUS_NAMESPACE', 'AZURE_IT_SERVICEBUS_QUEUE'
-       foreach ($name in ($names + 'AZURE_IT_PG_USER')) {
-           if (Test-Path "Env:$name") { Remove-Item "Env:$name" }
-       }
-       $userType = az account show --query user.type --output tsv
-       if ($LASTEXITCODE -ne 0 -or $userType -ne 'user') { throw 'Azure CLI 사용자 계정을 확인하지 못했습니다.' }
-       $userName = az account show --query user.name --output tsv
-       if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($userName) -or $userName -match '[<>]') { throw 'Azure CLI 사용자 이름을 확인하지 못했습니다.' }
-       $values = @{}
-       foreach ($name in $names) {
-           $value = azd env get-value $name
-           if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($value) -or $value -match '[<>]') { throw "테스트 대상 확인 실패: $name" }
-           $values[$name] = $value
-       }
-       foreach ($name in $names) { [Environment]::SetEnvironmentVariable($name, $values[$name], 'Process') }
-       $env:AZURE_IT_PG_USER = $userName
-   }
-   ```
-
-   이 환경 변수는 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 작성한 테스트의 입력 계약입니다. 조회한 값이 승인된 대상과 일치하고 전용 큐가 앱 큐와 다른지 확인합니다. 특히 Azure CLI 사용자 이름이 이 주체에 연결된 PostgreSQL DB 사용자 이름과 일치하지 않으면 실행하지 않습니다. 출력이 없거나 테스트가 같은 이름과 인증 방식을 사용하지 않으면 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)의 산출물 또는 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)의 테스트를 보완합니다. 비밀정보를 명령 인자, 셸 기록이나 로그에 남기지 않습니다.
-
-4. 같은 앱 루트와 셸에서 다음 명령을 실행합니다. `azure-it` 프로필이나 테스트가 생성되지 않았다면 먼저 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 테스트를 준비합니다.
-
-   ```bash
-   # zsh/bash
-   ./mvnw -Pazure-it -pl web,worker -am verify
-   ```
-
-   ```powershell
-   # PowerShell
-   ./mvnw.cmd -Pazure-it -pl web,worker -am verify
-   ```
-
-5. 종료 코드와 생성된 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
+4. 종료 코드와 이번 실행의 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
 
 ### end-to-end 테스트 작성과 실행
 

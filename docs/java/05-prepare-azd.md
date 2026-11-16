@@ -34,57 +34,41 @@ Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 �
 아래 프롬프트를 통해 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
 
 ```text
-`.github/modernize/rulebook/`의 rulebook과 실제 Azure 코드/환경 변수 계약을 읽고
-현재 앱 루트에 이미 있는 Azure Developer CLI 배포 산출물만 검토해 줘.
-파일을 만들거나 변경하지 말고, 명령을 실행하거나 결과를 다시 만들지 마.
-누락되거나 확인할 수 없는 산출물과 요구사항은 누락 또는 미확인으로 보고해 줘.
+`.github/modernize/rulebook/`과 실제 Azure 코드 및 환경 변수 계약을 읽고,
+현재 앱 루트의 기존 Azure Developer CLI 산출물만 검토해 줘. 파일을 만들거나
+변경하지 말고 명령도 실행하지 마. 누락된 항목은 누락으로, 근거가 없어 확인할 수
+없는 항목은 미확인 또는 미검증으로 보고해 줘.
 
-- 기존 `azure.yaml`에 서비스 이름 `web`, `worker`가 정의되어 있는지 확인해 줘.
-  두 서비스의 `language`가 `docker`, `host`가 `containerapp`인지 확인해 줘.
-- 설정에서 로컬 Docker 엔진과 `AZD_CONTAINER_RUNTIME=docker`를 사용하는지,
-  `docker.remoteBuild`가 `false`, `docker.platform`이 `linux/amd64`인지 확인해 줘.
-- `web`과 `worker`의 기존 Dockerfile이 있는지, 루트 Maven reactor를 빌드 컨텍스트로
-  사용하는지 확인해 줘.
-- 빌드와 런타임이 JDK 25 기반인지 확인해 줘. 이미지의 실제 tag와 manifest를
-  확인한 기존 근거가 없으면 미확인으로 표시해 줘.
-- 기존 Dockerfile에서 multi-stage 빌드, 비루트 사용자, `.dockerignore`, 필수 설정과
+- `azure.yaml`의 `web`/`worker`가 `language: docker`, `host: containerapp`인지,
+  로컬 Docker와 `AZD_CONTAINER_RUNTIME=docker`, `docker.remoteBuild: false`,
+  `docker.platform: linux/amd64` 설정인지 확인해 줘.
+- 두 서비스의 Dockerfile이 루트 Maven reactor를 빌드하는지, JDK 25와 실제 이미지
+  tag/manifest 근거, multi-stage 빌드, 비루트 사용자, `.dockerignore`, 필수 설정과
   health check를 확인해 줘.
-- `web`은 HTTP ingress와 실제 listen port가 일치하는지, `worker`는 ingress가 꺼져
-  있는지 확인해 줘.
-- `worker`가 `minReplicas=1`과 `maxReplicas=1`의 장기 실행 소비자인지 확인해 줘.
-  `web`에서 `minReplicas=0`을 사용한다면 cold start 검증이 계획되어 있는지 확인해 줘.
-- 기존 Bicep에서 ACR Basic, ACA environment, Log Analytics,
-  PostgreSQL Flexible Server, Service Bus queue, private Blob과 각각의 관리 ID 및
-  최소 권한을 정의했는지 확인해 줘.
-- ACR admin 계정 대신 관리 ID pull을 사용하는지, 로컬 `azd` 게시 주체의 push 권한을
-  별도로 설명하는지 확인해 줘. `az acr build`, ACR Tasks와 remote build는 사용하지
-  않는 설정인지 확인해 줘.
-- `AZURE_CONTAINER_REGISTRY_ENDPOINT`와 `AZURE_RESOURCE_GROUP`을 출력하고,
-  서비스 검색에 필요한 `azd-service-name` 태그 또는 `resourceName`을 연결하는지
-  확인해 줘.
-- `AZURE_WEB_APP_NAME`, `AZURE_WORKER_APP_NAME`, `WEB_URI`를 출력해 후속 조회에
-  사용하는지 확인해 줘.
-- `.azure/`, 비밀 파일과 빌드 산출물이 Git 및 이미지 빌드 컨텍스트에서 제외되는지
-  확인해 줘.
-- DB Entra 관리자와 DB 내부 principal, 권한 및 스키마를 설정하는 별도 초기화 절차가
-  이미 있는지 확인해 줘. 컨트롤 플레인 RBAC만으로 DB 인증이 완료된 것으로
-  처리하지 마.
-- 로컬 참가자와 ACA에서 DB까지 실제로 접근할 수 있는 네트워크 경로가 확인되는지
-  검토해 줘. 공개 DB라면 확인한 클라이언트 또는 egress IP만 허용하고 모든 IP를
-  열지 않는지, ACA의 inbound static IP를 outbound IP로 오인하지 않는지 확인해 줘.
-  제한된 연결 경로를 확인할 수 없으면 그 사실과 VNet 또는 private 연결 같은 대안을
-  보고하고, 비용 승인이 필요한 사항을 표시해 줘.
-- 기존 절차가 새 데모 DB만 초기화하고 기존 DB를 삭제하거나 덮어쓰지 않는지 확인해 줘.
-  실제 DB 사용자, 권한 또는 migration은 실행하지 마.
-- 구독, 리전, SKU와 비용, 권한, 네트워크 및 이미지 tag 정책을 설명해 줘.
-- 기존에 기록된 템플릿 구문 검증과 단위 빌드 결과만 확인해 줘. 결과가 없거나
-  근거를 확인할 수 없으면 미검증으로 표시하고 명령은 실행하거나 재실행하지 마.
-  미실행 통합 항목도 구분해 줘.
-- `azd` hooks와 호출 스크립트도 검토해 줘.
-- 이미지 게시, 프로비저닝, migration 실행과 배포는 수행하지 마.
+- `web`의 HTTP ingress와 listen port가 일치하고 `worker`는 ingress가 꺼져 있는지,
+  `worker`가 장기 실행 소비자이며 `minReplicas=1`/`maxReplicas=1`인지 확인해 줘.
+  `web`이 scale-to-zero이면 cold start 검증 계획도 확인해 줘.
+- Bicep에 ACR Basic, ACA environment, Log Analytics, PostgreSQL Flexible Server,
+  Service Bus queue, private Blob, 관리 ID와 최소 권한이 있는지 확인해 줘. ACR pull은
+  관리 ID를 쓰고 로컬 `azd` 게시 주체의 push 권한은 별도로 설명하는지 확인해 줘.
+  `az acr build`, ACR Tasks, remote build는 사용하지 않아야 해.
+- `AZURE_CONTAINER_REGISTRY_ENDPOINT`, `AZURE_RESOURCE_GROUP`,
+  `AZURE_WEB_APP_NAME`, `AZURE_WORKER_APP_NAME`, `WEB_URI` 출력과 서비스 검색용
+  `azd-service-name` 태그 또는 `resourceName`을 확인해 줘. `.azure/`, 비밀 파일과
+  빌드 산출물이 Git 및 이미지 빌드 컨텍스트에서 제외되는지도 확인해 줘.
+- DB Entra 관리자, DB 내부 principal/권한/스키마를 설정하는 초기화 절차가 있는지,
+  새 데모 DB만 대상으로 하고 기존 DB를 삭제하거나 덮어쓰지 않는지 확인해 줘.
+  컨트롤 플레인 RBAC를 DB 인증으로 간주하거나 실제 DB 작업을 실행하지 마.
+- 로컬과 ACA의 DB 네트워크 경로, 구독, 리전, SKU, 비용, 권한 및 이미지 tag 정책을
+  검토해 줘. 공개 DB는 확인된 클라이언트/egress IP만 허용해야 하며 ACA inbound
+  static IP를 outbound IP로 간주하지 마. 경로를 확인할 수 없으면 누락과 대안,
+  비용 승인 필요성을 보고해 줘.
+- `azd` hooks와 호출 스크립트를 검토해 줘. 템플릿 검증과 단위 빌드는 이미 기록된
+  결과만 확인하고, 결과가 없으면 미검증으로 표시해 줘. 통합 테스트 미실행 여부도
+  구분해 줘.
+- 이미지 게시, 프로비저닝, DB 사용자/권한 변경, migration 및 배포는 하지 마.
 
-각 판단의 근거로 파일 경로와 줄 번호를 제시해 줘. 코드나 기존 기록에서 확인할 수
-없는 항목은 미확인으로 표시해 줘.
+판단마다 파일 경로와 줄 번호를 제시하고, 확인할 근거가 없으면 추측하지 마.
 ```
 
 ## azure.yaml 검토 포인트

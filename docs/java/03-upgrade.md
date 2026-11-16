@@ -123,4 +123,4 @@ git commit -m "Modernize: upgrade Java application"
 - [ ] Modernize가 만든 커밋과 미커밋 변경을 검토하고, 필요한 변경만 커밋했습니다.
 - [ ] 이 단계에서 실제 Azure 리소스 연결이나 앱 실행을 검증하지 않았음을 확인했습니다.
 
-검증에 실패하면 다음 단계로 진행하지 말고 [문제 해결](08-troubleshooting.md)을 확인합니다. 위 항목을 모두 마쳤다면 [4. Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)로 이동해 이전 코드와 동작을 검토합니다.
+위 항목을 모두 마쳤다면 [4. Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)로 이동해 이전 코드와 동작을 검토합니다.

@@ -226,18 +226,16 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 1. 앱 루트의 현재 셸에서 JDK 25를 선택하고 Maven `azure-it` 프로필을 확인합니다. 다음 명령은 테스트를 실행하지 않습니다.
 
-   Windows PowerShell:
-
-   ```powershell
-   . ../scripts/use-java.ps1 -Jdk 25
-   ./mvnw.cmd -Pazure-it -pl web,worker -am help:active-profiles
-   ```
-
-   WSL/Linux Bash와 macOS zsh/bash:
-
    ```bash
+   # zsh/bash
    source ../scripts/use-java.sh --jdk 25
    ./mvnw -Pazure-it -pl web,worker -am help:active-profiles
+   ```
+
+   ```powershell
+   # PowerShell
+   . ../scripts/use-java.ps1 -Jdk 25
+   ./mvnw.cmd -Pazure-it -pl web,worker -am help:active-profiles
    ```
 
    출력에 `azure-it`가 활성 프로필로 나타나는지 확인합니다. 명령 성공만으로 테스트 연결은 확인되지 않으므로 생성된 테스트 코드와 실행 안내도 검토합니다. 프로필이 없거나 테스트와 연결되지 않았다면 실습 4를 보완하고 진행하지 않습니다.
@@ -255,16 +253,14 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 4. 같은 앱 루트와 셸에서 다음 명령을 실행합니다. `azure-it` 프로필이나 테스트가 생성되지 않았다면 먼저 실습 4를 보완합니다.
 
-   Windows PowerShell:
-
-   ```powershell
-   ./mvnw.cmd -Pazure-it -pl web,worker -am verify
+   ```bash
+   # zsh/bash
+   ./mvnw -Pazure-it -pl web,worker -am verify
    ```
 
-   WSL/Linux Bash와 macOS zsh/bash:
-
-   ```bash
-   ./mvnw -Pazure-it -pl web,worker -am verify
+   ```powershell
+   # PowerShell
+   ./mvnw.cmd -Pazure-it -pl web,worker -am verify
    ```
 
 5. 종료 코드와 생성된 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.

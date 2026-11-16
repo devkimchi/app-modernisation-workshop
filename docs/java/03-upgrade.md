@@ -96,17 +96,25 @@ source ../scripts/use-java.sh --jdk 25
 >
 > 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다. 테스트가 실패하는 경우 Copilot app을 이용해 수정합니다.
 
-## 실행 결과 검토
+## 실행 결과 커밋하기
 
-실행 직전 저장한 `$before`를 같은 터미널에서 사용합니다. 아래 Git 명령은 PowerShell과 Bash/Zsh에서 모두 실행할 수 있습니다.
+앱 루트에서 `$before` 이후 생성된 커밋과 미커밋 변경을 확인합니다. Modernize가 이미 커밋한 파일은 다시 스테이징하지 않습니다. 미커밋 변경이 있으면 `<검토한-파일-경로>`를 실제 경로로 바꿔 커밋할 파일만 추가하고, 스테이징된 범위를 검토합니다. 미커밋 변경이 없으면 이 단계를 건너뜁니다.
 
 ```text
 git status --short
 git log --oneline "$before..HEAD"
 git diff "$before"
+git add <검토한-파일-경로>
+git status --short
+git diff --cached --stat
+git diff --cached
 ```
 
-변경 내용을 검토하고, 미커밋 변경은 범위를 확인한 뒤 커밋합니다.
+검토한 변경만 포함됐고 비밀정보나 불필요한 파일이 없을 때 커밋합니다.
+
+```bash
+git commit -m "Modernize: upgrade Java application"
+```
 
 ## 완료 기준과 문제 해결
 

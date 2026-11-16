@@ -94,7 +94,7 @@ source ../scripts/use-java.sh --jdk 25
 
 > [!NOTE]
 >
-> 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다.
+> 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다. 테스트가 실패하는 경우 Copilot app을 이용해 수정합니다.
 
 ## 실행 결과 검토
 
@@ -103,13 +103,10 @@ source ../scripts/use-java.sh --jdk 25
 ```text
 git status --short
 git log --oneline "$before..HEAD"
-git diff --stat "$before..HEAD"
-git diff "$before..HEAD"
-git diff
-git diff --cached
+git diff "$before"
 ```
 
-`git diff`가 비어 있어도 자동 커밋에 변경이 있을 수 있습니다. 앱 밖의 파일, 비밀과 무관한 변경까지 확인합니다. CLI가 커밋하지 않은 변경만 범위를 검토해 별도로 커밋하며 `git add .`를 무조건 반복하지 않습니다.
+변경 내용을 검토하고, 미커밋 변경은 범위를 확인한 뒤 커밋합니다.
 
 ## 완료 기준과 문제 해결
 

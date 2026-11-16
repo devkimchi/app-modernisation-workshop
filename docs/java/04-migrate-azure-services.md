@@ -35,32 +35,15 @@
 
 ```text
 `.github/modernize/rulebook/`의 rulebook과 실제 업그레이드 결과를 읽고
-Azure 서비스 이전 코드와 테스트를 검토해 줘. 파일을 변경하거나 실행하지 마.
-JDK 25와 현재 Spring Boot 버전을 유지하고 web/worker의 기존 기능을 보존해 줘.
+Azure 서비스 이전 코드와 테스트를 검토해 줘. 파일을 변경하거나 명령을 실행하지 마.
+JDK 25와 현재 Spring Boot 버전, web/worker의 기존 기능을 유지하는지 확인해 줘.
 
-PostgreSQL은 Flexible Server와 TLS로 연결하도록 구성하고
-관리 ID/Entra 인증, 토큰 갱신과 커넥션 풀의 조합을 검토해 줘.
-RabbitMQ 의존성을 Service Bus의 생산자/소비자로 바꿔 줘.
-메시지 포맷을 유지하고 성공 후 complete, 실패 시 abandon/dead-letter,
-중복 수신 시 멱등 처리와 종료 시 소비자 정리를 구현해 줘.
-worker는 장기 실행 소비자로 동작하게 하고 이 단계에서 KEDA를 추가하지 마.
-
-파일은 private Blob에 저장해 줘. 컨테이너 로컬 디스크를 영구 저장소로 쓰지 마.
-기존 화면에서 파일을 조회할 수 있게 인증된 서버 경유 접근 등을 사용하고,
-공개 컨테이너나 무기한 SAS URL로 우회하지 마.
-dev 외 경로의 S3 코드와 설정을 Blob으로 대체하고 그 경로의 DB 메타데이터
-기록과 조회를 보존해 줘. dev 기준선에 없던 DB 기록과 구분해 검증해 줘.
-기존 S3 데이터 이전이나 AWS 리소스 접근은 필요 여부만 계획하고 실행하지 마.
-
-로컬 개발 자격 증명과 ACA 관리 ID를 구분하고 DefaultAzureCredential 등
-선택한 인증 체인의 실제 동작을 설명해 줘. 비밀은 코드/설정/Git에 넣지 마.
-호환되지 않는 Spring Cloud Azure starter를 억지로 추가하지 말고
-현재 Spring Boot/JDK 25를 지원하는 Azure SDK 조합을 근거와 함께 선택해 줘.
-
-변경된 환경 변수, 필요 리소스/역할, DB 초기화 절차를 문서화해 줘.
-단위 테스트는 외부 Azure 없이 실행 가능하게 하고 DB/큐/Blob 통합 테스트는
-별도로 준비하도록 계획해 줘. 인프라 생성, 실제 DB 변경/데이터 이전,
-이미지 게시와 배포는 작업 목록에 넣지 마.
+- **PostgreSQL:** Flexible Server와 TLS를 사용하고, 관리 ID/Entra 인증과 토큰 갱신이 커넥션 풀에서 올바르게 동작하는지 확인해 줘.
+- **Service Bus:** RabbitMQ를 대체하는 생산자와 소비자를 확인해 줘. 메시지 형식과 처리 동작을 유지하고, 성공 시 complete, 실패 시 abandon/dead-letter, 중복 수신 멱등 처리, 종료 시 소비자 정리를 검토해 줘. worker는 장기 실행 소비자로 유지하고 KEDA는 추가하지 마.
+- **Blob:** 파일이 private Blob에 저장되고 인증된 서버 경유로 조회되는지 확인해 줘. 컨테이너 로컬 디스크를 영구 저장소로 쓰거나 공개 컨테이너, 무기한 SAS URL을 사용하지 마. `dev` 외 S3 경로의 코드와 설정 및 DB 메타데이터 기록/조회 동작을 보존하고, `dev` 업로드 경로에 없던 DB 기록을 추가하지 마.
+- **인증과 SDK:** 로컬 개발 자격 증명과 ACA 관리 ID를 구분하고, 선택한 인증 체인(예: `DefaultAzureCredential`)의 실제 동작을 설명해 줘. 비밀을 코드, 설정, Git에 넣지 말고 현재 Spring Boot/JDK 25와 호환되는 Azure SDK를 근거와 함께 확인해 줘. 호환되지 않는 Spring Cloud Azure starter는 추가하지 마.
+- **문서와 테스트:** 변경된 환경 변수, 필요한 리소스와 역할, DB 초기화 절차가 문서화됐는지 확인해 줘. 단위 테스트는 Azure 없이 실행 가능해야 하며 DB/큐/Blob 통합 테스트는 별도로 준비하도록 계획해 줘.
+- **제외 범위:** S3 데이터 이전이나 AWS 리소스 접근은 필요성만 검토하고 실행하지 마. 인프라 생성, 실제 DB 변경/데이터 이전, 이미지 게시, 배포는 작업 목록에서 제외해 줘.
 ```
 
 ## 코드 검증

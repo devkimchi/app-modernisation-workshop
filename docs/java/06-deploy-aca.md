@@ -56,15 +56,14 @@ azd env new "<개인별-고유-환경명>"
 
 ### 리소스 프로비저닝
 
-모든 hooks를 읽고 설치본 `azd provision --help`에 `--preview`가 있으면 다음으로 변경을 미리 봅니다. 미리보기도 Azure 접근과 hook 실행을 포함할 수 있으며 비용 견적이나 데이터 안전 보장을 대신하지 않습니다.
+[실습 5](05-prepare-azd.md)에서 검토한 hooks와 구독, 리전, SKU, 권한, 네트워크 및 비용을 확인하고 승인합니다. 환경에 구독과 리전이 이미 설정되어 있다면 다음 명령으로 확인하고, 구독은 앞에서 확인한 `az account show`의 결과와 대조합니다. 이미 설정된 값은 다시 묻지 않을 수 있습니다.
 
 ```text
-azd provision --preview
+azd env get-value AZURE_SUBSCRIPTION_ID
+azd env get-value AZURE_LOCATION
 ```
 
-구독과 리전이 설정되지 않아 미리보기에서 선택을 요청하면 실습용 값을 선택합니다. 미리보기를 사용할 수 없거나 선택한 값이 저장되지 않아 환경에 값이 없다면 `azd env set AZURE_SUBSCRIPTION_ID "<본인-구독-ID>"`와 `azd env set AZURE_LOCATION "<지원되는-리전>"`으로 지정합니다.
-
-`azd env get-value AZURE_SUBSCRIPTION_ID`와 `azd env get-value AZURE_LOCATION`으로 저장된 값을 확인하고, 구독은 `az account show`의 결과와 대조합니다. 구독, 리전, SKU, 권한, 네트워크와 비용을 승인한 뒤 실제로 생성합니다.
+값이 설정되지 않았다면 대화형 프로비저닝에서 선택을 요청할 수 있습니다. 선택 질문이 반드시 나온다고 가정하지 말고, 승인한 대상이 불분명하면 진행하지 않습니다.
 
 ```text
 azd provision

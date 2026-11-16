@@ -82,11 +82,20 @@ azd provision
 
 ### 리소스 확인
 
-리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 확인합니다. 두 번째 명령의 `<리소스-그룹-이름>`을 확인한 값으로 바꿔 실행합니다.
+리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 읽어 리소스 목록을 확인합니다.
+
+**Bash/Zsh**
 
 ```bash
-azd env get-value AZURE_RESOURCE_GROUP
-az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:name,type:type}" --output table
+rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+az resource list --resource-group "$rg" --query "[].{name:name,type:type}" --output table
+```
+
+**PowerShell 7**
+
+```powershell
+$rg = azd env get-value AZURE_RESOURCE_GROUP
+az resource list --resource-group $rg --query "[].{name:name,type:type}" --output table
 ```
 
 목록을 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 승인한 리소스와 대조합니다. 이름이 비어 있거나 필요한 리소스가 없으면 원인을 파악해 해결합니다. 프로비저닝이 실패한 경우에도 원인을 파악해 해결합니다.

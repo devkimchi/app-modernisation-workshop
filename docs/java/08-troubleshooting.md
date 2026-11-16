@@ -156,33 +156,33 @@ podman exec assets-rabbitmq rabbitmq-diagnostics -q ping
 
 둘 다 준비되면 앱 루트에서 터미널 두 개를 열고 각각 실행합니다.
 
-macOS와 Linux 터미널 A:
+터미널 A:
 
 ```bash
+# zsh/bash
 source ../scripts/use-java.sh --jdk 8
 cd web
 ../mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-macOS와 Linux 터미널 B:
-
-```bash
-source ../scripts/use-java.sh --jdk 8
-cd worker
-../mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
-```
-
-Windows 터미널 A:
-
 ```powershell
+# PowerShell
 . ../scripts/use-java.ps1 -Jdk 8
 Set-Location web
 ../mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-Windows 터미널 B:
+터미널 B:
+
+```bash
+# zsh/bash
+source ../scripts/use-java.sh --jdk 8
+cd worker
+../mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
 
 ```powershell
+# PowerShell
 . ../scripts/use-java.ps1 -Jdk 8
 Set-Location worker
 ../mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
@@ -227,18 +227,16 @@ Set-Location worker
 
 **워크숍 루트**에서 실행합니다. 환경 변수는 실습할 터미널마다 설정합니다.
 
-macOS와 Linux:
-
 ```bash
+# zsh/bash
 export AZD_CONTAINER_RUNTIME=podman
 ./scripts/check-prerequisites.sh --track java --container-engine podman
 ./scripts/install-prerequisites.sh --track java --container-engine podman
 ./scripts/download-sample.sh --track java --container-engine podman
 ```
 
-Windows:
-
 ```powershell
+# PowerShell
 $env:AZD_CONTAINER_RUNTIME = 'podman'
 ./scripts/check-prerequisites.ps1 -Track java -ContainerEngine podman
 ./scripts/install-prerequisites.ps1 -Track java -ContainerEngine podman

@@ -79,9 +79,8 @@ JDK 25와 현재 Spring Boot 버전, web/worker의 기존 기능을 유지하는
 
 ```text
 위에서 승인한 항목만 수정하고 관련 테스트와 문서를 갱신해 줘.
-앱 루트의 같은 셸에서 JDK 25를 선택한 뒤 실습 3의 빌드와 web/worker 모의 테스트를 실행해 줘.
-Windows는 `. ../scripts/use-java.ps1 -Jdk 25`, macOS와 Linux는
-`source ../scripts/use-java.sh --jdk 25`로 JDK를 선택해 줘.
+앱 루트에서 현재 셸에 맞는 `../scripts/`의 `use-java` 도우미로 JDK 25를 선택해 줘.
+같은 셸에서 실습 3의 빌드와 web/worker 모의 테스트를 실행해 줘.
 실제 Azure 연결, 리소스 생성, DB 변경과 배포는 하지 마.
 변경 파일, 테스트 결과와 남은 미검증 항목을 보고해 줘.
 ```

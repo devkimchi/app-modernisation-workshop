@@ -157,13 +157,13 @@ Remove-Item Env:\PGPASSWORD
 
 ### 이미지 패키징
 
-앱 루트에서 web과 worker의 배포용 컨테이너 이미지를 로컬 엔진으로 빌드합니다.
+앱 루트에서 web과 worker의 배포용 컨테이너 이미지를 Docker Engine으로 빌드합니다.
 
 ```text
 azd package
 ```
 
-명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 로그에서 **선택한 로컬 엔진**, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 원인을 해결하고 빌드 결과를 확인한 뒤 배포합니다. 생성된 리소스에 비용이 발생할 수 있으므로 [정리](07-cleanup.md) 범위도 확인합니다.
+명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 로그에서 **Docker Engine**, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 원인을 해결하고 빌드 결과를 확인한 뒤 배포합니다. 생성된 리소스에 비용이 발생할 수 있으므로 [정리](07-cleanup.md) 범위도 확인합니다.
 
 ### 배포
 

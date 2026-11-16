@@ -155,6 +155,8 @@ Remove-Item Env:\PGPASSWORD
 
 ### 이미지 패키징
 
+앱 루트에서 web과 worker의 배포용 컨테이너 이미지를 로컬 엔진으로 빌드합니다.
+
 ```text
 azd package
 ```

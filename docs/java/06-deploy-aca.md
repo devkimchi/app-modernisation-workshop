@@ -241,15 +241,39 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
    출력에 `azure-it`가 활성 프로필로 나타나는지 확인합니다. 명령 성공만으로 테스트 연결은 확인되지 않으므로 생성된 테스트 코드와 실행 안내도 검토합니다. 프로필이 없거나 테스트와 연결되지 않았다면 실습 4를 보완하고 진행하지 않습니다.
 
    안내에서 테스트 대상과 환경 변수, 실제 사용할 인증 방식과 주체, 필요한 최소 권한, 네트워크 경로와 비용을 확인합니다. 메시지 수신은 다른 메시지를 소비하지 않는 전용 큐에서만 수행합니다. 대상이나 실행 방법이 불분명하면 실행하지 않습니다.
-2. 현재 Azure CLI 구독과 azd 환경의 구독 및 리소스 그룹을 확인하고 승인한 대상과 대조합니다. Azure SDK의 인증 체인이 Azure CLI와 다른 자격 증명을 선택할 수 있으므로, 테스트 안내의 인증 방식과 실제 실행 주체도 별도로 확인합니다.
+2. Azure CLI에 로그인한 주체와 구독, azd 환경의 구독 및 리소스 그룹을 확인하고 승인한 대상과 대조합니다. 테스트 코드가 Azure CLI 주체만 사용하도록 `AzureCliCredential`을 사용하는지도 확인합니다. 로그인 상태가 없거나 주체가 다르면 이 셸에서 `az login`으로 승인된 계정에 로그인한 뒤 다시 확인합니다.
 
    ```text
-   az account show --query "{name:name,id:id}" --output table
+   az account show --query "{name:name,id:id,tenant:tenantId,user:user.name}" --output table
    azd env get-value AZURE_SUBSCRIPTION_ID
    azd env get-value AZURE_RESOURCE_GROUP
    ```
 
-3. 테스트 데이터의 읽기 및 쓰기 범위를 확인하고 승인합니다. 같은 셸에서 생성된 실행 안내에 따라 필수 환경 변수를 설정합니다. 비밀정보를 명령 인자나 셸 기록에 남기지 않습니다.
+3. Azure 포털에서 PostgreSQL 서버의 **개요**와 DB 초기화 안내로 서버 FQDN, DB 사용자와 DB 이름을 확인합니다. Storage 계정의 엔드포인트와 컨테이너, Service Bus 네임스페이스의 호스트 이름과 테스트 전용 큐도 포털에서 확인합니다. 로컬 실행 주체에 DB 연결과 테스트 데이터의 읽기 및 쓰기 권한, Blob과 전용 큐에 필요한 데이터 권한이 있어야 합니다. 또한 이 셸의 실행 환경에서 각 서비스로 연결할 네트워크 경로와 PostgreSQL TLS 인증서 신뢰를 확인합니다. 앱 관리 ID에 부여된 권한은 로컬 주체의 권한이 아닙니다.
+
+   리소스나 권한이 없으면 임의로 만들거나 확대하지 말고 필요한 범위와 비용을 검토한 뒤 별도 승인을 받습니다. 테스트 데이터의 읽기 및 쓰기 범위를 승인한 다음, `<...>`를 확인한 값으로 바꿔 같은 셸에 설정합니다. PostgreSQL 사용자는 Azure CLI 로그인 주체에 연결된 DB 사용자이며, Blob 엔드포인트는 `https://` URL, Service Bus 네임스페이스는 호스트 이름입니다. 토큰이나 연결 문자열은 입력하지 않습니다.
+
+   ```bash
+   export AZURE_IT_PG_HOST="<PostgreSQL-서버-FQDN>"
+   export AZURE_IT_PG_DATABASE="<테스트-DB-이름>"
+   export AZURE_IT_PG_USER="<Entra-DB-사용자>"
+   export AZURE_IT_BLOB_ENDPOINT="<Blob-서비스-엔드포인트>"
+   export AZURE_IT_BLOB_CONTAINER="<테스트-컨테이너>"
+   export AZURE_IT_SERVICEBUS_NAMESPACE="<Service-Bus-네임스페이스-FQDN>"
+   export AZURE_IT_SERVICEBUS_QUEUE="<테스트-전용-큐>"
+   ```
+
+   ```powershell
+   $env:AZURE_IT_PG_HOST = '<PostgreSQL-서버-FQDN>'
+   $env:AZURE_IT_PG_DATABASE = '<테스트-DB-이름>'
+   $env:AZURE_IT_PG_USER = '<Entra-DB-사용자>'
+   $env:AZURE_IT_BLOB_ENDPOINT = '<Blob-서비스-엔드포인트>'
+   $env:AZURE_IT_BLOB_CONTAINER = '<테스트-컨테이너>'
+   $env:AZURE_IT_SERVICEBUS_NAMESPACE = '<Service-Bus-네임스페이스-FQDN>'
+   $env:AZURE_IT_SERVICEBUS_QUEUE = '<테스트-전용-큐>'
+   ```
+
+   이 환경 변수는 실습 4에서 작성한 테스트의 입력 계약입니다. 생성된 테스트가 같은 이름과 인증 방식을 사용하는지 확인하고 다르면 실습 4에서 보완합니다. 비밀정보를 명령 인자, 셸 기록이나 로그에 남기지 않습니다.
 
 4. 같은 앱 루트와 셸에서 다음 명령을 실행합니다. `azure-it` 프로필이나 테스트가 생성되지 않았다면 먼저 실습 4: Azure 서비스로 의존성 이전하기에서 테스트를 준비합니다.
 

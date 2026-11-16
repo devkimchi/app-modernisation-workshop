@@ -100,6 +100,8 @@ DB, Service Bus와 Blob을 실제 Azure 서비스에 연결해 검증할 테스�
 - 테스트 전용 데이터와 고유 식별자를 사용하고 기존 데이터나 메시지를 수정하거나 삭제하지 않도록 해 줘. 메시지 수신은 다른 메시지를 소비하지 않는 전용 큐에서만 수행해 줘. 자동 정리는 하지 말고 테스트 데이터와 별도 정리 방법을 안내해 줘.
 - Maven의 `azure-it` 프로필로 실제 Azure 연결 테스트를 명시적으로 실행하도록 분리해 줘. 앱 루트에서 `./mvnw -Pazure-it -pl web,worker -am verify`로 실행하고, PowerShell에서는 `./mvnw.cmd`를 사용해 줘.
 - 기본 빌드와 모의 테스트에서는 실제 Azure 연결 테스트가 실행되지 않게 해 줘. `azure-it` 실행 시 필수 대상이 없거나 연결에 실패하면 실패로 보고하고, 테스트가 없거나 모두 건너뛰어도 성공으로 오인하지 않게 해 줘.
+- 테스트 대상은 `AZURE_IT_PG_HOST`, `AZURE_IT_PG_DATABASE`, `AZURE_IT_PG_USER`, `AZURE_IT_BLOB_ENDPOINT`, `AZURE_IT_BLOB_CONTAINER`, `AZURE_IT_SERVICEBUS_NAMESPACE`, `AZURE_IT_SERVICEBUS_QUEUE` 환경 변수로 받아 줘. 누락, 빈 값 또는 `<...>` 형태의 값을 사용해 연결하지 마.
+- 로컬 테스트는 Azure CLI에 로그인한 주체만 사용하도록 `AzureCliCredential`을 명시적으로 사용하고 다른 자격 증명으로 대체하지 마. PostgreSQL은 해당 주체의 Entra 토큰과 DB 사용자로 TLS 인증해 줘. 토큰은 메모리에서만 사용하고 출력하거나 저장하지 마.
 - 구독, 리소스, 실행 주체, 필요한 최소 권한과 네트워크 경로, 읽기와 쓰기 범위, 환경 변수, 예상 비용을 실행 안내에 명시해 줘. 로컬 실행 주체와 배포된 앱의 관리 ID를 구분해 줘.
 - 앱 루트에서 Windows PowerShell과 WSL/Linux의 Bash 및 macOS의 zsh/bash 각각으로 실행할 수 있는 정확한 준비 및 실행 명령, 결과 확인과 실패 시 조치를 제시해 줘. JDK 선택이 필요하면 해당 셸의 `../scripts/` 도우미를 사용해 줘. 값이 없는 대상은 임의로 채우지 마.
 - 비밀정보를 코드, 명령 인자, 로그나 Git에 넣지 마. 의존성이나 도구의 설치가 필요하면 설치하지 말고 필요한 항목을 보고해 줘.

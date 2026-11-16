@@ -55,7 +55,7 @@ Azure 리소스나 데이터베이스에 실제 권한을 부여하지 말고, �
 - [ ] Blob 권한이 각 앱에 필요한 컨테이너와 작업으로 제한되어 있는지 확인합니다.
 - [ ] 앱에 Contributor 역할이나 구독 전체 데이터 권한이 부여되지 않았는지 확인합니다.
 
-PostgreSQL의 Entra 관리자, DB principal과 권한, 초기화 절차는 [실습 5](05-prepare-azd.md)에서 배포 산출물과 함께 검토합니다. 승인된 DB 초기화는 [실습 6](06-deploy-aca.md)에서 수행합니다.
+PostgreSQL의 Entra 관리자, DB principal과 권한, 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 배포 산출물과 함께 검토합니다. 승인된 DB 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 수행합니다.
 
 실습 3 이후 Modernize가 자동 커밋한 변경과 남은 파일을 확인합니다. `git status`는 미커밋 또는 미추적 파일을, `git log`는 `$before` 이후의 커밋을, `git diff`는 해당 커밋의 변경 내용을 보여 줍니다. 변경 내용에 앱 외부 파일, 불필요한 생성물이나 비밀이 포함되지 않았는지 검토합니다.
 

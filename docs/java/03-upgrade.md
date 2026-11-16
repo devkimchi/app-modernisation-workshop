@@ -90,9 +90,9 @@ source ../scripts/use-java.sh --jdk 25
 ./mvnw.cmd -pl web,worker -am verify
 ```
 
-현재 web/worker는 Azure Database for PostgreSQL, Service Bus, Blob Storage와 관리 ID를 사용하도록 설정되어 있습니다. 따라서 원본 `startapp.sh`/`startapp.cmd`로 실행하는 PostgreSQL과 RabbitMQ 컨테이너는 현재 앱의 의존성을 제공하지 않으며, 이 워크트리에는 Azure 서비스 없이 두 앱을 기동하는 로컬 프로필도 없습니다. 로컬 컴퓨터에서 전체 앱을 직접 실행해 확인할 수는 없습니다.
-
-실제 앱을 실행해 업로드, 조회와 썸네일 처리를 확인하려면 Azure 리소스와 권한을 준비하고 Container Apps에 배포해야 합니다. 절차는 [실습 6: Azure에 배포하기](06-deploy-aca.md)를 따릅니다.
+> [!NOTE]
+>
+> 여기서는 web/worker를 기동하지 않고 빌드와 모의 테스트만 검증합니다. 실제 Azure 서비스 연결과 앱 기능 확인은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 진행합니다.
 
 ## 실행 결과 검토
 

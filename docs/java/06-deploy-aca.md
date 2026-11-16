@@ -106,28 +106,95 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
 
 서버의 Entra 인증과 관리자, DB 이름, web/worker와 마이그레이션 관리 ID를 확인합니다. 실행 호스트에서 DB에 접근할 수 있는지, TLS 인증서를 신뢰할 수 있는지도 확인합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고 재연결 시 만료되었다면 다시 발급합니다.
 
-다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다.
+다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다. 조회 명령은 순서대로 실행하고, 오류나 빈 값이 나오면 다음 명령을 실행하지 마세요.
 
-1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
+1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
+
+   **Bash/Zsh**
 
    ```bash
-   psql "host=<서버-FQDN> dbname=postgres sslmode=verify-full" --username "<Entra-관리자-이름>" --file "infra/db/bootstrap-identities.sql"
+   subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+   rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+   server=$(azd env get-value POSTGRESQL_SERVER)
+   pgHost=$(az postgres flexible-server show --subscription "$subscription" --resource-group "$rg" --name "$server" --query fullyQualifiedDomainName --output tsv)
+   pgAdmin=$(azd env get-value POSTGRESQL_ADMIN_NAME)
+   PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
+   export PGPASSWORD &&
+   psql "host=$pgHost dbname=postgres sslmode=verify-full" --username "$pgAdmin" --file "infra/db/bootstrap-identities.sql"
+   unset PGPASSWORD
    ```
 
-2. **마이그레이션 관리 ID:** 관리자 인증을 종료하고 이 ID가 연결된 승인된 호스트에서 별도로 인증합니다. DB에 접근할 수 있는 해당 호스트의 앱 루트에서 `<서버-FQDN>`, `<앱-DB-이름>`과 `<마이그레이션-관리-ID-이름>`을 바꿔 실행하고, 프롬프트에 web과 worker 관리 ID 이름을 입력합니다.
+   **PowerShell 7**
+
+   ```powershell
+   $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
+   $rg = azd env get-value AZURE_RESOURCE_GROUP
+   $server = azd env get-value POSTGRESQL_SERVER
+   $pgHost = az postgres flexible-server show --subscription $subscription --resource-group $rg --name $server --query fullyQualifiedDomainName --output tsv
+   $pgAdmin = azd env get-value POSTGRESQL_ADMIN_NAME
+   $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
+   if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
+   psql "host=$pgHost dbname=postgres sslmode=verify-full" --username $pgAdmin --file "infra/db/bootstrap-identities.sql"
+   Remove-Item Env:\PGPASSWORD
+   ```
+
+2. **마이그레이션 관리 ID:** 관리자 연결을 종료하고 이 ID가 연결된 승인된 호스트에서 별도로 인증합니다. 해당 호스트에 같은 azd 환경의 비밀이 아닌 출력값과 앱 파일이 준비되어 있어야 합니다. DB에 접근할 수 있는 호스트의 앱 루트에서 아래 값을 먼저 조회합니다. Azure 조회 권한이 없다면 권한을 임의로 추가하지 말고 승인된 조회 주체가 확인한 값을 안전하게 전달합니다. `az login --identity`는 Azure CLI 로그인 주체를 마이그레이션 ID로 바꾸므로 해당 호스트에서만 실행합니다. SQL 프롬프트에는 web과 worker 관리 ID 이름을 입력합니다.
+
+   **Bash/Zsh**
 
    ```bash
-   psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<마이그레이션-관리-ID-이름>" --file "infra/db/initialize-image-metadata.sql"
+   subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+   rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+   server=$(azd env get-value POSTGRESQL_SERVER)
+   pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
+   pgUser=$(azd env get-value MIGRATION_IDENTITY_NAME)
+   pgHost=$(az postgres flexible-server show --subscription "$subscription" --resource-group "$rg" --name "$server" --query fullyQualifiedDomainName --output tsv)
+   migrationClientId=$(az identity show --subscription "$subscription" --resource-group "$rg" --name "$pgUser" --query clientId --output tsv)
+   az login --identity --client-id "$migrationClientId" --allow-no-subscriptions --output none &&
+   PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
+   export PGPASSWORD &&
+   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgUser" --file "infra/db/initialize-image-metadata.sql"
+   unset PGPASSWORD
+   ```
+
+   **PowerShell 7**
+
+   ```powershell
+   $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
+   $rg = azd env get-value AZURE_RESOURCE_GROUP
+   $server = azd env get-value POSTGRESQL_SERVER
+   $pgDatabase = azd env get-value POSTGRESQL_DATABASE
+   $pgUser = azd env get-value MIGRATION_IDENTITY_NAME
+   $pgHost = az postgres flexible-server show --subscription $subscription --resource-group $rg --name $server --query fullyQualifiedDomainName --output tsv
+   $migrationClientId = az identity show --subscription $subscription --resource-group $rg --name $pgUser --query clientId --output tsv
+   az login --identity --client-id $migrationClientId --allow-no-subscriptions --output none
+   if ($LASTEXITCODE -ne 0) { throw "Managed identity login failed." }
+   $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
+   if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
+   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgUser --file "infra/db/initialize-image-metadata.sql"
+   Remove-Item Env:\PGPASSWORD
    ```
 
 마이그레이션 관리 ID는 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
 
-초기화 후 DB에 접근할 수 있는 호스트에서 위 인증 안내에 따라 승인된 주체의 Entra 토큰을 `PGPASSWORD`로 전달합니다. `<서버-FQDN>`, `<앱-DB-이름>`과 `<DB-사용자-이름>`을 해당 주체의 값으로 바꿔 앱 DB에 연결합니다.
+초기화 후에는 2단계와 같은 호스트와 셸에서 조회한 변수와 마이그레이션 ID 인증을 사용해 앱 DB에 연결합니다. 토큰은 다시 발급하고, 조회 실패나 빈 값이 있으면 진행하지 마세요.
+
+**Bash/Zsh**
 
 ```bash
-psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<DB-사용자-이름>"
+PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
+export PGPASSWORD &&
+psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgUser"
+```
+
+**PowerShell 7**
+
+```powershell
+$env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
+if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
+psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgUser
 ```
 
 연결된 `psql`에서 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.

@@ -11,13 +11,13 @@
 | 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
 | --- | --- | --- |
 | [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
-| [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md) | 이전된 Azure 서비스 코드와 테스트, [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)의 검증 결과 검토 | 코드 변경, Azure 리소스 생성과 실제 연결 |
+| [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md) | 이전된 Azure 서비스 코드와 테스트 검토, 필요한 수정과 로컬 검증 | Azure 리소스 생성과 실제 연결 |
 | 실습 5: 이 문서 | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
 | [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
 
 ## 실습 전 확인 사항
 
-[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)에서 Azure 서비스 이전 코드와 테스트를 검토한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다. [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
+[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)에서 Azure 서비스 이전 코드와 테스트를 검토하고 필요한 수정을 마친 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다. [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
 
 ```bash
 git status --short

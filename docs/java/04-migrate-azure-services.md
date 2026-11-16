@@ -44,28 +44,25 @@ JDK 25와 현재 Spring Boot 버전, web/worker의 기존 기능을 유지하는
 - **인증과 SDK:** 로컬 개발 자격 증명과 ACA 관리 ID를 구분하고, 선택한 인증 체인(예: `DefaultAzureCredential`)의 실제 동작을 설명해 줘. 비밀을 코드, 설정, Git에 넣지 말고 현재 Spring Boot/JDK 25와 호환되는 Azure SDK를 근거와 함께 확인해 줘. 호환되지 않는 Spring Cloud Azure starter는 추가하지 마.
 - **문서와 테스트:** 변경된 환경 변수, 필요한 리소스와 역할, DB 초기화 절차가 문서화됐는지 확인해 줘. 단위 테스트는 Azure 없이 실행 가능해야 하며 DB/큐/Blob 통합 테스트는 별도로 준비하도록 계획해 줘.
 - **제외 범위:** S3 데이터 이전이나 AWS 리소스 접근은 필요성만 검토하고 실행하지 마. 인프라 생성, 실제 DB 변경/데이터 이전, 이미지 게시, 배포는 작업 목록에서 제외해 줘.
+
+각 판단의 근거로 파일 경로와 줄 번호를 제시하고, 코드에서 확인할 수 없는 항목은 미확인으로 표시해 줘.
 ```
 
 ## 생성 결과 검토
 
-앱 코드나 Azure 리소스는 수정하지 않고 생성 결과만 검토합니다.
+- [ ] 앱 코드나 Azure 리소스는 변경하지 않습니다. 위의 읽기 전용 검토 요청을 Copilot app 채팅에 보내고, 응답의 파일 경로와 줄 번호를 확인합니다.
+- [ ] 앱 루트에서 실습 3 이후의 변경을 확인합니다. `git diff`에서 앱 외부 파일, 불필요한 생성물이나 비밀이 포함되지 않았는지 살핍니다.
 
-- [ ] 실습 3의 결과에서 단위 테스트의 통과 여부와 실행하지 않은 Azure 통합 테스트를 구분해 기록합니다.
-- [ ] `infra/`의 Bicep에서 `identity`와 `Microsoft.Authorization/roleAssignments`를 찾아 `principalId`가 해당 앱 관리 ID인지 확인하고 파일 경로와 줄 번호를 기록합니다.
-- [ ] web에는 Service Bus Data Sender, worker에는 Data Receiver가 필요한 범위로 할당됐는지 확인합니다. Blob 권한도 필요한 컨테이너로 제한하고, Contributor나 구독 전체 권한은 없어야 합니다. 할당을 확인할 수 없으면 미확인으로 기록합니다.
-- [ ] 실행 안내에서 로컬 `dev` 사용법을 확인합니다. Azure 설정이 별도 프로파일이면 그 실행 방법도 문서화되어 있어야 합니다.
+    ```text
+    git status --short
+    git log --oneline "$before..HEAD"
+    git diff "$before"
+    ```
 
-PostgreSQL 권한과 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토하고, 실제 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 수행합니다.
-
-아래 명령으로 실습 3 이후 변경을 확인하고, 앱 외부 파일, 불필요한 생성물 또는 비밀이 포함되지 않았는지 검토합니다.
-
-```text
-git status --short
-git log --oneline "$before..HEAD"
-git diff "$before..HEAD"
-```
-
-실습 4에서는 코드를 수정하거나 테스트를 다시 실행하지 않습니다. 실습 3의 단위 테스트 결과와 미실행 Azure 통합 테스트를 구분해 기록하고, 로컬 `dev` 및 Azure 설정의 실행 방법이 문서화됐는지 확인합니다.
+- [ ] `infra/`의 Bicep에서 `identity`와 `Microsoft.Authorization/roleAssignments`를 찾아 `principalId`가 해당 앱의 관리 ID인지 확인합니다. web의 Service Bus Data Sender, worker의 Data Receiver, Blob의 컨테이너 범위와 역할을 확인하고, Contributor나 구독 전체 권한이 없는지 살핍니다. Bicep 파일 경로와 줄 번호를 기록하고 확인할 수 없는 할당은 미확인으로 남깁니다.
+- [ ] 실습 3에서 실행한 `./mvnw -pl web,worker -am verify` (PowerShell은 `./mvnw.cmd -pl web,worker -am verify`)의 터미널 결과를 확인해 단위 테스트 상태를 기록합니다. Azure 통합 테스트는 미실행으로 표시하고 다시 실행하지 않습니다.
+- [ ] 각 앱의 `application*.yml` 또는 `application*.properties`와 README에서 로컬 `dev` 및 Azure 설정의 실행 방법을 확인합니다.
+- [ ] PostgreSQL 권한과 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토하고, 실제 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 수행합니다.
 
 ## 완료 기준과 문제 해결
 

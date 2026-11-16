@@ -10,6 +10,15 @@
 
 실습 3에서 JDK 25 빌드와 로컬 기준 동작 검증을 마친 뒤, 같은 Copilot app 터미널의 **앱 루트**에서 진행합니다.
 
+## 실습 범위
+
+| 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
+| --- | --- | --- |
+| [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
+| 실습 4: 이 문서 | 이전된 Azure 서비스 코드와 기존 동작 검토, 외부 Azure 서비스 없는 테스트 | 코드 변경, Azure 리소스 생성과 실제 연결 |
+| [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
+| [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
+
 | 기존 의존성 | 목표 | 보존할 동작 |
 | --- | --- | --- |
 | PostgreSQL 컨테이너 | Azure Database for PostgreSQL Flexible Server | DB 연결과 `dev` 외 S3 경로의 메타데이터 기록 및 조회 |

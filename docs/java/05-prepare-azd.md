@@ -34,41 +34,20 @@ Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 �
 아래 프롬프트를 통해 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
 
 ```text
-`.github/modernize/rulebook/`과 실제 Azure 코드 및 환경 변수 계약을 읽고,
-현재 앱 루트의 기존 Azure Developer CLI 산출물만 검토해 줘. 파일을 만들거나
-변경하지 말고 명령도 실행하지 마. 누락된 항목은 누락으로, 근거가 없어 확인할 수
-없는 항목은 미확인 또는 미검증으로 보고해 줘.
+`.github/modernize/rulebook/`과 실제 Azure 코드 및 환경 변수 계약을 읽고
+현재 앱 루트의 기존 Azure Developer CLI 산출물만 검토해 줘. 파일을 만들거나 변경하지 말고 명령도 실행하지 마.
 
-- `azure.yaml`의 `web`/`worker`가 `language: docker`, `host: containerapp`인지,
-  로컬 Docker와 `AZD_CONTAINER_RUNTIME=docker`, `docker.remoteBuild: false`,
-  `docker.platform: linux/amd64` 설정인지 확인해 줘.
-- 두 서비스의 Dockerfile이 루트 Maven reactor를 빌드하는지, JDK 25와 실제 이미지
-  tag/manifest 근거, multi-stage 빌드, 비루트 사용자, `.dockerignore`, 필수 설정과
-  health check를 확인해 줘.
-- `web`의 HTTP ingress와 listen port가 일치하고 `worker`는 ingress가 꺼져 있는지,
-  `worker`가 장기 실행 소비자이며 `minReplicas=1`/`maxReplicas=1`인지 확인해 줘.
-  `web`이 scale-to-zero이면 cold start 검증 계획도 확인해 줘.
-- Bicep에 ACR Basic, ACA environment, Log Analytics, PostgreSQL Flexible Server,
-  Service Bus queue, private Blob, 관리 ID와 최소 권한이 있는지 확인해 줘. ACR pull은
-  관리 ID를 쓰고 로컬 `azd` 게시 주체의 push 권한은 별도로 설명하는지 확인해 줘.
-  `az acr build`, ACR Tasks, remote build는 사용하지 않아야 해.
-- `AZURE_CONTAINER_REGISTRY_ENDPOINT`, `AZURE_RESOURCE_GROUP`,
-  `AZURE_WEB_APP_NAME`, `AZURE_WORKER_APP_NAME`, `WEB_URI` 출력과 서비스 검색용
-  `azd-service-name` 태그 또는 `resourceName`을 확인해 줘. `.azure/`, 비밀 파일과
-  빌드 산출물이 Git 및 이미지 빌드 컨텍스트에서 제외되는지도 확인해 줘.
-- DB Entra 관리자, DB 내부 principal/권한/스키마를 설정하는 초기화 절차가 있는지,
-  새 데모 DB만 대상으로 하고 기존 DB를 삭제하거나 덮어쓰지 않는지 확인해 줘.
-  컨트롤 플레인 RBAC를 DB 인증으로 간주하거나 실제 DB 작업을 실행하지 마.
-- 로컬과 ACA의 DB 네트워크 경로, 구독, 리전, SKU, 비용, 권한 및 이미지 tag 정책을
-  검토해 줘. 공개 DB는 확인된 클라이언트/egress IP만 허용해야 하며 ACA inbound
-  static IP를 outbound IP로 간주하지 마. 경로를 확인할 수 없으면 누락과 대안,
-  비용 승인 필요성을 보고해 줘.
-- `azd` hooks와 호출 스크립트를 검토해 줘. 템플릿 검증과 단위 빌드는 이미 기록된
-  결과만 확인하고, 결과가 없으면 미검증으로 표시해 줘. 통합 테스트 미실행 여부도
-  구분해 줘.
-- 이미지 게시, 프로비저닝, DB 사용자/권한 변경, migration 및 배포는 하지 마.
+- **azd 설정:** `azure.yaml`의 `web`/`worker`가 `language: docker`, `host: containerapp`인지, 로컬 Docker와 `AZD_CONTAINER_RUNTIME=docker`, `docker.remoteBuild: false`, `docker.platform: linux/amd64` 설정인지 확인해 줘.
+- **이미지 빌드:** 두 서비스의 Dockerfile이 루트 Maven reactor를 빌드하는지, JDK 25와 실제 이미지 tag/manifest 근거, multi-stage 빌드, 비루트 사용자, `.dockerignore`, 필수 설정과 health check를 확인해 줘.
+- **Container Apps:** `web`의 HTTP ingress와 listen port가 일치하고 `worker`는 ingress가 꺼져 있는지, `worker`가 장기 실행 소비자이며 `minReplicas=1`/`maxReplicas=1`인지 확인해 줘. `web`이 scale-to-zero이면 cold start 검증 계획도 확인해 줘.
+- **Azure 리소스와 권한:** Bicep에 ACR Basic, ACA environment, Log Analytics, PostgreSQL Flexible Server, Service Bus queue, private Blob, 관리 ID와 최소 권한이 있는지 확인해 줘. ACR pull은 관리 ID를 쓰고 로컬 `azd` 게시 주체의 push 권한은 별도로 설명하는지 확인해 줘. `az acr build`, ACR Tasks, remote build는 사용하지 않아야 해.
+- **출력과 제외 파일:** `AZURE_CONTAINER_REGISTRY_ENDPOINT`, `AZURE_RESOURCE_GROUP`, `AZURE_WEB_APP_NAME`, `AZURE_WORKER_APP_NAME`, `WEB_URI` 출력과 서비스 검색용 `azd-service-name` 태그 또는 `resourceName`을 확인해 줘. `.azure/`, 비밀 파일과 빌드 산출물이 Git 및 이미지 빌드 컨텍스트에서 제외되는지도 확인해 줘.
+- **DB 초기화:** DB Entra 관리자, DB 내부 principal/권한/스키마를 설정하는 초기화 절차가 있는지, 새 데모 DB만 대상으로 하고 기존 DB를 삭제하거나 덮어쓰지 않는지 확인해 줘. 컨트롤 플레인 RBAC를 DB 인증으로 간주하거나 실제 DB 작업을 실행하지 마.
+- **네트워크와 비용:** 로컬과 ACA의 DB 네트워크 경로, 구독, 리전, SKU, 비용, 권한 및 이미지 tag 정책을 검토해 줘. 공개 DB는 확인된 클라이언트/egress IP만 허용해야 하며 ACA inbound static IP를 outbound IP로 간주하지 마. 경로를 확인할 수 없으면 누락과 대안, 비용 승인 필요성을 보고해 줘.
+- **hooks와 검증:** `azd` hooks와 호출 스크립트를 검토해 줘. 템플릿 검증과 단위 빌드는 이미 기록된 결과만 확인하고, 결과가 없으면 미검증으로 표시해 줘. 통합 테스트 미실행 여부도 구분해 줘.
+- **제외 범위:** 이미지 게시, 프로비저닝, DB 사용자/권한 변경, migration 및 배포는 하지 마.
 
-판단마다 파일 경로와 줄 번호를 제시하고, 확인할 근거가 없으면 추측하지 마.
+각 판단의 근거로 파일 경로와 줄 번호를 제시하고, 누락된 항목은 누락으로, 근거가 없어 확인할 수 없는 항목은 미확인 또는 미검증으로 보고해 줘.
 ```
 
 ## azure.yaml 검토 포인트

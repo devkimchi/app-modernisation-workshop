@@ -113,6 +113,49 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 > - `nvm use`로 사용할 Node.js 버전을 선택합니다.
 > - Linux에서는 glibc 2.27 이상이 필요합니다. 버전이 2.27 미만이거나 확인할 수 없다면 지원되는 배포판을 사용하세요.
 
+### PostgreSQL 클라이언트 설치
+
+실습 6의 Azure DB 초기화와 연결 확인에는 PostgreSQL 클라이언트 `psql`이 필요합니다. 위 설치 도우미와 점검 스크립트에는 포함되어 있지 않으므로 별도로 준비합니다. 로컬 PostgreSQL 서버는 설치하거나 실행할 필요가 없습니다.
+
+먼저 실습에 사용할 터미널에서 확인합니다. 이미 실행된다면 설치를 건너뜁니다.
+
+```bash
+psql --version
+```
+
+**Windows (PowerShell 7)**
+
+```powershell
+winget install --id PostgreSQL.PostgreSQL.17 --exact --source winget --interactive
+```
+
+설치 화면에서 **Command Line Tools만 선택**하고 PostgreSQL Server, pgAdmin과 Stack Builder는 해제합니다. 기본 경로에 설치했다면 현재 PowerShell 창에 실행 경로를 추가합니다. 다른 경로에 설치했다면 실제 `bin` 경로로 바꾸세요.
+
+```powershell
+$env:PATH = "C:/Program Files/PostgreSQL/17/bin;$env:PATH"
+psql --version
+```
+
+**macOS (Bash/Zsh)**
+
+Homebrew의 [libpq](https://formulae.brew.sh/formula/libpq) 패키지를 설치하고 현재 셸에 실행 경로를 추가합니다.
+
+```bash
+brew install libpq
+export PATH="$(brew --prefix libpq)/bin:$PATH"
+psql --version
+```
+
+**Ubuntu/Debian 또는 해당 배포판의 WSL (Bash)**
+
+```bash
+sudo apt-get update
+sudo apt-get install postgresql-client
+psql --version
+```
+
+다른 Linux 배포판에서는 해당 패키지 관리자로 PostgreSQL 클라이언트를 설치합니다. Windows PowerShell과 WSL의 설치 환경은 별개입니다. 새 터미널을 열면 `psql --version`으로 다시 확인하고, Windows와 macOS에서 찾을 수 없으면 위 실행 경로 설정을 다시 적용하세요.
+
 ### 인증과 권한 확인
 
 워크숍 루트의 터미널에서 다음 명령을 차례로 실행하고, 각 서비스에서 실습에 사용할 계정으로 로그인합니다.

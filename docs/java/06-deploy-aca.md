@@ -47,35 +47,45 @@ azd auth login --check-status
 ```text
 azd version
 azd env new "<개인별-고유-환경명>"
-azd env set AZURE_SUBSCRIPTION_ID "<본인-구독-ID>"
-azd env set AZURE_LOCATION "<지원되는-리전>"
 ```
 
-기존 환경을 이어서 사용한다면 새로 만들지 않고 `azd env list`와 `azd env select "<환경명>"`을 사용합니다. `az account show`의 구독과 `azd env get-value AZURE_SUBSCRIPTION_ID`를 대조합니다. 다른 참가자의 환경이나 구독을 선택하지 않습니다. `.azure`에는 상태/설정이 저장되므로 커밋하거나 채팅에 전체 내용을 붙이지 않습니다.
+기존 환경을 이어서 사용한다면 새로 만들지 않고 `azd env list`와 `azd env select "<환경명>"`을 사용합니다. 다른 참가자의 환경이나 구독을 선택하지 않습니다. `.azure`에는 상태/설정이 저장되므로 커밋하거나 채팅에 전체 내용을 붙이지 않습니다.
 
 azd는 실행 환경에 따라 자동 비대화형 모드가 될 수 있습니다. 설치본이 지원하는 `AZD_NON_INTERACTIVE=false`로 자동 감지를 해제하더라도 비용/데이터 승인이나 hook 검토를 대신하지는 않습니다. 승인 질문이 반드시 나온다고 가정하지 말고 각 명령 전에 범위를 직접 확인합니다.
 
 ## 프로비저닝, 패키징, 배포
 
-각 명령이 성공하고 결과를 검토한 뒤 다음 명령을 실행합니다. 블록 전체를 무인 실행하지 않습니다. 모든 hooks를 읽고 설치본 `azd provision --help`에 `--preview`가 있으면 다음으로 변경을 미리 봅니다. 미리보기도 Azure 접근과 hook 실행을 포함할 수 있으며 비용 견적이나 데이터 안전 보장을 대신하지 않습니다.
+각 명령이 성공하고 결과를 검토한 뒤 다음 명령을 실행합니다. 블록 전체를 무인 실행하지 않습니다.
+
+### 리소스 프로비저닝
+
+모든 hooks를 읽고 설치본 `azd provision --help`에 `--preview`가 있으면 다음으로 변경을 미리 봅니다. 미리보기도 Azure 접근과 hook 실행을 포함할 수 있으며 비용 견적이나 데이터 안전 보장을 대신하지 않습니다.
 
 ```text
 azd provision --preview
 ```
 
-구독, 리전, SKU, 권한, 네트워크와 비용을 승인한 뒤 실제로 생성합니다.
+구독과 리전이 설정되지 않아 미리보기에서 선택을 요청하면 실습용 값을 선택합니다. 미리보기를 사용할 수 없거나 선택한 값이 저장되지 않아 환경에 값이 없다면 `azd env set AZURE_SUBSCRIPTION_ID "<본인-구독-ID>"`와 `azd env set AZURE_LOCATION "<지원되는-리전>"`으로 지정합니다.
+
+`azd env get-value AZURE_SUBSCRIPTION_ID`와 `azd env get-value AZURE_LOCATION`으로 저장된 값을 확인하고, 구독은 `az account show`의 결과와 대조합니다. 구독, 리전, SKU, 권한, 네트워크와 비용을 승인한 뒤 실제로 생성합니다.
 
 ```text
 azd provision
 ```
 
+### DB 초기화
+
 생성된 리소스와 실패 지점을 확인합니다. 승인한 DB 초기화 절차로 Entra principal, DB 권한, 스키마와 migration을 준비합니다. ARM/Bicep 성공만으로 이 작업이 끝났다고 판단하지 않습니다. 로컬 개발자 ID로 수행할 DB 관리 작업과 ACA 앱 관리 ID의 권한을 구분하세요.
+
+### 이미지 패키징
 
 ```text
 azd package
 ```
 
-명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 로그에서 **선택한 로컬 엔진**, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 배포하지 않습니다.
+명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 로그에서 **선택한 로컬 엔진**, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 배포하지 않습니다. 생성된 리소스에 비용이 발생할 수 있으므로 [정리](07-cleanup.md) 범위도 확인합니다.
+
+### 배포
 
 ```text
 azd deploy

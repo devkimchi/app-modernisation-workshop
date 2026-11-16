@@ -51,8 +51,6 @@ modernize
 
 ## 업그레이드 결과 검증
 
-[Spring Boot 4.1.2 공식 요구사항](https://github.com/spring-projects/spring-boot/blob/v4.1.2/documentation/spring-boot-docs/src/docs/antora/modules/ROOT/pages/system-requirements.adoc)은 Java 17~27을 지원 범위로 설명합니다. 이것이 개별 라이브러리나 샘플의 호환성까지 보장하지는 않습니다. 실제 선택한 버전과 변경 근거를 확인합니다.
-
 현재 터미널에도 JDK 25를 적용하고 Maven Wrapper로 검증합니다. 다른 프로세스의 JDK 선택은 현재 터미널에 자동 적용되지 않습니다.
 
 Windows:

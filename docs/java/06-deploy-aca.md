@@ -33,18 +33,25 @@ $env:AZD_CONTAINER_RUNTIME = 'docker'
 $env:AZD_NON_INTERACTIVE = 'false'
 ```
 
-다음 명령은 두 환경에서 같습니다. `<...>`를 실제 값으로 바꾸고 로그인 상태부터 확인합니다. 필요한 로그인은 참가자가 직접 수행합니다.
+Azure CLI와 azd의 로그인은 별개입니다. 필요한 경우 참가자가 직접 로그인하고, 로그인 상태와 선택한 구독을 확인합니다.
+
+```text
+az login
+azd auth login
+az account show --query "{name:name,id:id}" --output table
+azd auth login --check-status
+```
+
+다음 명령은 두 환경에서 같습니다. `<...>`를 실제 값으로 바꿉니다.
 
 ```text
 azd version
-azd auth login --check-status
-az account show --query "{name:name,id:id}" --output table
 azd env new "<개인별-고유-환경명>"
 azd env set AZURE_SUBSCRIPTION_ID "<본인-구독-ID>"
 azd env set AZURE_LOCATION "<지원되는-리전>"
 ```
 
-기존 환경을 이어서 사용한다면 새로 만들지 않고 `azd env list`와 `azd env select "<환경명>"`을 사용합니다. `az account show`의 구독과 `azd env get-value AZURE_SUBSCRIPTION_ID`를 대조합니다. az와 azd의 로그인은 별개입니다. 다른 참가자의 환경이나 구독을 선택하지 않습니다. `.azure`에는 상태/설정이 저장되므로 커밋하거나 채팅에 전체 내용을 붙이지 않습니다.
+기존 환경을 이어서 사용한다면 새로 만들지 않고 `azd env list`와 `azd env select "<환경명>"`을 사용합니다. `az account show`의 구독과 `azd env get-value AZURE_SUBSCRIPTION_ID`를 대조합니다. 다른 참가자의 환경이나 구독을 선택하지 않습니다. `.azure`에는 상태/설정이 저장되므로 커밋하거나 채팅에 전체 내용을 붙이지 않습니다.
 
 azd는 실행 환경에 따라 자동 비대화형 모드가 될 수 있습니다. 설치본이 지원하는 `AZD_NON_INTERACTIVE=false`로 자동 감지를 해제하더라도 비용/데이터 승인이나 hook 검토를 대신하지는 않습니다. 승인 질문이 반드시 나온다고 가정하지 말고 각 명령 전에 범위를 직접 확인합니다.
 

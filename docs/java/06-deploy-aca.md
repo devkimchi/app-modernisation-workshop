@@ -44,7 +44,7 @@ az account show --query "{name:name,id:id}" --output table
 azd auth login --check-status
 ```
 
-앱 배포 환경을 만듭니다. `<...>`를 실제 값으로 바꿉니다. (예: contoso-asset-manager
+앱 배포 환경을 만듭니다. `<...>`를 실제 값으로 바꿉니다. (예: `contoso-asset-manager`)
 
 ```bash
 azd env new "<개인별-고유-환경명>"

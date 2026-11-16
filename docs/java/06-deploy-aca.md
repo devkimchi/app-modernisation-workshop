@@ -222,9 +222,46 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 ### Azure 통합 테스트 실행
 
-[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 준비한 실행 안내를 앱 루트에서 확인합니다. 실제 Azure 연결 테스트는 로컬 실행 주체의 권한을 사용하므로, 이 결과만으로 web이나 worker의 관리 ID 인증을 증명할 수 없습니다.
+[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 준비한 테스트는 실제 Azure의 DB, Service Bus와 Blob에 연결해 데이터를 읽고 씁니다. 로컬 실행 주체의 권한을 사용하므로, 이 결과만으로 web이나 worker의 관리 ID 인증을 증명할 수 없습니다.
 
-안내에 명시된 구독, 리소스, 실행 주체, 네트워크, 비용과 테스트 데이터의 읽기 및 쓰기 범위를 확인하고 승인한 뒤, 현재 셸에 맞는 준비 및 실행 명령을 참가자가 직접 실행합니다. 메시지 수신용 전용 큐를 포함해 대상이나 실행 방법이 불분명하면 실행하지 않고 실습 4의 테스트와 안내를 보완합니다. 결과와 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
+1. 앱 루트에서 생성된 실행 안내와 테스트 코드, Maven `azure-it` 프로필을 확인합니다. 안내에서 테스트 대상과 환경 변수, 실제 사용할 인증 방식과 주체, 필요한 최소 권한, 네트워크 경로와 비용을 확인합니다. 메시지 수신은 다른 메시지를 소비하지 않는 전용 큐에서만 수행합니다. 대상이나 실행 방법이 불분명하면 실행하지 않고 실습 4의 테스트와 안내를 보완합니다.
+2. 현재 Azure CLI 구독과 azd 환경의 구독 및 리소스 그룹을 확인하고 승인한 대상과 대조합니다. Azure SDK의 인증 체인이 Azure CLI와 다른 자격 증명을 선택할 수 있으므로, 테스트 안내의 인증 방식과 실제 실행 주체도 별도로 확인합니다.
+
+   ```text
+   az account show --query "{name:name,id:id}" --output table
+   azd env get-value AZURE_SUBSCRIPTION_ID
+   azd env get-value AZURE_RESOURCE_GROUP
+   ```
+
+3. 테스트 데이터의 읽기 및 쓰기 범위를 확인하고 승인합니다. 앱 루트의 현재 셸에서 JDK 25를 선택한 뒤 생성된 실행 안내에 따라 필수 환경 변수를 설정합니다. 비밀정보를 명령 인자나 셸 기록에 남기지 않습니다.
+
+   Windows PowerShell:
+
+   ```powershell
+   . ../scripts/use-java.ps1 -Jdk 25
+   ```
+
+   WSL/Linux Bash와 macOS zsh/bash:
+
+   ```bash
+   source ../scripts/use-java.sh --jdk 25
+   ```
+
+4. 같은 앱 루트와 셸에서 다음 명령을 실행합니다. `azure-it` 프로필이나 테스트가 생성되지 않았다면 먼저 실습 4를 보완합니다.
+
+   Windows PowerShell:
+
+   ```powershell
+   ./mvnw.cmd -Pazure-it -pl web,worker -am verify
+   ```
+
+   WSL/Linux Bash와 macOS zsh/bash:
+
+   ```bash
+   ./mvnw -Pazure-it -pl web,worker -am verify
+   ```
+
+5. 종료 코드와 생성된 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
 
 ### end-to-end 테스트 작성과 실행
 

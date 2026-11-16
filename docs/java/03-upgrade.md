@@ -69,7 +69,17 @@ source ../scripts/use-java.sh --jdk 25
 
 `BUILD SUCCESS`를 확인합니다. 실패하면 문제를 해결한 뒤 다음 단계로 진행합니다.
 
-생성된 로컬 실행 절차에 따라 web/worker를 실행하고 실습 1의 입력을 재사용합니다. Azure 코드도 변경됐으므로 원본 `dev` 실행 명령이 그대로 유효하다고 가정하지 않습니다.
+web/worker의 동작을 다시 검증하려면 앱 루트에서 아래 명령을 실행합니다. Azure 리소스를 아직 만들지 않았으므로 앱을 직접 기동하지 않고, 외부 서비스를 모의 객체로 대체한 테스트로 확인합니다.
+
+```bash
+./mvnw -pl web,worker -am verify
+```
+
+```powershell
+./mvnw.cmd -pl web,worker -am verify
+```
+
+실제 Azure에 연결한 앱 실행과 업로드, 조회 및 썸네일 처리 확인은 [실습 6: Azure에 배포하기](06-deploy-aca.md)에서 진행합니다.
 
 ## 실행 결과 검토
 

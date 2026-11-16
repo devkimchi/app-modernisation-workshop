@@ -168,7 +168,7 @@ Remove-Item Env:\PGPASSWORD
 
 앱 루트에서 web과 worker의 배포용 컨테이너 이미지를 Docker Engine으로 빌드합니다.
 
-```text
+```bash
 azd package
 ```
 
@@ -178,13 +178,13 @@ azd package
 
 앱 루트에서 web과 worker 이미지를 게시하고 Azure Container Apps에 배포합니다.
 
-```text
+```bash
 azd deploy
 ```
 
 `azd deploy`는 다시 빌드할 수 있습니다. package 후 소스를 바꾸지 않고 실제 배포 이미지 tag/digest를 기록합니다. 이미지 게시와 앱 업데이트가 성공했는지 확인한 뒤 결과를 조회합니다.
 
-```text
+```bash
 azd show
 ```
 
@@ -199,7 +199,7 @@ Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Con
 터미널에서 확인하려면 다음 명령을 사용할 수도 있습니다. [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 정의한 출력 이름을 사용하며, 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 고칩니다. 로그 명령은 worker의 최근 50줄을 조회합니다.
 
 ```bash
-# zsh.bzsh
+# zsh/bzsh
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 web=$(azd env get-value AZURE_WEB_APP_NAME)
 worker=$(azd env get-value AZURE_WORKER_APP_NAME)
@@ -231,10 +231,12 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 3. 앱 루트에서 현재 셸에 맞는 스크립트를 직접 실행합니다. 스크립트가 JDK 25를 선택하고 Azure CLI와 azd에서 대상을 조회합니다. 표시된 구독, 리소스, 사용자와 데이터 읽기 및 쓰기 범위를 앞서 검토한 비용과 함께 확인한 뒤 실행에 명시적으로 동의합니다. CI나 비대화형 환경에서는 실행할 수 없습니다.
 
    ```bash
+   # zsh/bash
    ./scripts/run-azure-it.sh
    ```
 
    ```powershell
+   # PowerShell
    ./scripts/run-azure-it.ps1
    ```
 

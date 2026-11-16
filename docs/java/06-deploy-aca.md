@@ -86,7 +86,27 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
 앱 루트에서 실습 5에 검토한 DB 초기화 안내와 스크립트(예: `infra/db/README.md`)를 확인합니다. 안내가 없거나 대상과 권한을 확인할 수 없다면 중단합니다.
 
-승인한 새 데모 DB에만 초기화 절차를 실행하고, 안내에 따라 Entra principal과 DB 권한, 스키마와 migration을 준비합니다. 로컬 개발자 ID로 수행할 DB 관리 작업과 ACA 앱 관리 ID의 권한을 구분합니다.
+승인한 새 데모 DB에만 초기화 절차를 실행합니다. 서버의 Entra 인증과 관리자, DB 이름, web/worker 및 마이그레이션용 관리 ID, 실행 호스트의 DB 접근과 TLS 인증서 신뢰를 먼저 확인합니다. 기존 DB나 호환되지 않는 스키마가 있다면 중단하고 DB 소유자와 확인합니다.
+
+각 연결은 해당 주체의 PostgreSQL용 Entra 토큰으로 별도 인증합니다. 토큰 발급과 `psql` 연결은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 마세요. 재연결 시 토큰이 만료되었다면 다시 발급합니다.
+
+예를 들어 검토한 산출물에 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`이 있다면 다음 순서로 실행합니다. 생성된 파일과 절차가 다르면 이 예시 대신 검토한 절차를 따릅니다.
+
+1. Entra 관리자 자격으로 `postgres` DB에 연결해 principal과 연결 권한을 만듭니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID 이름과 앱 DB 이름을 입력합니다.
+
+   ```text
+   psql "host=<서버-FQDN> dbname=postgres sslmode=verify-full" --username "<Entra-관리자-이름>" --file "infra/db/bootstrap-identities.sql"
+   ```
+
+2. 관리자 인증을 종료한 뒤, 마이그레이션 관리 ID가 연결되고 DB 네트워크 접근이 허용된 호스트에서 해당 ID로 인증합니다. 그 호스트의 앱 루트에서 `<서버-FQDN>`, `<앱-DB-이름>`과 `<마이그레이션-관리-ID-이름>`을 바꿔 실행하고, 프롬프트에 web과 worker 관리 ID 이름을 입력합니다.
+
+   ```text
+   psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<마이그레이션-관리-ID-이름>" --file "infra/db/initialize-image-metadata.sql"
+   ```
+
+   이 예시는 새 테이블과 앱별 권한을 준비하며, 기존 데이터 이전이나 스키마 업그레이드는 수행하지 않습니다. 앱 관리 ID에 스키마 변경 권한을 부여하지 않습니다.
+
+각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 다음 단계로 진행하지 않습니다. 일부 변경 후 실패할 수 있으므로 재실행하기 전에 DB 상태를 확인합니다.
 
 초기화 후 승인된 주체로 앱 DB에 `psql`을 연결하고 다음 명령으로 현재 DB와 사용자, DB 역할, 테이블과 부여된 권한을 확인합니다.
 

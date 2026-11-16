@@ -19,7 +19,7 @@
 
 [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)에서 Azure 서비스 이전 코드와 테스트를 검토한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다. [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 기록한 `$before`를 사용해 자동 커밋과 미커밋 변경을 함께 확인합니다.
 
-```text
+```bash
 git status --short
 git log --oneline "$before..HEAD"
 git diff "$before..HEAD"
@@ -31,7 +31,7 @@ Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 �
 
 ## 배포 산출물 요구사항 확인
 
-별도 계획을 만들지 않고, 다음 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
+아래 프롬프트를 통해 요구사항이 생성된 배포 산출물에 반영됐는지 확인합니다.
 
 ```text
 `.github/modernize/rulebook/`의 rulebook과 실제 Azure 코드/환경 변수 계약을 읽고

@@ -116,6 +116,11 @@ git diff --cached
 git commit -m "Modernize: upgrade Java application"
 ```
 
-## 완료 기준과 문제 해결
+## 완료 및 다음 단계
 
-최종 Maven/컴파일/실행 JVM이 모두 25이고 루트 빌드와 기존 기능이 통과해야 합니다. Boot 버전만 바뀌거나 테스트를 제외한 패키징만 성공한 것은 완료가 아닙니다. 실패한 단계에서 멈춰 [문제 해결](08-troubleshooting.md)을 확인하고 `reset --hard`로 미검토 변경을 삭제하지 않습니다.
+- [ ] Maven Wrapper와 테스트가 JDK 25를 사용하고 `clean verify`가 통과했습니다.
+- [ ] web/worker의 모의 테스트가 통과했습니다.
+- [ ] Modernize가 만든 커밋과 미커밋 변경을 검토하고, 필요한 변경만 커밋했습니다.
+- [ ] 이 단계에서 실제 Azure 리소스 연결이나 앱 실행을 검증하지 않았음을 확인했습니다.
+
+검증에 실패하면 다음 단계로 진행하지 말고 [문제 해결](08-troubleshooting.md)을 확인합니다. 위 항목을 모두 마쳤다면 [4. Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)로 이동해 이전 코드와 동작을 검토합니다.

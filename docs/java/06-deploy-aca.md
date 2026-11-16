@@ -26,7 +26,7 @@
 
 ## 환경 설정
 
-로컬 Docker를 사용하고, 설치본이 지원하면 azd의 자동 비대화형 모드 감지를 해제하도록 현재 셸에서 다음을 설정합니다.
+Docker Engine을 사용하고, 설치본이 지원하면 azd의 자동 비대화형 모드 감지를 해제하도록 현재 셸에서 다음을 설정합니다.
 
 ```bash
 # zsh/bash
@@ -169,7 +169,7 @@ Remove-Item Env:\PGPASSWORD
 azd package
 ```
 
-명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 로그에서 **Docker Engine**, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 원인을 해결하고 빌드 결과를 확인한 뒤 배포합니다. 생성된 리소스에 비용이 발생할 수 있으므로 [정리](07-cleanup.md) 범위도 확인합니다.
+로그에서 Docker Engine, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 원인을 해결하고 빌드 결과를 확인한 뒤 배포합니다.
 
 ### 배포
 

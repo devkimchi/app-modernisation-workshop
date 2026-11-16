@@ -104,6 +104,42 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
 
 목록을 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 승인한 리소스와 대조합니다. 이름이 비어 있거나 필요한 리소스가 없으면 원인을 파악해 해결합니다. 프로비저닝이 실패한 경우에도 원인을 파악해 해결합니다.
 
+### DB 방화벽에 클라이언트 IP 등록
+
+공개 네트워크를 사용하는 PostgreSQL 서버에는 DB 초기화 전에 실행 PC의 **공인 송신 IPv4 주소**를 허용해야 합니다. `192.168.x.x` 같은 사설 IP나 DB 서버의 IP를 등록하지 마세요. 사설 네트워크를 사용한다면 공개 접근을 켜지 말고 승인한 사설 연결 경로를 확인합니다.
+
+Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**으로 이동해 **현재 클라이언트 IP 추가**에 표시되는 주소를 확인합니다. VPN이나 회사 프록시를 사용하면 브라우저와 DB 연결의 송신 IP가 다를 수 있으므로, 불분명하면 네트워크 관리자에게 확인합니다. 외부 IP 조회 서비스는 필수가 아닙니다.
+
+대상 서버와 주소를 확인하고 변경을 승인한 뒤 Portal에서 저장하거나, 앱 루트에서 아래 명령을 실행합니다. `<확인한-공인-IPv4>`를 실제 주소로 바꾸고, 조회 오류나 빈 값이 나오면 다음 명령을 실행하지 마세요. 규칙을 조회하고 변경할 권한이 필요합니다. **Azure 서비스 전체 허용**이나 전체 IP 범위 개방은 사용하지 않습니다.
+
+**Bash/Zsh**
+
+```bash
+subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+server=$(azd env get-value POSTGRESQL_SERVER)
+clientIp="<확인한-공인-IPv4>"
+ruleName="allow-local-$(date +%Y%m%d%H%M%S)"
+az postgres flexible-server firewall-rule create --subscription "$subscription" --resource-group "$rg" --server-name "$server" --name "$ruleName" --start-ip-address "$clientIp" --end-ip-address "$clientIp"
+az postgres flexible-server firewall-rule list --subscription "$subscription" --resource-group "$rg" --server-name "$server" --output table
+```
+
+**PowerShell 7**
+
+```powershell
+$subscription = azd env get-value AZURE_SUBSCRIPTION_ID
+$rg = azd env get-value AZURE_RESOURCE_GROUP
+$server = azd env get-value POSTGRESQL_SERVER
+$clientIp = "<확인한-공인-IPv4>"
+$ruleName = "allow-local-$(Get-Date -Format yyyyMMddHHmmss)"
+az postgres flexible-server firewall-rule create --subscription $subscription --resource-group $rg --server-name $server --name $ruleName --start-ip-address $clientIp --end-ip-address $clientIp
+az postgres flexible-server firewall-rule list --subscription $subscription --resource-group $rg --server-name $server --output table
+```
+
+규칙의 시작과 끝 IP가 같고 승인한 주소만 허용했는지 확인합니다. 적용까지 몇 분 걸릴 수 있습니다. 연결이 계속 시간 초과되면 실행 네트워크의 외부 TCP 5432 차단 여부도 확인합니다. 방화벽 허용과 DB 인증 및 권한 설정은 별개입니다.
+
+IP가 바뀌면 새 주소를 확인하고, 기존 규칙 삭제도 별도 승인 후 수행합니다. 이 규칙은 로컬 PC용입니다. 별도 호스트의 마이그레이션 ID와 ACA에는 각각 승인한 송신 경로와 허용 규칙이 필요합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
+
 ### DB 초기화
 
 앱 루트에서 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 합니다. 안내, 대상 또는 권한이 불분명하면 중단하고, 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.

@@ -89,25 +89,25 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 
 ## Azure 통합 테스트 준비
 
-DB, Service Bus와 Blob을 실제 Azure 서비스에 연결해 검증할 테스트와 실행 스크립트를 준비합니다. 이 테스트는 앞서 실행한 모의 테스트와 별개입니다. Copilot app 채팅에 다음을 요청합니다.
+실제 Azure의 DB, Service Bus와 Blob에 연결해 검증할 테스트와 실행 스크립트를 준비합니다. 이 테스트는 앞서 실행한 모의 테스트와 별개입니다. Copilot app 채팅에 다음을 요청합니다.
 
 ```text
 현재 앱의 Azure 서비스 코드, 테스트와 빌드 설정을 읽고 실제 Azure 연결용 통합 테스트와 실행 스크립트를 작성해 줘.
-기존 테스트 도구를 우선 사용하고, Azure 리소스 생성이나 실제 연결 없이 코드와 실행 안내를 준비해 줘.
+기존 테스트 도구를 우선 사용하고 Azure 리소스 생성이나 실제 연결 없이 코드와 실행 안내를 준비해 줘.
 
 - PostgreSQL의 TLS 연결과 테스트 데이터의 기록 및 조회, Blob의 비공개 저장 및 조회, Service Bus의 메시지 송수신과 처리 결과를 각각 검증해 줘.
 - 실제 코드의 동작과 테스트 대상에 근거해 성공 조건을 작성해 줘. 확인할 수 없는 동작은 추측하지 말고 미검증으로 표시해 줘.
 - 테스트 전용 데이터와 고유 식별자를 사용하고 기존 데이터나 메시지를 수정하거나 삭제하지 않도록 해 줘. 메시지 수신은 다른 메시지를 소비하지 않는 전용 큐에서만 수행해 줘. 자동 정리는 하지 말고 테스트 데이터와 별도 정리 방법을 안내해 줘.
 - Maven의 `azure-it` 프로필로 실제 Azure 연결 테스트를 명시적으로 실행하도록 분리해 줘. 앱 루트에서 `./mvnw -Pazure-it -pl web,worker -am verify`로 실행하고, PowerShell에서는 `./mvnw.cmd`를 사용해 줘.
 - 기본 빌드와 모의 테스트에서는 실제 Azure 연결 테스트가 실행되지 않게 해 줘. `azure-it` 실행 시 필수 대상이 없거나 연결에 실패하면 실패로 보고하고, 테스트가 없거나 모두 건너뛰어도 성공으로 오인하지 않게 해 줘.
-- 테스트 대상은 `AZURE_IT_PG_HOST`, `AZURE_IT_PG_DATABASE`, `AZURE_IT_PG_USER`, `AZURE_IT_BLOB_ENDPOINT`, `AZURE_IT_BLOB_CONTAINER`, `AZURE_IT_SERVICEBUS_NAMESPACE`, `AZURE_IT_SERVICEBUS_QUEUE` 환경 변수로 받아 줘. 누락, 빈 값 또는 `<...>` 형태의 값을 사용해 연결하지 마.
+- 테스트 대상은 `AZURE_IT_PG_HOST`, `AZURE_IT_PG_DATABASE`, `AZURE_IT_PG_USER`, `AZURE_IT_BLOB_ENDPOINT`, `AZURE_IT_BLOB_CONTAINER`, `AZURE_IT_SERVICEBUS_NAMESPACE`, `AZURE_IT_SERVICEBUS_QUEUE` 환경 변수로 받아 줘. 값이 누락되거나 비어 있거나 `<...>` 형태이면 연결하지 마.
 - 로컬 테스트는 Azure CLI에 로그인한 주체만 사용하도록 `AzureCliCredential`을 명시적으로 사용하고 다른 자격 증명으로 대체하지 마. PostgreSQL은 해당 주체의 Entra 토큰과 DB 사용자로 TLS 인증해 줘. 토큰은 메모리에서만 사용하고 출력하거나 저장하지 마.
-- 앱 루트에 `scripts/run-azure-it.sh`와 `scripts/run-azure-it.ps1`을 만들어 줘. 이미 같은 파일이 있으면 덮어쓰지 말고 보고해 줘. 두 스크립트는 앱 루트에서 직접 실행하며 현재 셸의 환경을 변경하지 않아야 해.
-- `.sh`는 Bash 3.2와 Bash 5에서 실행하고 `#!/usr/bin/env bash`, LF와 실행 권한을 사용해 줘. Windows `.ps1`은 UTF-8 BOM과 LF를 유지하고 `../../scripts/powershell-bootstrap.ps1`의 `Initialize-WorkshopScript`를 스크립트 위치 기준으로 사용해 Windows PowerShell 5.1에서 PowerShell 7로 위임해 줘. 설치 승인 옵션은 사용하지 말고 PowerShell 7이 없으면 종료해 줘.
-- 스크립트 자체의 실행 환경에서 `../scripts/use-java.sh --jdk 25`를 source하거나 `../scripts/use-java.ps1 -Jdk 25`를 dot-source해 JDK를 선택해 줘. PowerShell에서는 직접 실행해도 환경 변수가 호출자 프로세스에 남지 않도록 변경 전 값을 보존하고 실패 시에도 복원해 줘. `azure-it` 프로필과 테스트가 연결되어 있는지 확인하고 명령 실패나 누락을 명시적으로 보고해 줘.
-- `az account show`와 `azd env get-value`로 현재 Azure CLI 사용자, 구독, 리소스 그룹과 테스트 대상 값을 조회해 줘. `AZURE_IT_PG_USER`는 Azure CLI 사용자 이름으로 설정하고, DB 사용자와 일치하는지 참가자가 확인하도록 해 줘. Azure CLI 사용자 계정만 지원하고 다른 계정이면 중단해 줘. azd와 Azure CLI 구독이 다르거나 값이 없으면 중단하고 다른 구독으로 전환하지 마.
-- `AZURE_IT_APP_SERVICEBUS_NAMESPACE`와 `AZURE_IT_APP_SERVICEBUS_QUEUE` 출력으로 앱 큐를 확인하고, 테스트 큐가 같은 네임스페이스의 앱 큐와 같으면 중단해 줘. 테스트 대상, 앱 큐, 사용자, 구독, 리소스 그룹, 데이터 읽기 및 쓰기 범위와 정리 필요성을 표시하되 토큰이나 비밀은 표시하지 마.
-- 참가자가 실제 대상, DB 사용자, 권한, 네트워크, 비용과 데이터 변경 범위를 확인하고 대화형으로 명시적으로 동의한 경우에만 `azure-it` 테스트를 실행해 줘. CI나 비대화형 환경에서는 자동 승인하거나 실행하지 말고 실패로 종료해 줘.
+- 앱 루트에 `scripts/run-azure-it.sh`와 `scripts/run-azure-it.ps1`을 만들어 줘. 이미 같은 파일이 있으면 덮어쓰지 말고 보고해 줘. 두 스크립트는 앱 루트에서 직접 실행하고 현재 셸의 환경을 변경하지 않아야 해.
+- `.sh`는 Bash 3.2와 Bash 5에서 실행할 수 있도록 `#!/usr/bin/env bash`, LF와 실행 권한을 사용해 줘. Windows `.ps1`은 UTF-8 BOM과 LF를 유지해 줘. 스크립트 위치를 기준으로 `../../scripts/powershell-bootstrap.ps1`의 `Initialize-WorkshopScript`를 사용해 Windows PowerShell 5.1에서 PowerShell 7로 실행을 위임해 줘. 설치 승인 옵션은 사용하지 말고 PowerShell 7이 없으면 종료해 줘.
+- 스크립트의 실행 환경에서 `../scripts/use-java.sh --jdk 25`를 `source`로 불러오거나 `../scripts/use-java.ps1 -Jdk 25`를 dot-source해 JDK를 선택해 줘. PowerShell에서는 직접 실행해도 환경 변수가 호출자 프로세스에 남지 않도록 변경 전 값을 보존하고 실패 시에도 복원해 줘. `azure-it` 프로필이 테스트와 연결되어 있는지 확인하고 명령 실패나 누락을 명시적으로 보고해 줘.
+- `az account show`와 `azd env get-value`로 현재 Azure CLI 사용자, 구독, 리소스 그룹과 테스트 대상 값을 조회해 줘. `AZURE_IT_PG_USER`는 Azure CLI 사용자 이름으로 설정하고 DB 사용자와 일치하는지 참가자가 확인하도록 해 줘. Azure CLI 사용자 계정만 지원하고 다른 계정이면 중단해 줘. azd와 Azure CLI 구독이 다르거나 값이 없으면 중단하고 다른 구독으로 전환하지 마.
+- `AZURE_IT_APP_SERVICEBUS_NAMESPACE`와 `AZURE_IT_APP_SERVICEBUS_QUEUE` 출력으로 앱 큐를 확인해 줘. 테스트 큐가 같은 네임스페이스의 앱 큐와 같으면 중단해 줘. 테스트 대상, 앱 큐, 사용자, 구독, 리소스 그룹, 데이터 읽기와 쓰기 범위, 정리 필요성을 표시하되 토큰이나 비밀은 표시하지 마.
+- 참가자가 실제 대상, DB 사용자, 권한, 네트워크, 비용과 데이터 변경 범위를 확인하고 대화형으로 명시적으로 동의한 경우에만 `azure-it` 테스트를 실행해 줘. CI나 비대화형 환경에서는 자동 승인하지 말고 테스트를 실행하지 않은 채 실패로 종료해 줘.
 - 실행마다 구분되는 테스트 결과를 확인해 DB, Blob, Service Bus 테스트가 각각 실행되고 성공했는지 검증해 줘. 테스트 실패, 결과 누락 또는 건너뛰기는 성공으로 처리하지 말고 종료 코드에 반영해 줘. 기존 테스트 결과와 사용자 데이터를 삭제하거나 덮어쓰지 마.
 - 스크립트의 성공, 조회 실패, 구독 불일치, 앱 큐와 테스트 큐 충돌, 사용자 거부, 비대화형 실행과 테스트 실패를 가짜 명령으로 검증해 줘. 실제 Azure 연결과 로그인, 리소스 생성, DB 변경, 배포, 설치는 하지 마.
 - 구독, 리소스, 실행 주체, 필요한 최소 권한과 네트워크 경로, 읽기와 쓰기 범위, 환경 변수, 예상 비용을 실행 안내에 명시해 줘. 로컬 실행 주체와 배포된 앱의 관리 ID를 구분해 줘.
@@ -116,7 +116,7 @@ DB, Service Bus와 Blob을 실제 Azure 서비스에 연결해 검증할 테스�
 - 실제 Azure 연결 테스트 실행과 도구 설치는 하지 마. 변경 파일, 모의 검증 결과와 검토가 필요한 항목을 보고해 줘.
 ```
 
-생성된 테스트와 두 스크립트, 실행 안내에서 `azure-it` 프로필과 테스트의 연결, 대상과 권한, 데이터 범위, 승인과 실패 처리, 기본 빌드와의 분리를 확인합니다. 가짜 명령으로 검증한 결과와 실제 Azure 연결 테스트의 미실행 상태를 구분해 기록합니다. 필요한 도구나 대상이 불분명하면 해결한 뒤 진행합니다. 실제 연결 테스트는 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 대상과 영향을 승인한 뒤 실행합니다.
+생성된 테스트와 두 스크립트, 실행 안내를 검토합니다. `azure-it` 프로필과 테스트의 연결, 대상과 권한, 데이터 범위, 승인과 실패 처리, 기본 빌드와의 분리를 확인합니다. 가짜 명령으로 검증한 결과와 실제 Azure 연결 테스트의 미실행 상태를 구분해 기록합니다. 필요한 도구나 대상이 불분명하면 해결한 뒤 진행합니다. 실제 연결 테스트는 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 대상과 영향을 승인한 뒤 실행합니다.
 
 ## 완료 및 다음 단계
 

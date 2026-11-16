@@ -18,7 +18,7 @@ Copilot app 터미널의 **앱 루트**에서 실행합니다. Windows는 PowerS
 
 ## Azure 정리
 
-각 명령을 실행한 뒤 성공 여부와 출력을 확인하고 다음 단계로 진행합니다. `<이번-실습-환경명>`은 실제 환경명으로 바꿉니다.
+각 명령을 실행한 뒤 성공 여부와 출력을 확인하고 다음 단계로 진행합니다. `<이번-실습-환경명>`은 실제 환경명으로 바꿉니다. (예: `contoso-asset-manager`)
 
 ```bash
 azd env list
@@ -42,13 +42,11 @@ az account show --query "{name:name,id:id}" --output table
 
 두 구독이 승인한 본인 실습 구독과 다르거나 값을 확인하지 못하면 중단합니다. 다음 명령으로 리소스 그룹을 확인합니다.
 
-macOS와 Linux의 zsh/bash:
-
 ```bash
-rg=$(azd env get-value AZURE_RESOURCE_GROUP) && [ -n "$rg" ] && printf '리소스 그룹: %s\n' "$rg"
+# zsh/bash
+rg=$(azd env get-value AZURE_RESOURCE_GROUP) && \
+  [ -n "$rg" ] && printf '리소스 그룹: %s\n' "$rg"
 ```
-
-Windows PowerShell:
 
 ```powershell
 # PowerShell
@@ -59,21 +57,20 @@ $rg
 
 명령이 실패하거나 값이 비어 있으면 중단합니다.
 
-다음 명령은 두 환경에서 같습니다.
-
 ```bash
 az group show --name "$rg" --query "{name:name,id:id,tags:tags}" --output json
-```
-
-```bash
 az resource list --resource-group "$rg" --query "[].{name:name,type:type}" --output table
 ```
 
-위 명령이 모두 성공하고 구독, 그룹과 리소스가 삭제를 승인한 본인 실습 대상인지 확인한 경우에만 다음 명령을 실행합니다. 공유 리소스, 다른 환경 또는 기존 서비스가 포함되어 있으면 실행하지 않습니다. 삭제 확인 메시지도 읽고 직접 승인합니다. `--force`와 `--purge`는 기본으로 사용하지 않습니다.
+위 명령이 모두 성공하고 구독, 그룹과 리소스가 삭제를 승인한 본인 실습 대상인지 확인한 경우에만 다음 명령을 실행합니다. 공유 리소스, 다른 환경 또는 기존 서비스가 포함되어 있으면 실행하지 않습니다. 삭제 확인 메시지도 읽고 직접 승인합니다.
 
 ```bash
 azd down
 ```
+
+> [!NOTE]
+>
+> `--force`와 `--purge` 옵션을 사용하는 것도 좋습니다.
 
 삭제가 끝난 후 리소스 그룹을 확인합니다.
 
@@ -89,13 +86,10 @@ az group exists --name "$rg"
 
 Modernize CLI가 실행 중이면 먼저 해당 작업을 정상 종료하고 마지막 변경과 커밋을 확인합니다. 별도 터미널의 전경 web과 worker는 `Ctrl+C`로 종료합니다. 원본 스크립트로 시작했다면 종료 스크립트를 읽고 이번 앱과 컨테이너만 대상으로 하는지 확인한 뒤 실행합니다.
 
-macOS와 Linux의 zsh/bash:
-
 ```bash
+# zsh/bash
 ./scripts/stopapp.sh
 ```
-
-Windows PowerShell:
 
 ```powershell
 # PowerShell
@@ -132,6 +126,6 @@ docker rm assets-postgres assets-rabbitmq
 - [ ] 실습 프로세스와 컨테이너를 정지했습니다.
 - [ ] 로컬 설정과 로그에 민감한 값이 남지 않았는지 확인했습니다.
 
-삭제 권한이나 잠금 때문에 실패하면 [문제 해결](08-troubleshooting.md)을 참고합니다.
+삭제 권한이나 잠금 때문에 실패하면 [8. 문제 해결](08-troubleshooting.md)을 참고합니다.
 
 위 항목을 모두 마쳤다면 Java 실습을 마칩니다.

@@ -84,16 +84,14 @@ azd provision
 
 리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 읽어 리소스 목록을 확인합니다.
 
-**Bash/Zsh**
-
 ```bash
+# zsh/bash
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 az resource list --resource-group "$rg" --query "[].{name:name,type:type}" --output table
 ```
 
-**PowerShell 7**
-
 ```powershell
+# PowerShell
 $rg = azd env get-value AZURE_RESOURCE_GROUP
 az resource list --resource-group $rg --query "[].{name:name,type:type}" --output table
 ```
@@ -110,9 +108,8 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
 
 1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
 
-   **Bash/Zsh**
-
    ```bash
+   # zsh/bash
    subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
    rg=$(azd env get-value AZURE_RESOURCE_GROUP)
    server=$(azd env get-value POSTGRESQL_SERVER)
@@ -124,9 +121,8 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
    unset PGPASSWORD
    ```
 
-   **PowerShell 7**
-
    ```powershell
+   # PowerShell
    $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
    $rg = azd env get-value AZURE_RESOURCE_GROUP
    $server = azd env get-value POSTGRESQL_SERVER
@@ -140,9 +136,8 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
 
 2. **마이그레이션 관리 ID:** 관리자 연결을 종료하고 이 ID가 연결된 승인된 호스트에서 별도로 인증합니다. 해당 호스트에 같은 azd 환경의 비밀이 아닌 출력값과 앱 파일이 준비되어 있어야 합니다. DB에 접근할 수 있는 호스트의 앱 루트에서 아래 값을 먼저 조회합니다. Azure 조회 권한이 없다면 권한을 임의로 추가하지 말고 승인된 조회 주체가 확인한 값을 안전하게 전달합니다. `az login --identity`는 Azure CLI 로그인 주체를 마이그레이션 ID로 바꾸므로 해당 호스트에서만 실행합니다. SQL 프롬프트에는 web과 worker 관리 ID 이름을 입력합니다.
 
-   **Bash/Zsh**
-
    ```bash
+   # zsh/bash
    subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
    rg=$(azd env get-value AZURE_RESOURCE_GROUP)
    server=$(azd env get-value POSTGRESQL_SERVER)
@@ -157,9 +152,8 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
    unset PGPASSWORD
    ```
 
-   **PowerShell 7**
-
    ```powershell
+   # PowerShell
    $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
    $rg = azd env get-value AZURE_RESOURCE_GROUP
    $server = azd env get-value POSTGRESQL_SERVER
@@ -181,17 +175,15 @@ az resource list --resource-group $rg --query "[].{name:name,type:type}" --outpu
 
 초기화 후에는 2단계와 같은 호스트와 셸에서 조회한 변수와 마이그레이션 ID 인증을 사용해 앱 DB에 연결합니다. 토큰은 다시 발급하고, 조회 실패나 빈 값이 있으면 진행하지 마세요.
 
-**Bash/Zsh**
-
 ```bash
+# zsh/bash
 PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
 export PGPASSWORD &&
 psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgUser"
 ```
 
-**PowerShell 7**
-
 ```powershell
+# PowerShell
 $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
 if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
 psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgUser

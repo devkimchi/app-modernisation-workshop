@@ -48,15 +48,14 @@ JDK 25와 현재 Spring Boot 버전, web/worker의 기존 기능을 유지하는
 
 ## 생성 결과 검토
 
-Azure 리소스나 데이터베이스에 실제 권한을 부여하지 말고, 생성된 코드와 배포 계획에서 다음 항목을 확인합니다.
+앱 코드나 Azure 리소스는 수정하지 않고 생성 결과만 검토합니다.
 
-- [ ] 이전 실습의 빌드와 모의 테스트 결과를 참고해 생성된 코드와 테스트가 요구사항을 반영하는지 확인합니다.
-- [ ] `infra/`의 Bicep에서 각 Container App의 `identity`와 `Microsoft.Authorization/roleAssignments`를 찾고, 역할 할당의 `principalId`가 해당 앱의 관리 ID를 가리키는지 확인합니다. 검토 결과에 Bicep 파일 경로와 줄 번호를 기록합니다.
-- [ ] Service Bus 역할 할당이 web에는 Data Sender, worker에는 Data Receiver를 지정하고 필요한 큐 또는 네임스페이스 범위에만 적용되는지 확인합니다.
-- [ ] Blob 역할 할당이 필요한 앱의 관리 ID를 가리키고, 필요한 데이터 작업과 컨테이너 범위로 제한되어 있는지 확인합니다.
-- [ ] 모든 역할 할당의 역할과 범위를 확인해 앱에 Contributor나 구독 전체 데이터 권한이 부여되지 않았는지 확인합니다. 할당이 없거나 대상을 확인할 수 없으면 미확인 항목으로 기록합니다.
+- [ ] 실습 3의 결과에서 단위 테스트의 통과 여부와 실행하지 않은 Azure 통합 테스트를 구분해 기록합니다.
+- [ ] `infra/`의 Bicep에서 `identity`와 `Microsoft.Authorization/roleAssignments`를 찾아 `principalId`가 해당 앱 관리 ID인지 확인하고 파일 경로와 줄 번호를 기록합니다.
+- [ ] web에는 Service Bus Data Sender, worker에는 Data Receiver가 필요한 범위로 할당됐는지 확인합니다. Blob 권한도 필요한 컨테이너로 제한하고, Contributor나 구독 전체 권한은 없어야 합니다. 할당을 확인할 수 없으면 미확인으로 기록합니다.
+- [ ] 실행 안내에서 로컬 `dev` 사용법을 확인합니다. Azure 설정이 별도 프로파일이면 그 실행 방법도 문서화되어 있어야 합니다.
 
-PostgreSQL의 Entra 관리자, DB principal과 권한, 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 배포 산출물과 함께 검토합니다. 승인된 DB 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 수행합니다.
+PostgreSQL 권한과 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토하고, 실제 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 수행합니다.
 
 아래 명령으로 실습 3 이후 변경을 확인하고, 앱 외부 파일, 불필요한 생성물 또는 비밀이 포함되지 않았는지 검토합니다.
 

@@ -242,7 +242,7 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 4. 종료 코드와 이번 실행의 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
 
-### end-to-end 테스트 작성과 실행
+### End-to-end 테스트 작성과 실행
 
 실제 배포된 앱에서 사용자의 업로드부터 결과 조회까지 확인하는 end-to-end 테스트를 준비합니다. 앱 루트에서 Copilot app 채팅에 다음을 요청합니다.
 

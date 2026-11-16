@@ -92,6 +92,15 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
 예를 들어 검토한 산출물에 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`이 있다면 다음 순서로 실행합니다. 생성된 파일과 절차가 다르면 이 예시 대신 검토한 절차를 따릅니다.
 
+| 주체 | 수행할 작업과 DB 권한 |
+| --- | --- |
+| Entra 관리자 | 승인된 로컬 개발자 계정이 서버의 Entra 관리자인 경우 principal과 DB 연결 권한을 설정합니다. 개발자라는 이유만으로 관리자 권한이 생기지는 않습니다. |
+| 마이그레이션 관리 ID | 승인된 호스트에서 스키마 안에 테이블을 만들고 소유합니다. 앱에 연결하지 않습니다. |
+| web 관리 ID | `image_metadata`의 조회, 추가, 수정, 삭제에 필요한 권한만 사용합니다. |
+| worker 관리 ID | `image_metadata`의 조회와 수정에 필요한 권한만 사용합니다. |
+
+web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. Azure RBAC와 DB 내부 권한은 별개로 확인합니다.
+
 1. Entra 관리자 자격으로 `postgres` DB에 연결해 principal과 연결 권한을 만듭니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID 이름과 앱 DB 이름을 입력합니다.
 
    ```text
@@ -108,14 +117,34 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
 각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 다음 단계로 진행하지 않습니다. 일부 변경 후 실패할 수 있으므로 재실행하기 전에 DB 상태를 확인합니다.
 
-초기화 후 승인된 주체로 앱 DB에 `psql`을 연결하고 다음 명령으로 현재 DB와 사용자, DB 역할, 테이블과 부여된 권한을 확인합니다.
+초기화 후 승인된 주체로 앱 DB에 `psql`을 연결하고 다음 명령으로 현재 DB와 로그인 주체, DB 역할, 테이블과 부여된 권한을 확인합니다. `session_user`는 로그인 주체이고 `current_user`는 현재 권한 검사에 사용되는 역할입니다.
 
 ```text
-SELECT current_database(), current_user;
+SELECT current_database(), session_user, current_user;
 \du
 \dt
 \dp
 ```
+
+위 예시의 스크립트를 사용했다면 같은 `psql` 세션에서 다음을 실행하고 프롬프트에 web과 worker의 DB 역할 이름을 입력합니다. 직접 부여한 권한뿐 아니라 역할 상속과 `PUBLIC`을 포함한 유효 권한을 확인합니다.
+
+```sql
+\prompt 'Web DB role: ' web_role
+\prompt 'Worker DB role: ' worker_role
+SELECT role_name,
+       has_table_privilege(role_name, 'public.image_metadata', 'SELECT') AS can_select,
+       has_table_privilege(role_name, 'public.image_metadata', 'INSERT') AS can_insert,
+       has_table_privilege(role_name, 'public.image_metadata', 'UPDATE') AS can_update,
+       has_table_privilege(role_name, 'public.image_metadata', 'DELETE') AS can_delete,
+       has_schema_privilege(role_name, 'public', 'CREATE') AS can_create
+FROM (VALUES (:'web_role'), (:'worker_role')) AS apps(role_name);
+
+SELECT pg_get_userbyid(relowner) AS table_owner
+FROM pg_class
+WHERE oid = to_regclass('public.image_metadata');
+```
+
+web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 마이그레이션 관리 ID여야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다. 이 조회만으로 Entra ID 연결이나 배포된 앱의 실제 인증을 증명하지는 못합니다.
 
 결과를 검토한 초기화 절차의 대상과 권한에 대조하고 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다. ARM/Bicep 성공만으로 DB 초기화가 끝났다고 판단하지 않습니다.
 

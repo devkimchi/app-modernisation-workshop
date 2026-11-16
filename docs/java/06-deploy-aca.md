@@ -190,7 +190,13 @@ azd show
 
 ## 리소스 상태와 기능 확인
 
-실습 5에서 정의한 출력 이름을 사용합니다. 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 고칩니다.
+Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Container App을 각각 확인합니다.
+
+1. **개요**와 **수정 버전 관리(Revision management)**에서 배포 상태와 이번에 배포한 revision의 준비 상태를 확인하고, web의 URL을 확인합니다.
+2. **설정 → 수신(Ingress)**에서 web과 worker의 수신 설정이 실습 5에서 검토한 구성과 일치하는지 확인합니다.
+3. worker의 **모니터링 → 로그 스트림(Log stream) → 콘솔(Console)**에서 처리 로그와 오류를 확인합니다. revision, replica 또는 컨테이너가 여러 개라면 해당 대상을 선택합니다.
+
+터미널에서 확인하려면 다음 명령을 사용할 수도 있습니다. 실습 5에서 정의한 출력 이름을 사용하며, 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 고칩니다. 로그 명령은 worker의 최근 50줄을 조회합니다.
 
 Windows:
 
@@ -219,7 +225,7 @@ az containerapp logs show --resource-group "$rg" --name "$worker" --type console
 참가자가 실습 5에서 검토한 통합 검사를 직접 실행합니다. 로그 해석이 필요하면 Copilot app 채팅에 비밀을 제거한 결과와 다음 요청을 전달합니다.
 
 ```text
-전달한 azd 출력과 통합 검사 결과를 검토해 줘. 구독이나 환경을 바꾸지 마.
+전달한 azd 출력, 리소스 상태와 통합 검사 결과를 검토해 줘. 구독이나 환경을 바꾸지 마.
 web/worker 이미지 tag/digest, JDK 25, readiness와 ingress 설정의 근거를 확인해 줘.
 DB TLS/관리 ID와 실제 권한, Service Bus 처리, Blob 비공개 검증의 누락을 찾아 줘.
 실제 실행 결과와 미실행 항목을 구분하고 추가 검사 명령은 제시만 해 줘.

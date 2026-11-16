@@ -67,7 +67,7 @@ source ../scripts/use-java.sh --jdk 25
 ./mvnw.cmd clean verify
 ```
 
-각 명령의 결과를 확인하고 실패하면 다음 명령으로 진행하지 않습니다. Windows는 `$LASTEXITCODE`, macOS와 Linux는 명령 직후 `echo $?`를 확인합니다. Azure 연결이 필요한 통합 검사는 별도로 구분합니다.
+`BUILD SUCCESS`를 확인합니다. 실패하면 문제를 해결한 뒤 다음 단계로 진행합니다.
 
 생성된 로컬 실행 절차에 따라 web/worker를 실행하고 실습 1의 입력을 재사용합니다. Azure 코드도 변경됐으므로 원본 `dev` 실행 명령이 그대로 유효하다고 가정하지 않습니다.
 

@@ -69,9 +69,35 @@ azd env get-value AZURE_LOCATION
 azd provision
 ```
 
+### 리소스 확인
+
+명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패했다면 출력에서 실패한 리소스와 오류를 확인하고, Azure 포털의 대상 구독이나 리소스 그룹의 활동 로그에서 해당 작업의 상세 오류를 살핍니다. 문제를 해결하기 전에는 다음 단계로 진행하지 않습니다.
+
+성공했다면 앱 루트에서 리소스 그룹 이름을 확인하고, 두 번째 명령의 `<리소스-그룹-이름>`을 확인한 값으로 바꿔 실행합니다.
+
+```text
+azd env get-value AZURE_RESOURCE_GROUP
+az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:name,type:type}" --output table
+```
+
+목록을 실습 5에서 승인한 리소스와 대조합니다. 이름이 비어 있거나 필요한 리소스가 없으면 원인을 확인합니다. 리소스 목록만으로 DB 초기화나 앱의 정상 동작을 판단하지 않습니다.
+
 ### DB 초기화
 
-생성된 리소스와 실패 지점을 확인합니다. 승인한 DB 초기화 절차로 Entra principal, DB 권한, 스키마와 migration을 준비합니다. ARM/Bicep 성공만으로 이 작업이 끝났다고 판단하지 않습니다. 로컬 개발자 ID로 수행할 DB 관리 작업과 ACA 앱 관리 ID의 권한을 구분하세요.
+앱 루트에서 실습 5에 검토한 DB 초기화 안내와 스크립트(예: `infra/db/README.md`)를 확인합니다. 안내가 없거나 대상과 권한을 확인할 수 없다면 중단합니다.
+
+승인한 새 데모 DB에만 초기화 절차를 실행하고, 안내에 따라 Entra principal과 DB 권한, 스키마와 migration을 준비합니다. 로컬 개발자 ID로 수행할 DB 관리 작업과 ACA 앱 관리 ID의 권한을 구분합니다.
+
+초기화 후 승인된 주체로 앱 DB에 `psql`을 연결하고 다음 명령으로 현재 DB와 사용자, DB 역할, 테이블과 부여된 권한을 확인합니다.
+
+```text
+SELECT current_database(), current_user;
+\du
+\dt
+\dp
+```
+
+결과를 검토한 초기화 절차의 대상과 권한에 대조하고 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다. ARM/Bicep 성공만으로 DB 초기화가 끝났다고 판단하지 않습니다.
 
 ### 이미지 패키징
 

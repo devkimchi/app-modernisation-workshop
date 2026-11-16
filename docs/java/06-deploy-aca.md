@@ -26,7 +26,7 @@
 
 ## 환경 설정
 
-Docker Engine을 사용하고, 설치본이 지원하면 azd의 자동 비대화형 모드 감지를 해제하도록 현재 셸에서 다음을 설정합니다.
+현재 셸에서 Docker Engine을 사용하도록 설정합니다. 설치된 azd가 지원하면 자동 비대화형 모드 감지도 해제합니다.
 
 ```bash
 # zsh/bash
@@ -52,7 +52,7 @@ az account show --query "{name:name,id:id}" --output table
 azd auth login --check-status
 ```
 
-앱 배포 환경을 만듭니다. `<...>`를 실제 값으로 바꿉니다. (예: `contoso-asset-manager`)
+앱 배포 환경을 만듭니다. `<...>`를 실제 값으로 바꿉니다(예: `contoso-asset-manager`).
 
 ```bash
 azd env new "<개인별-고유-환경명>"
@@ -63,18 +63,18 @@ azd env new "<개인별-고유-환경명>"
 각 명령이 성공하고 결과를 검토한 뒤 다음 명령을 실행합니다. 블록 전체를 무인 실행하지 않습니다.
 
 > [!NOTE]
-> `azd up`은 provision/package/deploy를 묶는 명령이지만 이번 실습은 실패 위치와 승인 범위를 알 수 있도록 단계별 실행이 기본입니다.
+> `azd up`은 프로비저닝, 패키징, 배포를 묶어 실행합니다. 이번 실습에서는 실패한 단계와 승인 범위를 알 수 있도록 각 명령을 따로 실행합니다.
 
 ### 리소스 프로비저닝
 
-[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 hooks와 구독, 리전, SKU, 권한, 네트워크 및 비용을 확인하고 승인합니다. 환경에 구독과 리전이 이미 설정되어 있다면 다음 명령으로 확인하고, 구독은 앞에서 확인한 `az account show`의 결과와 대조합니다. 이미 설정된 값은 다시 묻지 않을 수 있습니다.
+[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 훅과 구독, 리전, SKU, 권한, 네트워크와 비용을 확인하고 승인합니다. 환경에 구독과 리전이 이미 설정되어 있다면 다음 명령으로 확인하고, 구독은 앞서 확인한 `az account show`의 결과와 대조합니다. 이미 설정된 값은 다시 묻지 않을 수 있습니다.
 
 ```bash
 azd env get-value AZURE_SUBSCRIPTION_ID
 azd env get-value AZURE_LOCATION
 ```
 
-값이 설정되지 않았다면 대화형 프로비저닝에서 선택을 요청할 수 있습니다. 선택 질문이 반드시 나온다고 가정하지 말고, 승인한 대상이 불분명하면 진행하지 않습니다.
+값이 설정되지 않았다면 대화형 프로비저닝에서 선택을 요청할 수 있습니다. 선택 질문이 반드시 나온다고 가정하지 말고 승인한 대상이 불분명하면 진행하지 않습니다.
 
 ```bash
 azd provision
@@ -82,24 +82,24 @@ azd provision
 
 ### 리소스 확인
 
-리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 확인하고, 두 번째 명령의 `<리소스-그룹-이름>`을 확인한 값으로 바꿔 실행합니다.
+리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 확인합니다. 두 번째 명령의 `<리소스-그룹-이름>`을 확인한 값으로 바꿔 실행합니다.
 
 ```bash
 azd env get-value AZURE_RESOURCE_GROUP
 az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:name,type:type}" --output table
 ```
 
-목록을 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 승인한 리소스와 대조합니다. 이름이 비어 있거나 필요한 리소스가 없으면 원인을 파악하고 문제를 해결합니다. 또한 리소스 프로비저닝이 실패했다면 원인을 파악하고 문제를 해결합니다.
+목록을 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 승인한 리소스와 대조합니다. 이름이 비어 있거나 필요한 리소스가 없으면 원인을 파악해 해결합니다. 프로비저닝이 실패한 경우에도 원인을 파악해 해결합니다.
 
 ### DB 초기화
 
-앱 루트에서 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 하며, 안내나 대상과 권한이 불분명하면 중단합니다. 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.
+앱 루트에서 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 합니다. 안내, 대상 또는 권한이 불분명하면 중단하고, 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.
 
-서버의 Entra 인증과 관리자, DB 이름, web/worker 및 마이그레이션 관리 ID, 실행 호스트의 DB 접근과 TLS 인증서 신뢰를 확인합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고, 재연결 시 만료되었다면 다시 발급합니다.
+서버의 Entra 인증과 관리자, DB 이름, web/worker와 마이그레이션 관리 ID를 확인합니다. 실행 호스트에서 DB에 접근할 수 있는지, TLS 인증서를 신뢰할 수 있는지도 확인합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고 재연결 시 만료되었다면 다시 발급합니다.
 
 다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다.
 
-1. **Entra 관리자:** `postgres` DB에 principal과 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
+1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
 
    ```bash
    psql "host=<서버-FQDN> dbname=postgres sslmode=verify-full" --username "<Entra-관리자-이름>" --file "infra/db/bootstrap-identities.sql"
@@ -111,7 +111,7 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
    psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<마이그레이션-관리-ID-이름>" --file "infra/db/initialize-image-metadata.sql"
    ```
 
-이 ID가 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
+마이그레이션 관리 ID는 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
 
@@ -150,9 +150,9 @@ WHERE oid = to_regclass('public.image_metadata');
 
 web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 마이그레이션 관리 ID여야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다.
 
-결과를 검토한 초기화 절차의 대상과 권한에 대조하고 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다.
+결과를 앞서 검토한 초기화 절차의 대상과 권한에 대조해 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다.
 
-확인을 마치면 `\q`로 `psql`을 종료합니다. 연결 실패 또는 확인 후 토큰을 삭제합니다.
+확인을 마치면 `\q`로 `psql`을 종료합니다. 연결에 실패했거나 확인을 마쳤다면 토큰을 삭제합니다.
 
 ```bash
 # zsh/bash
@@ -172,7 +172,7 @@ Remove-Item Env:\PGPASSWORD
 azd package
 ```
 
-로그에서 Docker Engine, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드를 확인합니다. 실패했거나 빌드 결과를 확인하지 못했다면 원인을 해결하고 빌드 결과를 확인한 뒤 배포합니다.
+로그에서 Docker Engine, `linux/amd64`, Java 25 이미지와 web/worker 각각의 빌드 결과를 확인합니다. 빌드에 실패했거나 결과를 확인하지 못했다면 원인을 해결하고 결과를 확인한 뒤 배포합니다.
 
 ### 배포
 
@@ -182,7 +182,7 @@ azd package
 azd deploy
 ```
 
-`azd deploy`는 다시 빌드할 수 있습니다. package 후 소스를 바꾸지 않고 실제 배포 이미지 tag/digest를 기록합니다. 이미지 게시와 앱 업데이트가 성공했는지 확인한 뒤 결과를 조회합니다.
+`azd deploy`는 이미지를 다시 빌드할 수 있습니다. 패키징 후 소스를 바꾸지 않고 실제 배포된 이미지의 태그와 다이제스트를 기록합니다. 이미지 게시와 앱 업데이트가 성공했는지 확인한 뒤 결과를 조회합니다.
 
 ```bash
 azd show
@@ -192,14 +192,14 @@ azd show
 
 Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Container App을 각각 확인합니다.
 
-1. **개요**와 **수정 버전 관리(Revision management)** 에서 배포 상태와 이번에 배포한 revision의 준비 상태를 확인하고, web의 URL을 확인합니다.
+1. **개요**와 **수정 버전 관리(Revision management)** 에서 배포 상태와 이번에 배포한 수정 버전의 준비 상태, web의 URL을 확인합니다.
 2. **설정 → 수신(Ingress)** 에서 web과 worker의 수신 설정이 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 구성과 일치하는지 확인합니다.
-3. worker의 **모니터링 → 로그 스트림(Log stream) → 콘솔(Console)** 에서 처리 로그와 오류를 확인합니다. revision, replica 또는 컨테이너가 여러 개라면 해당 대상을 선택합니다.
+3. worker의 **모니터링 → 로그 스트림(Log stream) → 콘솔(Console)** 에서 처리 로그와 오류를 확인합니다. 수정 버전, 복제본 또는 컨테이너가 여러 개라면 해당 대상을 선택합니다.
 
-터미널에서 확인하려면 다음 명령을 사용할 수도 있습니다. [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 정의한 출력 이름을 사용하며, 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 고칩니다. 로그 명령은 worker의 최근 50줄을 조회합니다.
+터미널에서 확인하려면 다음 명령을 사용할 수도 있습니다. [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 정의한 출력 이름을 사용합니다. 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 수정합니다. 로그 명령은 worker의 최근 50줄을 조회합니다.
 
 ```bash
-# zsh/bzsh
+# zsh/bash
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 web=$(azd env get-value AZURE_WEB_APP_NAME)
 worker=$(azd env get-value AZURE_WORKER_APP_NAME)
@@ -222,12 +222,12 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 ### Azure 통합 테스트 실행
 
-[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 준비한 테스트는 실제 Azure의 DB, Service Bus와 Blob에 연결해 데이터를 읽고 씁니다. 로컬 실행 주체의 권한을 사용하므로, 이 결과만으로 web이나 worker의 관리 ID 인증을 증명할 수 없습니다.
+[실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 준비한 테스트는 실제 Azure의 DB, Service Bus와 Blob에 연결해 데이터를 읽고 씁니다. 로컬 실행 주체의 권한을 사용하므로 이 결과만으로 web이나 worker의 관리 ID 인증을 증명할 수 없습니다.
 
 1. [실습 4: Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md#azure-통합-테스트-준비)에서 생성한 테스트, `azure-it` 프로필, 실행 스크립트와 안내를 검토합니다. 테스트나 스크립트가 없거나 연결이 불분명하면 해당 실습을 보완하고 진행하지 않습니다.
-2. 테스트 대상과 주체를 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 출력 및 DB 초기화 안내에 대조합니다. Azure CLI 사용자에게 DB, Blob과 테스트 전용 큐의 최소 데이터 권한이 있는지, 네트워크 경로와 PostgreSQL TLS 인증서를 신뢰할 수 있는지 확인합니다. 앱 큐 출력이 실제 배포 설정과 일치하는지 확인하고 앱 큐와 다른 전용 큐만 사용합니다.
+2. 테스트 대상과 주체를 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 출력과 DB 초기화 안내에 대조합니다. Azure CLI 사용자에게 DB, Blob과 테스트 전용 큐의 최소 데이터 권한이 있는지 확인합니다. 네트워크 경로가 확보됐는지, PostgreSQL TLS 인증서를 신뢰할 수 있는지도 확인합니다. 앱 큐 출력이 실제 배포 설정과 일치하는지 확인하고 앱 큐와 다른 전용 큐만 사용합니다.
 
-   Azure CLI 사용자 이름이 해당 PostgreSQL DB 사용자 이름과 다르거나, 대상, 권한, 비용 또는 데이터 변경 범위가 불분명하면 실행하지 않습니다. 리소스나 권한이 없으면 필요한 범위와 비용을 검토하고 별도 승인을 받습니다. 로그인 상태가 없거나 주체가 다르면 `az login`으로 승인된 사용자 계정에 로그인한 뒤 확인합니다. 서비스 주체의 DB 역할 이름은 추측하지 않습니다.
+   Azure CLI 사용자 이름이 해당 PostgreSQL DB 사용자 이름과 다르거나 대상, 권한, 비용 또는 데이터 변경 범위가 불분명하면 실행하지 않습니다. 리소스나 권한이 없으면 필요한 범위와 비용을 검토하고 별도 승인을 받습니다. 로그인 상태가 없거나 주체가 다르면 `az login`으로 승인된 사용자 계정에 로그인한 뒤 확인합니다. 서비스 주체의 DB 역할 이름은 추측하지 않습니다.
 3. 앱 루트에서 현재 셸에 맞는 스크립트를 직접 실행합니다. 스크립트가 JDK 25를 선택하고 Azure CLI와 azd에서 대상을 조회합니다. 표시된 구독, 리소스, 사용자와 데이터 읽기 및 쓰기 범위를 앞서 검토한 비용과 함께 확인한 뒤 실행에 명시적으로 동의합니다. CI나 비대화형 환경에서는 실행할 수 없습니다.
 
    ```bash
@@ -240,11 +240,11 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
    ./scripts/run-azure-it.ps1
    ```
 
-4. 종료 코드와 이번 실행의 테스트 보고서를 확인해 DB, Service Bus와 Blob 각각의 실행 및 성공 여부를 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록하고, 데이터 정리는 범위와 영향을 확인해 별도로 승인합니다.
+4. 종료 코드와 이번 실행의 테스트 보고서를 확인해 DB, Service Bus와 Blob 테스트의 실행 및 성공 여부를 각각 기록합니다. 프로필이 없거나 테스트가 실행되지 않았거나 건너뛴 경우는 성공이 아닙니다. 실패 또는 미검증 항목과 생성된 테스트 데이터의 식별자를 기록합니다. 데이터 정리는 범위와 영향을 확인하고 별도로 승인합니다.
 
 ### End-to-end 테스트 작성과 실행
 
-실제 배포된 앱에서 사용자의 업로드부터 결과 조회까지 확인하는 end-to-end 테스트를 준비합니다. 앱 루트에서 Copilot app 채팅에 다음을 요청합니다.
+배포된 앱에서 사용자의 업로드부터 결과 조회까지 확인하는 end-to-end 테스트를 준비합니다. 앱 루트에서 Copilot app 채팅에 다음을 요청합니다.
 
 ```text
 현재 앱의 화면, 업로드 및 조회 흐름, 테스트 도구와 배포 설정을 읽고 배포된 web을 대상으로 하는 end-to-end 테스트를 작성해 줘.
@@ -269,23 +269,23 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 
 ```text
 전달한 azd 출력, 리소스 상태와 통합 및 end-to-end 테스트 결과를 검토해 줘. 구독이나 환경을 바꾸지 마.
-web/worker 이미지 tag/digest, JDK 25, readiness와 ingress 설정의 근거를 확인해 줘.
+web/worker 이미지의 태그와 다이제스트, JDK 25, 준비 상태와 수신 설정의 근거를 확인해 줘.
 DB TLS/관리 ID와 실제 권한, Service Bus 처리, Blob 비공개 검증의 누락을 찾아 줘.
 실제 실행 결과와 미실행 항목을 구분하고 추가 검사 명령은 제시만 해 줘.
 운영 데이터 삭제, 방화벽 전체 개방, RBAC 범위 확대는 하지 마.
 오류가 있으면 비밀을 제거한 로그와 원인을 제시하고 필요한 변경 승인을 기다려 줘.
 ```
 
-추가 Java 명령은 앱 루트의 같은 셸에서 JDK 25를 먼저 선택하도록 요청합니다. Windows에서는 `. ../scripts/use-java.ps1 -Jdk 25`, macOS와 Linux에서는 `source ../scripts/use-java.sh --jdk 25`를 사용합니다. 코드 수정은 제한된 복구 계획을 검토한 뒤 실행합니다.
+Java 명령을 추가로 맡길 때는 앱 루트의 같은 셸에서 JDK 25를 먼저 선택하도록 요청합니다. Windows에서는 `. ../scripts/use-java.ps1 -Jdk 25`, macOS와 Linux에서는 `source ../scripts/use-java.sh --jdk 25`를 사용합니다. 코드 수정은 제한된 복구 계획을 검토한 뒤 실행합니다.
 
-수동 확인이 필요하면 `azd show`의 **web URL**을 브라우저에서 열고 [실습 1: 원본 앱을 로컬에서 실행하기](01-run-locally.md)와 같은 개인 정보 없는 입력을 사용합니다. DB 메타데이터 기록과 조회, Blob 저장과 조회, Service Bus 수신과 worker 처리가 연결되는지 확인합니다. DB 메타데이터는 원본 `dev`에 없던 동작이므로 `dev` 외 S3 구현에서 이전한 기능으로 구분해 기록합니다. private Blob URL의 익명 요청으로 파일이 공개되지 않는지도 확인합니다.
+수동 확인이 필요하면 `azd show`의 **web URL**을 브라우저에서 열고 [실습 1: 원본 앱을 로컬에서 실행하기](01-run-locally.md)와 같은 개인 정보 없는 입력을 사용합니다. DB 메타데이터 기록과 조회, Blob 저장과 조회, Service Bus 수신과 worker 처리가 연결되는지 확인합니다. DB 메타데이터는 원본 `dev`에 없던 동작이므로 `dev` 외 S3 구현에서 이전한 기능으로 구분해 기록합니다. 비공개 Blob URL의 익명 요청으로 파일이 공개되지 않는지도 확인합니다.
 
-단위 테스트 통과나 HTTP 200만으로는 완료가 아닙니다. 로컬 파일에 의존하지 않고 새 revision에서도 같은 업로드를 조회할 수 있는지 확인합니다. 강제 종료 대신 정상 재배포나 새 revision으로 검증하고 추가 비용을 확인합니다.
+단위 테스트 통과나 HTTP 200만으로는 완료가 아닙니다. 로컬 파일에 의존하지 않고 새 수정 버전에서도 같은 업로드를 조회할 수 있는지 확인합니다. 강제 종료 대신 정상 재배포나 새 수정 버전으로 검증하고 추가 비용을 확인합니다.
 
 ## 완료 및 다음 단계
 
-- [ ] 승인한 리소스와 web/worker의 정상 revision을 확인하고 이미지 식별자와 배포 결과를 기록했습니다.
+- [ ] 승인한 리소스와 web/worker의 정상 수정 버전을 확인하고 이미지 식별자와 배포 결과를 기록했습니다.
 - [ ] Azure 통합 테스트와 end-to-end 테스트 결과로 실제 사용자 기능을 확인하고 미검증 항목을 구분해 기록했습니다.
-- [ ] 로컬 파일에 의존하지 않고 새 revision에서도 업로드를 조회할 수 있는지 확인했습니다.
+- [ ] 로컬 파일에 의존하지 않고 새 수정 버전에서도 업로드를 조회할 수 있는지 확인했습니다.
 
 위 항목을 모두 마쳤다면 [7. 리소스와 로컬 실행 정리하기](07-cleanup.md)로 이동합니다.

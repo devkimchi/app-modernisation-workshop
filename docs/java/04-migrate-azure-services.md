@@ -13,7 +13,7 @@
 | 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
 | --- | --- | --- |
 | [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
-| 실습 4: 이 문서 | 이전된 Azure 서비스 코드와 테스트 검토, 필요한 수정과 로컬 검증 | Azure 리소스 생성과 실제 연결 |
+| 실습 4: Azure 서비스로 의존성 이전하기 (이 문서) | 이전된 Azure 서비스 코드와 테스트 검토, 필요한 수정과 로컬 검증 | Azure 리소스 생성과 실제 연결 |
 | [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
 | [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
 
@@ -51,7 +51,7 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 ## 생성 결과 검토
 
 - [ ] 위의 읽기 전용 검토 요청을 Copilot app 채팅에 보내고, 앱 코드나 Azure 리소스를 변경하지 않은 상태에서 응답에 제시된 파일 경로와 줄 번호를 확인합니다.
-- [ ] 앱 루트에서 실습 3 이후의 변경을 확인합니다. `git diff`에서 앱 외부 파일, 불필요한 생성물이나 비밀정보가 포함되지 않았는지 살핍니다.
+- [ ] 앱 루트에서 [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) 이후의 변경을 확인합니다. `git diff`에서 앱 외부 파일, 불필요한 생성물이나 비밀정보가 포함되지 않았는지 살핍니다.
 
     ```text
     git status --short
@@ -60,7 +60,7 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
     ```
 
 - [ ] `infra/`의 Bicep에서 `identity`와 `Microsoft.Authorization/roleAssignments`를 찾아 `principalId`가 해당 앱의 관리 ID인지 확인합니다. web의 Service Bus Data Sender, worker의 Data Receiver, Blob의 컨테이너 범위와 역할을 확인하고, Contributor나 구독 전체 권한이 없는지 살핍니다. Bicep 파일 경로와 줄 번호를 기록하고 확인할 수 없는 권한 할당은 미확인으로 남깁니다.
-- [ ] 실습 3에서 실행한 `./mvnw -pl web,worker -am verify` (PowerShell은 `./mvnw.cmd -pl web,worker -am verify`)의 터미널 결과를 확인해 단위 테스트 상태를 기록합니다. Azure 통합 테스트는 실행하지 않고 미실행으로 표시합니다.
+- [ ] [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 실행한 `./mvnw -pl web,worker -am verify` (PowerShell은 `./mvnw.cmd -pl web,worker -am verify`)의 터미널 결과를 확인해 단위 테스트 상태를 기록합니다. Azure 통합 테스트는 실행하지 않고 미실행으로 표시합니다.
 - [ ] 각 앱의 `application*.yml` 또는 `application*.properties`와 README에서 로컬 `dev`와 Azure 설정으로 실행하는 방법을 확인합니다.
 - [ ] PostgreSQL 권한과 초기화 절차는 [5. azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토하고, 실제 초기화는 [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 수행합니다.
 
@@ -80,7 +80,7 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 ```text
 위에서 승인한 항목만 수정하고 관련 테스트와 문서를 갱신해 줘.
 앱 루트에서 현재 셸에 맞는 `../scripts/`의 `use-java` 도우미로 JDK 25를 선택해 줘.
-같은 셸에서 실습 3의 빌드와 web/worker 모의 테스트를 실행해 줘.
+같은 셸에서 앞서 실행한 빌드와 web/worker 모의 테스트를 실행해 줘.
 실제 Azure 연결, 리소스 생성, DB 변경과 배포는 하지 마.
 변경 파일, 테스트 결과와 남은 미검증 항목을 보고해 줘.
 ```
@@ -114,7 +114,7 @@ DB, Service Bus와 Blob을 실제 Azure 서비스에 연결해 검증할 테스�
 
 - [ ] 생성된 Azure 서비스 코드와 테스트를 요구사항과 대조하고, 판단 근거로 파일 경로와 줄 번호를 기록했습니다. 확인할 수 없는 항목은 미확인으로 남겼습니다.
 - [ ] DB, Service Bus, Blob 이전 경로와 web/worker의 역할 범위를 확인했습니다.
-- [ ] 실습 3의 단위 테스트 결과와 미실행 Azure 통합 테스트를 구분해 기록했습니다. 수정한 경우 다시 실행한 테스트 결과도 기록했습니다.
+- [ ] [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)의 단위 테스트 결과와 미실행 Azure 통합 테스트를 구분해 기록했습니다. 수정한 경우 다시 실행한 테스트 결과도 기록했습니다.
 - [ ] 실제 Azure 통합 테스트 코드와 실행 안내를 검토하고 테스트를 미실행으로 기록했습니다.
 - [ ] 로컬 `dev`와 Azure 설정으로 실행하는 방법을 앱의 설정 파일과 README에서 확인했습니다.
 - [ ] 발견 사항의 조치 결과와 미확인 항목을 기록했습니다.

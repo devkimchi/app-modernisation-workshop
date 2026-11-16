@@ -54,9 +54,8 @@ Azure 리소스나 데이터베이스에 실제 권한을 부여하지 말고, �
 - [ ] web의 관리 ID에는 Service Bus 메시지 송신 권한, worker의 관리 ID에는 수신 권한만 필요한지 확인합니다.
 - [ ] Blob 권한이 각 앱에 필요한 컨테이너와 작업으로 제한되어 있는지 확인합니다.
 - [ ] 앱에 Contributor 역할이나 구독 전체 데이터 권한이 부여되지 않았는지 확인합니다.
-- [ ] PostgreSQL의 Azure 리소스 관리 권한(ARM)과 데이터베이스 내부 권한을 따로 정리했는지 확인합니다.
-- [ ] Entra 관리자, 앱 관리 ID에 연결할 DB principal과 필요한 스키마/테이블 권한을 계획에 명시했는지 확인합니다.
-- [ ] 초기 migration 실행 주체를 앱의 일반 실행 주체와 구분하고, 일반 앱 계정에 불필요한 스키마 변경 권한을 주지 않는지 확인합니다.
+
+PostgreSQL의 Entra 관리자, DB principal과 권한, 초기화 절차는 [실습 5](05-prepare-azd.md)에서 배포 산출물과 함께 검토합니다. 승인된 DB 초기화는 [실습 6](06-deploy-aca.md)에서 수행합니다.
 
 ```text
 git status --short

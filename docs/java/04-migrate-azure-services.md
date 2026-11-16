@@ -8,12 +8,12 @@
 
 ## 실습 범위
 
-이 실습에서는 [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 준비한 Azure 서비스 이전 코드와 테스트를 검토하고, 외부 Azure 서비스 없이 가능한 검증을 수행합니다.
+이 실습에서는 [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)에서 준비한 Azure 서비스 이전 코드와 테스트, 빌드 및 모의 테스트 결과를 요구사항과 대조합니다.
 
 | 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
 | --- | --- | --- |
 | [실습 3: JDK 25로 업그레이드하기](03-upgrade.md) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
-| 실습 4: 이 문서 | 이전된 Azure 서비스 코드와 기존 동작 검토, 외부 Azure 서비스 없는 테스트 | 코드 변경, Azure 리소스 생성과 실제 연결 |
+| 실습 4: 이 문서 | 이전된 Azure 서비스 코드와 테스트, 실습 3의 검증 결과 검토 | 코드 변경, Azure 리소스 생성과 실제 연결 |
 | [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
 | [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
 
@@ -27,7 +27,7 @@
 
 ## 실습 전 확인 사항
 
-이전 실습에서 JDK 25 빌드와 로컬 기준 동작 검증을 마친 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다.
+이전 실습의 JDK 25 빌드와 모의 테스트 결과를 확인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 계속 사용합니다.
 
 ## 코드 이전 요구사항 확인
 
@@ -46,27 +46,9 @@ JDK 25와 현재 Spring Boot 버전, web/worker의 기존 기능을 유지하는
 - **제외 범위:** S3 데이터 이전이나 AWS 리소스 접근은 필요성만 검토하고 실행하지 마. 인프라 생성, 실제 DB 변경/데이터 이전, 이미지 게시, 배포는 작업 목록에서 제외해 줘.
 ```
 
-## 코드 검증
-
-Windows:
-
-```powershell
-. ../scripts/use-java.ps1 -Jdk 25
-./mvnw.cmd clean verify
-```
-
-macOS와 Linux:
-
-```bash
-source ../scripts/use-java.sh --jdk 25
-./mvnw clean verify
-```
-
-명령별 결과를 확인하고 실패하면 멈춥니다. Copilot app 채팅에 추가 Java 검증을 맡길 때도 같은 실행 셸에 `use-java.ps1` 또는 `use-java.sh`로 JDK 25를 먼저 적용하도록 요청합니다.
-
 ## 참가자 검토
 
-각 앱의 실제 책임에 따라 역할을 나눕니다. 예를 들어 web에는 Service Bus Data Sender, worker에는 Data Receiver를 부여하며 Blob도 필요한 컨테이너 범위와 작업에 맞춥니다. 모든 앱에 Contributor 또는 구독 전체 데이터 권한을 주지 않습니다.
+이전 실습의 빌드와 모의 테스트 결과를 참고해 생성된 코드와 테스트를 요구사항에 대조합니다. 각 앱의 실제 책임에 따라 역할을 나눕니다. 예를 들어 web에는 Service Bus Data Sender, worker에는 Data Receiver를 부여하며 Blob도 필요한 컨테이너 범위와 작업에 맞춥니다. 모든 앱에 Contributor 또는 구독 전체 데이터 권한을 주지 않습니다.
 
 **PostgreSQL의 ARM 역할과 DB 내부 권한은 다릅니다.** Entra 관리자, 관리 ID에 대응하는 DB principal, 필요한 스키마/테이블 권한과 초기 migration 실행 주체가 계획에 있어야 합니다. 일반 DB 사용자는 스키마 변경 권한까지 무조건 갖지 않도록 구분합니다.
 

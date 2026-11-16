@@ -82,40 +82,29 @@ az resource list --resource-group "<리소스-그룹-이름>" --query "[].{name:
 
 ### DB 초기화
 
-앱 루트에서 실습 5에 검토한 DB 초기화 안내와 스크립트(예: `infra/db/README.md`)를 확인합니다. 안내가 없거나 대상과 권한을 확인할 수 없다면 중단합니다.
+앱 루트에서 실습 5에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 하며, 안내나 대상과 권한이 불분명하면 중단합니다. 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.
 
-승인한 새 데모 DB에만 초기화 절차를 실행합니다. 서버의 Entra 인증과 관리자, DB 이름, web/worker 및 마이그레이션용 관리 ID, 실행 호스트의 DB 접근과 TLS 인증서 신뢰를 먼저 확인합니다. 기존 DB나 호환되지 않는 스키마가 있다면 중단하고 DB 소유자와 확인합니다.
+서버의 Entra 인증과 관리자, DB 이름, web/worker 및 마이그레이션 관리 ID, 실행 호스트의 DB 접근과 TLS 인증서 신뢰를 확인합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고, 재연결 시 만료되었다면 다시 발급합니다.
 
-각 연결은 해당 주체의 PostgreSQL용 Entra 토큰으로 별도 인증합니다. 토큰 발급과 `psql` 연결은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 마세요. 재연결 시 토큰이 만료되었다면 다시 발급합니다.
+다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다.
 
-예를 들어 검토한 산출물에 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`이 있다면 다음 순서로 실행합니다. 생성된 파일과 절차가 다르면 이 예시 대신 검토한 절차를 따릅니다.
-
-| 주체 | 수행할 작업과 DB 권한 |
-| --- | --- |
-| Entra 관리자 | 승인된 로컬 개발자 계정이 서버의 Entra 관리자인 경우 principal과 DB 연결 권한을 설정합니다. 개발자라는 이유만으로 관리자 권한이 생기지는 않습니다. |
-| 마이그레이션 관리 ID | 승인된 호스트에서 스키마 안에 테이블을 만들고 소유합니다. 앱에 연결하지 않습니다. |
-| web 관리 ID | `image_metadata`의 조회, 추가, 수정, 삭제에 필요한 권한만 사용합니다. |
-| worker 관리 ID | `image_metadata`의 조회와 수정에 필요한 권한만 사용합니다. |
-
-web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. Azure RBAC와 DB 내부 권한은 별개로 확인합니다.
-
-1. Entra 관리자 자격으로 `postgres` DB에 연결해 principal과 연결 권한을 만듭니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID 이름과 앱 DB 이름을 입력합니다.
+1. **Entra 관리자:** `postgres` DB에 principal과 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 `<서버-FQDN>`과 `<Entra-관리자-이름>`을 바꿔 실행하고, 프롬프트에 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
 
    ```text
    psql "host=<서버-FQDN> dbname=postgres sslmode=verify-full" --username "<Entra-관리자-이름>" --file "infra/db/bootstrap-identities.sql"
    ```
 
-2. 관리자 인증을 종료한 뒤, 마이그레이션 관리 ID가 연결되고 DB 네트워크 접근이 허용된 호스트에서 해당 ID로 인증합니다. 그 호스트의 앱 루트에서 `<서버-FQDN>`, `<앱-DB-이름>`과 `<마이그레이션-관리-ID-이름>`을 바꿔 실행하고, 프롬프트에 web과 worker 관리 ID 이름을 입력합니다.
+2. **마이그레이션 관리 ID:** 관리자 인증을 종료하고 이 ID가 연결된 승인된 호스트에서 별도로 인증합니다. DB에 접근할 수 있는 해당 호스트의 앱 루트에서 `<서버-FQDN>`, `<앱-DB-이름>`과 `<마이그레이션-관리-ID-이름>`을 바꿔 실행하고, 프롬프트에 web과 worker 관리 ID 이름을 입력합니다.
 
    ```text
    psql "host=<서버-FQDN> dbname=<앱-DB-이름> sslmode=verify-full" --username "<마이그레이션-관리-ID-이름>" --file "infra/db/initialize-image-metadata.sql"
    ```
 
-   이 예시는 새 테이블과 앱별 권한을 준비하며, 기존 데이터 이전이나 스키마 업그레이드는 수행하지 않습니다. 앱 관리 ID에 스키마 변경 권한을 부여하지 않습니다.
+   이 ID가 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
 각 명령 직후 Windows는 `$LASTEXITCODE`, macOS와 Linux는 `echo $?`로 종료 코드 `0`을 확인합니다. 실패하면 다음 단계로 진행하지 않습니다. 일부 변경 후 실패할 수 있으므로 재실행하기 전에 DB 상태를 확인합니다.
 
-초기화 후 승인된 주체로 앱 DB에 `psql`을 연결하고 다음 명령으로 현재 DB와 로그인 주체, DB 역할, 테이블과 부여된 권한을 확인합니다. `session_user`는 로그인 주체이고 `current_user`는 현재 권한 검사에 사용되는 역할입니다.
+초기화 후 승인된 주체로 앱 DB에 `psql`을 연결해 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
 
 ```text
 SELECT current_database(), session_user, current_user;
@@ -124,7 +113,7 @@ SELECT current_database(), session_user, current_user;
 \dp
 ```
 
-위 예시의 스크립트를 사용했다면 같은 `psql` 세션에서 다음을 실행하고 프롬프트에 web과 worker의 DB 역할 이름을 입력합니다. 직접 부여한 권한뿐 아니라 역할 상속과 `PUBLIC`을 포함한 유효 권한을 확인합니다.
+위 예시를 사용했다면 같은 `psql` 세션에서 web과 worker의 DB 역할 이름을 입력해 유효 권한과 테이블 소유자를 확인합니다. 유효 권한에는 역할 상속과 `PUBLIC`이 포함됩니다.
 
 ```sql
 \prompt 'Web DB role: ' web_role

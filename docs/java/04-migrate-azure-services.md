@@ -57,16 +57,13 @@ Azure 리소스나 데이터베이스에 실제 권한을 부여하지 말고, �
 
 PostgreSQL의 Entra 관리자, DB principal과 권한, 초기화 절차는 [실습 5](05-prepare-azd.md)에서 배포 산출물과 함께 검토합니다. 승인된 DB 초기화는 [실습 6](06-deploy-aca.md)에서 수행합니다.
 
+실습 3 이후 Modernize가 자동 커밋한 변경과 남은 파일을 확인합니다. `git status`는 미커밋 또는 미추적 파일을, `git log`는 `$before` 이후의 커밋을, `git diff`는 해당 커밋의 변경 내용을 보여 줍니다. 변경 내용에 앱 외부 파일, 불필요한 생성물이나 비밀이 포함되지 않았는지 검토합니다.
+
 ```text
 git status --short
 git log --oneline "$before..HEAD"
-git diff --stat "$before..HEAD"
 git diff "$before..HEAD"
-git diff
-git diff --cached
 ```
-
-자동 커밋에 앱 외부 파일, 생성물과 비밀이 포함되지 않았는지도 확인합니다.
 
 외부 연결 없이 통과한 단위 검사와 아직 실행하지 않은 Azure 통합 검사를 분리해 기록합니다. 로컬 `dev` 프로파일을 유지할지, Azure 설정이 필요한 별도 프로파일로 분리할지는 코드와 실행 안내에 명확히 반영합니다. Azure 이전 후에도 원본 `dev` 실행 명령이 그대로 유효하다고 가정하지 않습니다.
 

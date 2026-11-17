@@ -154,7 +154,7 @@ az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
 bash ./infra/tests/vm-payload.tests.sh
 ```
 
-테스트는 임시 파일과 mock을 사용하며 실제 도구 설치나 Azure 배포는 하지 않습니다. 의도적인 오류로 `FAIL`이 출력될 수 있으니 마지막 `PASS` 요약과 종료 코드로 결과를 확인하세요. **로컬 테스트만으로 실제 VM 배포와 도구 작동을 검증할 수는 없습니다.**
+테스트는 임시 파일, Windows의 임시 레지스트리 키와 mock을 사용하며 실제 도구 설치나 Azure 배포는 하지 않습니다. 의도적인 오류로 `FAIL`이 출력될 수 있으니 마지막 `PASS` 요약과 종료 코드로 결과를 확인하세요. **로컬 테스트만으로 실제 VM 배포와 도구 작동을 검증할 수는 없습니다.**
 
 ## 리소스 정리
 

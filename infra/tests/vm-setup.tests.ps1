@@ -372,9 +372,11 @@ namespace Appmod {
         $registry | Add-Member ScriptMethod GetValue { param($Name,$Default,$Options); return $script:StoredUserPath }
         $registry | Add-Member ScriptMethod GetValueNames { return @('Path') }
         $registry | Add-Member ScriptMethod GetValueKind { param($Name); return [Microsoft.Win32.RegistryValueKind]::ExpandString }
-        $registry | Add-Member ScriptMethod SetValue {
-            param($Name,$Value,$Kind)
-            if ($Name -ne 'Path' -or $Kind -ne [Microsoft.Win32.RegistryValueKind]::ExpandString) { throw 'Unexpected registry value or type' }
+        function Set-ItemProperty {
+            param($LiteralPath,$Name,$Value,$Type,$ErrorAction)
+            Assert-True ($LiteralPath -eq 'HKCU:\Environment' -and $Name -eq 'Path' -and
+                $Type -eq [Microsoft.Win32.RegistryValueKind]::ExpandString -and
+                $ErrorAction -eq 'Stop') 'PATH writes preserve the registry type and surface errors'
             $script:StoredUserPath=$Value; $script:PathWrites++
         }
         function Get-VmPostgresClient { return $client }
@@ -409,8 +411,53 @@ namespace Appmod {
         Assert-Throws { Set-VmPostgresPath } 'without a working' 'missing client cannot be added to PATH'
         function Get-VmPostgresClient { return $client }
         $script:StoredUserPath=''
-        $registry | Add-Member ScriptMethod SetValue { throw 'fixture registry access denied' } -Force
+        function Set-ItemProperty { throw 'fixture registry access denied' }
         Assert-Throws { Set-VmPostgresPath } 'registry access denied' 'persistent PATH write failures propagate'
+    }
+
+    if ($IsWindows) {
+        & {
+            $subKey = 'Software\appmod-vm-test-' + [guid]::NewGuid().ToString('N')
+            $registryPath = 'HKCU:\' + $subKey
+            $client = 'C:\fixture-postgres\18\bin\psql.exe'
+            $directory = Split-Path -Parent $client
+            $registry = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($subKey)
+            $registry.Dispose()
+            try {
+                function Get-VmPostgresClient { return $client }
+                function Get-Item {
+                    param($LiteralPath,$ErrorAction)
+                    if ($LiteralPath -ne 'HKCU:\Environment') { throw 'Unexpected registry read target' }
+                    Microsoft.PowerShell.Management\Get-Item -LiteralPath $registryPath -ErrorAction Stop
+                }
+                function Set-ItemProperty {
+                    param($LiteralPath,$Name,$Value,$Type,$ErrorAction)
+                    if ($LiteralPath -ne 'HKCU:\Environment') { throw 'Unexpected registry write target' }
+                    Microsoft.PowerShell.Management\Set-ItemProperty -LiteralPath $registryPath `
+                        -Name $Name -Value $Value -Type $Type -ErrorAction Stop
+                }
+                function Confirm-VmAction { return $true }
+                function Update-ProcessPath { }
+                function Test-VmCommand { return $true }
+                function Get-Command { [pscustomobject]@{Source=$client} }
+                function Write-WorkshopMessage { param($Message) }
+                foreach ($kind in @([Microsoft.Win32.RegistryValueKind]::String,
+                    [Microsoft.Win32.RegistryValueKind]::ExpandString)) {
+                    Microsoft.PowerShell.Management\Set-ItemProperty -LiteralPath $registryPath -Name Path `
+                        -Value '%SystemRoot%\System32;C:\keep' -Type $kind -ErrorAction Stop
+                    Assert-True (Set-VmPostgresPath) "PATH append works with a real read-only registry handle ($kind)"
+                    Assert-True (Set-VmPostgresPath) "real registry PATH append is idempotent ($kind)"
+                    $stored = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($subKey)
+                    try {
+                        Assert-True ($stored.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) -ceq
+                            "%SystemRoot%\System32;C:\keep;$directory" -and $stored.GetValueKind('Path') -eq $kind) `
+                            "real registry PATH preserves raw entries, order and value type ($kind)"
+                    }
+                    finally { $stored.Dispose() }
+                }
+            }
+            finally { [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($subKey) }
+        }
     }
 
     & {

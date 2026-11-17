@@ -328,7 +328,8 @@ function Set-VmPostgresPath {
         $kind = if ($environment.GetValueNames() -contains 'Path') {
             $environment.GetValueKind('Path')
         } else { [Microsoft.Win32.RegistryValueKind]::ExpandString }
-        $environment.SetValue('Path', "$userPath$separator$directory", $kind)
+        Set-ItemProperty -LiteralPath 'HKCU:\Environment' -Name Path -Value "$userPath$separator$directory" `
+            -Type $kind -ErrorAction Stop
     }
     Update-ProcessPath
     if (-not (Test-VmCommand psql)) { throw 'User PATH was configured, but psql could not run in the installer process.' }

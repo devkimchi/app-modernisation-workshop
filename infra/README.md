@@ -86,17 +86,17 @@ azd env set VM_AUTO_SHUTDOWN_TIME 2100
 3. 다음 명령을 실행하고 필요한 항목에 동의합니다.
 
 ```powershell
-$HOME/scripts/install-vm-tools.ps1
+& "$HOME/scripts/install-vm-tools.ps1"
 ```
 
-현재 PowerShell에서 직접 실행하면 됩니다. Windows PowerShell 5.1에서는 도우미가 WinGet과 안정 PowerShell 7.x를 준비한 뒤 PowerShell 7에 위임합니다.
+현재 PowerShell에서 직접 실행하면 됩니다. 변수가 포함된 경로는 따옴표로 감싸고 호출 연산자 `&`를 붙이세요. Windows PowerShell 5.1에서는 도우미가 WinGet과 안정 PowerShell 7.x를 준비한 뒤 PowerShell 7에 위임합니다.
 
 WSL2와 MSMQ의 Windows 기능 상태 조회 및 MSMQ 기능 활성화는 별도 Windows PowerShell 5.1 프로세스에서 수행합니다. 이는 MSIX PowerShell 7의 DISM 명령에서 발생할 수 있는 `Class not registered` 오류를 피하기 위한 것으로, 설치 동의와 수동 재부팅 절차는 동일합니다.
 
 이 VM 설치 도우미에 한해 `-Yes`로 모든 도구 설치, 관련 약관 수락과 설치 설정 변경(nvm 설정 및 Node.js 활성화 포함)에 일괄 동의할 수 있습니다. WinGet의 패키지 및 원본 약관도 수락합니다. 옵션을 생략하면 기존처럼 항목별로 질문합니다. 관리자 권한의 대화형 터미널에서 실행하세요.
 
 ```powershell
-$HOME/scripts/install-vm-tools.ps1 -Yes
+& "$HOME/scripts/install-vm-tools.ps1" -Yes
 ```
 
 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 옵션으로 명령을 다시 실행하세요. `-Yes`도 자동 재부팅, 자동 로그인과 예약 작업에 의한 재개는 하지 않습니다. 기존 설치본과 데이터를 유지하며, 아직 준비되지 않은 항목을 다시 확인합니다.

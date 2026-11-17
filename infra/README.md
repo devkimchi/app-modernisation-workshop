@@ -24,84 +24,57 @@ VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배�
 
 ## 사전 준비
 
-배포할 PC에 azd CLI를 미리 설치하고 다음 조건을 확인하세요.
-
-- Azure 구독에서 리소스 그룹, VM, 네트워크와 자동 종료 일정을 생성할 권한
-- 선택한 리전의 VM 크기 지원, vCPU 할당량과 Bastion Developer 지원
+- [Azure 구독](https://aka.ms/azure/free)
+- [`azd` CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
 - [Azure에서 Windows 클라이언트를 사용할 라이선스 자격](https://learn.microsoft.com/azure/virtual-machines/windows/windows-desktop-multitenant-hosting-deployment)
-- Windows, Visual Studio Build Tools, Docker Desktop과 GitHub Copilot의 사용 조건
 
 ## 배포
 
-**배포할 PC의 저장소 루트에서 실행하세요.** 공통 `scripts` 파일도 필요하므로 `infra`만 복사해서 배포할 수는 없습니다.
+**배포할 PC의 저장소 루트에서 실행하세요.**
 
-Copilot app 터미널에서 azd가 AI 에이전트 환경으로 인식해 질문을 생략하면, **배포 명령을 실행하기 전에** 같은 터미널에서 다음 값을 설정하세요. 직접 입력할 수 있는 터미널이어야 합니다.
+1. Copilot app 터미널에서 azd CLI를 실행시킬 경우 아래와 같이 환경 변수를 설정하세요.
 
-PowerShell:
+   ```bash
+   # zsh/bash
+   export AZD_NON_INTERACTIVE=false
+   ```
 
-```powershell
-$env:AZD_NON_INTERACTIVE = 'false'
-```
+   ```powershell
+   # PowerShell
+   $env:AZD_NON_INTERACTIVE = 'false'
+   ```
 
-macOS/Linux Bash:
+1. Azure에 로그인합니다.
 
-```bash
-export AZD_NON_INTERACTIVE=false
-```
+   ```bash
+   azd auth login
+   ```
 
-현재 터미널과 자식 프로세스에만 적용됩니다. 일반 터미널에서는 보통 필요하지 않으며, CI나 무인 실행에서는 설정하지 마세요. 이 설정만으로 누락된 필수 값이나 Bicep 기본값이 바뀌지는 않습니다.
+1. 배포를 시작합니다.
 
-다음 명령은 두 환경에서 같습니다. 구독과 리전이 설정되지 않았다면 azd가 선택을 요청합니다.
+   ```bash
+   azd up
+   ```
 
-```powershell
-azd auth login
-azd env new appmod-dev
-azd provision
-```
-
-첫 배포에서는 `adminPassword`를 입력하고 `confirmWindowsClientLicense`에 답합니다. 암호는 화면에 표시되지 않습니다. Windows 클라이언트 라이선스 자격이 있는 경우에만 `true`를 선택하세요. 암호는 12~123자로, 대문자, 소문자, 숫자, 특수 문자 중 3가지 이상을 포함해야 하며 Azure 암호 정책도 충족해야 합니다. 명령 인수, 매개변수 파일이나 채팅에 암호를 적지 마세요.
-
-azd는 입력한 값을 로컬에 캐시합니다. 확인한 azd 1.37.3은 비밀 값을 기본 `$HOME/.azd/vaults`에 **암호화 없이 base64로 저장**합니다. 경로는 `AZD_CONFIG_DIR` 설정에 따라 달라질 수 있습니다. `.azure`와 azd vault를 공유하거나 커밋하지 마세요.
-
-암호를 다시 입력하려면 해당 azd 환경에서 다음 명령을 실행하세요. 캐시 참조만 해제하며, 기존 VM 암호를 바꾸거나 vault 파일을 삭제하지는 않습니다.
-
-```powershell
-azd env config unset infra.parameters.adminPassword
-azd provision
-```
-
-기본값을 바꾸려면 **프로비저닝 전에** 필요한 항목만 설정하세요.
-
-```powershell
-azd env set VM_SIZE Standard_D8s_v5
-azd env set VM_OS_DISK_SIZE_GB 512
-azd env set VM_AUTO_SHUTDOWN_ENABLED true
-azd env set VM_AUTO_SHUTDOWN_TIME 2100
-```
-
-디스크는 256~1024 GiB로 설정할 수 있으며, 기존 디스크는 축소하지 마세요. VM 크기를 바꾸려면 재시작이 필요할 수 있습니다. 다른 리전이나 VM 크기를 사용하려면 Windows 11, 중첩 가상화와 Bastion 지원을 확인하세요. 설치 중 자동 종료를 막으려면 `VM_AUTO_SHUTDOWN_ENABLED`를 `false`로 설정하세요.
+   테넌트, 구독, 지역과 `adminPassword`, `confirmWindowsClientLicense` 값을 입력합니다.
 
 ## 로그인과 도구 설치
 
 1. Azure portal에서 VM의 **연결 > Bastion**을 선택하고 `.\appmoduser`와 배포 시 입력한 암호로 로그인합니다.
-2. PowerShell을 **관리자 권한으로 실행**합니다. Windows PowerShell 5.1과 PowerShell 7 모두 사용할 수 있습니다.
+2. PowerShell을 **관리자 권한으로 실행**합니다.
 3. 다음 명령을 실행하고 필요한 항목에 동의합니다.
 
-```powershell
-& "$HOME/scripts/install-vm-tools.ps1"
-```
+   ```powershell
+   & "$HOME/scripts/install-vm-tools.ps1"
+   ```
 
-경로 앞의 `&`와 따옴표를 유지하세요. Windows PowerShell 5.1에서는 WinGet과 PowerShell 7.x를 준비한 뒤 PowerShell 7로 실행을 이어갑니다.
+   기본적으로 항목마다 동의를 받습니다. `-Yes` 스위치를 추가하면 도구 설치, 약관 수락(WinGet 패키지 및 원본 약관 포함), 설정 변경(nvm 설정 및 Node.js 활성화 포함)에 일괄 동의합니다.
 
-기본적으로 항목마다 동의를 받습니다. 이 VM 도우미에 한해 `-Yes`를 지정하면 도구 설치, 약관 수락(WinGet 패키지 및 원본 약관 포함), 설정 변경(nvm 설정 및 Node.js 활성화 포함)에 일괄 동의합니다.
+   ```powershell
+   & "$HOME/scripts/install-vm-tools.ps1" -Yes
+   ```
 
-```powershell
-& "$HOME/scripts/install-vm-tools.ps1" -Yes
-```
-
-재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 기존 설치와 데이터는 유지합니다. `-Yes`를 사용해도 재부팅, 로그인과 설치 재개는 직접 해야 합니다.
-
-관리자 `appmoduser`의 대화형 터미널에서 실행해야 합니다. `-Yes`도 CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자 실행 제한을 해제하지 않습니다. 종료 코드는 완료 `0`, 미동의를 포함한 미완료 또는 실패 `1`, 재부팅 대기 `3010`입니다.
+4. 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요.
 
 ### 설치 대상
 

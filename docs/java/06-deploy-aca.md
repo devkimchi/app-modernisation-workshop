@@ -208,6 +208,53 @@ $env:PGSSLROOTCERT = $caFile.FullName
 
 다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다. 조회 명령은 순서대로 실행하고, 오류나 빈 값이 나오면 다음 명령을 실행하지 마세요.
 
+`bootstrap-identities.sql`을 실행하기 전에 앱 루트에서 아래 네 값을 조회해 준비합니다. web과 worker는 각 Container App에 연결된 사용자 할당 관리 ID를 조회합니다. 이 예시는 앱마다 관리 ID가 하나인 경우에 사용합니다. 여러 ID가 조회되면 임의로 하나를 선택하지 말고 앱 설정과 초기화 안내에서 사용할 ID를 확인하세요.
+
+```bash
+subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
+rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)
+workerApp=$(azd env get-value WORKER_CONTAINER_APP_NAME)
+webIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$webApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
+workerIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$workerApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
+webIdentity=$(az identity show --subscription "$subscription" --ids "$webIdentityId" --query name --output tsv)
+workerIdentity=$(az identity show --subscription "$subscription" --ids "$workerIdentityId" --query name --output tsv)
+migrationIdentity=$(azd env get-value MIGRATION_IDENTITY_NAME)
+pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
+printf 'Web: %s\nWorker: %s\nSchema-migration: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$migrationIdentity" "$pgDatabase"
+```
+
+```powershell
+# PowerShell
+$subscription = azd env get-value AZURE_SUBSCRIPTION_ID
+$rg = azd env get-value AZURE_RESOURCE_GROUP
+$webApp = azd env get-value WEB_CONTAINER_APP_NAME
+$workerApp = azd env get-value WORKER_CONTAINER_APP_NAME
+$webIdentityId = az containerapp show --subscription $subscription --resource-group $rg --name $webApp --query "keys(identity.userAssignedIdentities)" --output tsv
+$workerIdentityId = az containerapp show --subscription $subscription --resource-group $rg --name $workerApp --query "keys(identity.userAssignedIdentities)" --output tsv
+$webIdentity = az identity show --subscription $subscription --ids $webIdentityId --query name --output tsv
+$workerIdentity = az identity show --subscription $subscription --ids $workerIdentityId --query name --output tsv
+$migrationIdentity = azd env get-value MIGRATION_IDENTITY_NAME
+$pgDatabase = azd env get-value POSTGRESQL_DATABASE
+[pscustomobject]@{
+    Web = $webIdentity
+    Worker = $workerIdentity
+    "Schema-migration" = $migrationIdentity
+    Database = $pgDatabase
+} | Format-List
+```
+
+출력값이 승인한 대상과 일치하는지 확인하고, 프롬프트에 따라 다음 순서로 입력합니다.
+
+| 프롬프트 | 입력할 출력값 |
+| --- | --- |
+| `Web managed identity name:` | `Web` |
+| `Worker managed identity name:` | `Worker` |
+| `Schema-migration managed identity name:` | `Schema-migration` |
+| `Application database name:` | `Database` |
+
+관리 ID는 Client ID나 Object ID가 아닌 **리소스 이름**을 입력합니다. 네 값을 모두 입력하면 DB 사용자 생성과 권한 부여가 시작됩니다. 2단계의 초기화 스크립트에서도 같은 web과 worker 이름이 필요하므로 별도 호스트에서 사용할 수 있도록 준비하세요.
+
 1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
 
    ```bash

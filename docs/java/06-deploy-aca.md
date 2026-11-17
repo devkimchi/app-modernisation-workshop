@@ -127,6 +127,7 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 `<확인한-공인-IPv4>`를 확인한 주소로 바꾸고 도우미가 표시한 서버와 IP 주소를 확인한 뒤 승인합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. 도우미는 단일 IP만 등록하며 기존 규칙을 삭제하거나 범위를 덮어쓰지 않습니다. Azure 서비스 전체나 모든 IP를 허용하는 규칙을 만들지 않습니다.
 
 ```bash
+# zsh/bash
 clientIp="<확인한-공인-IPv4>"
 ../scripts/register-java-db-client-ip.sh --client-ip "$clientIp"
 ```
@@ -146,6 +147,7 @@ $clientIp = "<확인한-공인-IPv4>"
 `psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 도우미를 실행해 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받고, 반환된 PEM 파일 경로를 `PGSSLROOTCERT`에 지정합니다. Bash 도우미에는 `curl`과 `openssl`이 필요합니다. 시스템 인증서 저장소는 변경하지 않습니다.
 
 ```bash
+# zsh/bash
 PGSSLROOTCERT=$(../scripts/prepare-java-db-root-cert.sh) && export PGSSLROOTCERT
 ```
 
@@ -175,6 +177,7 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 초기화 전에 서버, 관리자, web/worker 관리 ID 이름과 DB 이름을 조회해 승인한 대상과 대조합니다. 앱마다 사용자 할당 관리 ID가 정확히 하나여야 하며 조회에 실패하거나 값이 비어 있으면 중단합니다.
 
 ```bash
+# zsh/bash
 ../scripts/get-java-db-info.sh
 ```
 
@@ -188,10 +191,12 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 `postgres` DB에 Entra 관리자로 연결해 검토한 SQL을 실행합니다. SQL은 web/worker 보안 주체를 생성하고 DB 연결 권한을 부여한 뒤 앱 DB에 연결해 스키마 사용 권한을 설정해야 합니다. 도우미는 실행 후 두 역할의 유효 `CONNECT`, `USAGE`와 스키마 `CREATE` 금지를 확인합니다.
 
 ```bash
+# zsh/bash
 ../scripts/initialize-java-db-users.sh
 ```
 
 ```powershell
+# PowerShell
 ../scripts/initialize-java-db-users.ps1
 ```
 
@@ -200,10 +205,12 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 같은 Entra 관리자 계정으로 앱 DB에 연결해 테이블과 앱 권한을 설정합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 실행 후 도우미가 테이블 소유자와 web/worker의 유효 권한을 확인합니다.
 
 ```bash
+# zsh/bash
 ../scripts/initialize-java-db-schema.sh
 ```
 
 ```powershell
+# PowerShell
 ../scripts/initialize-java-db-schema.ps1
 ```
 
@@ -248,6 +255,7 @@ Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Con
 터미널에서는 아래 도우미로 두 앱의 최신 수정 버전과 준비된 수정 버전이 같은지, 최신 버전이 활성화되어 정상인지, web의 외부 ingress와 8080 포트 및 worker의 ingress 비활성화를 확인합니다. 최근 시스템 로그 각 20줄과 web HTTP 응답도 확인합니다. 필요한 azd 출력이 없거나 확인에 실패하면 오류로 종료합니다.
 
 ```bash
+# zsh/bash
 ../scripts/check-java-deployment.sh
 ```
 
@@ -269,6 +277,7 @@ Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Con
 3. 앱 루트에서 현재 셸에 맞는 스크립트를 직접 실행합니다. 스크립트가 JDK 25를 선택하고 Azure CLI와 azd에서 대상을 조회합니다. 표시된 구독, 리소스, 사용자와 데이터 읽기 및 쓰기 범위를 앞서 검토한 비용과 함께 확인한 뒤 실행에 명시적으로 동의합니다. CI나 비대화형 환경에서는 실행할 수 없습니다.
 
    ```bash
+   # zsh/bash
    ./scripts/run-azure-it.sh
    ```
 

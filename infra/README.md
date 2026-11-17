@@ -22,18 +22,18 @@
 
 VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배포와 Azure portal 접속에는 Azure 로그인이 필요합니다.
 
-## 배포
+## 사전 준비
 
-**배포할 PC의 저장소 루트에서 실행하세요.** azd CLI가 필요하며, Windows에서는 PowerShell 7, macOS/Linux 데스크톱에서는 Bash 3.2 이상을 사용합니다. Bash 훅은 `gzip`, `base64`를 사용하며 PowerShell은 필요하지 않습니다.
-
-공통 `scripts` 파일도 필요하므로 `infra`만 복사해서 배포할 수는 없습니다.
-
-먼저 다음 조건을 확인하세요.
+배포할 PC에 azd CLI를 미리 설치하고 다음 조건을 확인하세요.
 
 - Azure 구독에서 리소스 그룹, VM, 네트워크와 자동 종료 일정을 생성할 권한
 - 선택한 리전의 VM 크기 지원, vCPU 할당량과 Bastion Developer 지원
 - [Azure에서 Windows 클라이언트를 사용할 라이선스 자격](https://learn.microsoft.com/azure/virtual-machines/windows/windows-desktop-multitenant-hosting-deployment)
 - Windows, Visual Studio Build Tools, Docker Desktop과 GitHub Copilot의 사용 조건
+
+## 배포
+
+**배포할 PC의 저장소 루트에서 실행하세요.** 공통 `scripts` 파일도 필요하므로 `infra`만 복사해서 배포할 수는 없습니다.
 
 Copilot app 터미널에서 azd가 AI 에이전트 환경으로 인식해 질문을 생략하면, **배포 명령을 실행하기 전에** 같은 터미널에서 다음 값을 설정하세요. 직접 입력할 수 있는 터미널이어야 합니다.
 

@@ -115,7 +115,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 ### PostgreSQL 클라이언트 설치
 
-실습 6의 Azure DB 초기화와 연결 확인에는 PostgreSQL 클라이언트 `psql`이 필요합니다. 위 도우미는 PostgreSQL 클라이언트를 설치하거나 점검하지 않으므로 별도로 준비합니다. 로컬 PostgreSQL 서버는 설치하거나 실행할 필요가 없습니다.
+[실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)의 Azure DB 초기화와 연결 확인에는 PostgreSQL 클라이언트 `psql`이 필요합니다. 위 도우미는 PostgreSQL 클라이언트를 설치하거나 점검하지 않으므로 별도로 준비합니다. 로컬 PostgreSQL 서버는 설치하거나 실행할 필요가 없습니다.
 
 먼저 실습에 사용할 터미널에서 다음 명령을 실행합니다. 버전이 표시되면 설치를 건너뜁니다.
 

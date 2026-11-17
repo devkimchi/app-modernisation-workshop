@@ -33,6 +33,8 @@ Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 �
 
 다음 프롬프트로 생성된 배포 산출물에 요구사항이 반영됐는지 확인합니다. 이미 생성된 산출물은 `azd init --from-code`로 다시 생성하지 않습니다.
 
+DB 도우미 연동은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 사용하는 `../scripts/` 도우미를 기준으로 검토합니다.
+
 ```text
 `.github/modernize/rulebook/`과 실제 Azure 연동 코드 및 환경 변수 정의를 읽고
 현재 앱 루트에 있는 기존 Azure Developer CLI 산출물만 검토해 줘. 파일을 만들거나 변경하지 말고 명령도 실행하지 마.
@@ -58,7 +60,7 @@ Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 �
   앱은 web/worker 관리 ID로 연결해야 해. web에는 테이블 조회, 추가, 수정, 삭제를, worker에는 조회와 수정만 허용해야 해. 스키마 생성이나 테이블 변경 권한은 주지 마.
   사용하지 않는 마이그레이션 관리 ID의 생성 코드, 매개변수, 출력과 SQL 입력 프롬프트가 남아 있으면 수정 대상으로 보고해 줘.
   새 데모 DB만 대상으로 하고 기존 DB를 삭제하거나 덮어쓰지 않는지도 확인해 줘. 컨트롤 플레인의 RBAC 권한만으로 DB 인증이 가능하다고 판단하지 말고, 실제 DB 작업도 실행하지 마.
-- **DB 도우미 연동:** 실습 6의 `../scripts/` 도우미에 필요한 azd 출력 `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`, `POSTGRESQL_SERVER`, `POSTGRESQL_DATABASE`, `POSTGRESQL_ADMIN_NAME`, `POSTGRESQL_ADMIN_OBJECT_ID`, `WEB_CONTAINER_APP_NAME`, `WORKER_CONTAINER_APP_NAME`이 실제 리소스와 연결되는지 확인해 줘.
+- **DB 도우미 연동:** `../scripts/` 도우미에 필요한 azd 출력 `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`, `POSTGRESQL_SERVER`, `POSTGRESQL_DATABASE`, `POSTGRESQL_ADMIN_NAME`, `POSTGRESQL_ADMIN_OBJECT_ID`, `WEB_CONTAINER_APP_NAME`, `WORKER_CONTAINER_APP_NAME`이 실제 리소스와 연결되는지 확인해 줘.
   `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`은 도우미가 `--set`으로 전달하는 `web_identity_name`, `worker_identity_name`, `database_name`을 사용해야 해. `\prompt`나 마이그레이션 관리 ID 입력은 요구하지 않아야 해.
   SQL 값은 `:'변수명'`, 식별자는 `:"변수명"`으로 안전하게 인용해야 해.
   bootstrap SQL은 `postgres` DB에서 시작해 앱 DB에 연결한 상태로 끝나야 해. schema SQL은 앱 DB에서 실행해야 해.
@@ -99,7 +101,7 @@ Java 검증이 필요하면 앱 루트에서 현재 셸에 맞는 `../scripts/`�
 
 수정 후 변경 내용과 검증 결과를 살펴봅니다. 파일이나 리소스를 변경하지 않는 검토를 다시 요청해 문제가 해결됐는지 확인합니다.
 
-로컬에서 확인할 수 없는 Azure 연결과 통합 테스트는 미검증으로 기록합니다. [6. azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 확인합니다. 다음 실습의 진행을 막는 문제가 남아 있다면 먼저 해결합니다.
+로컬에서 확인할 수 없는 Azure 연결과 통합 테스트는 미검증으로 기록합니다. [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 확인합니다. 다음 실습의 진행을 막는 문제가 남아 있다면 먼저 해결합니다.
 
 ## 비용과 배포 승인
 

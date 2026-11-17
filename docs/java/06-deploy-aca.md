@@ -245,6 +245,10 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 ../scripts/initialize-java-db-schema.ps1
 ```
 
+#### 초기화 결과 확인
+
+두 초기화 도우미는 [권한 검증 SQL](../../scripts/java-db-permissions.sql)을 자동으로 실행하므로 별도 쿼리를 입력할 필요는 없습니다. 각 도우미 실행 끝에 `[PASS] SQL and effective permission checks completed.`로 시작하는 메시지가 나오는지 확인합니다.
+
 출력에서 테이블 소유자가 초기화한 관리자이고, web은 조회, 추가, 수정, 삭제를, worker는 조회와 수정만 할 수 있는지 확인합니다. 두 앱 역할에는 스키마 생성이나 테이블 변경 권한이 없어야 합니다.
 
 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태와 원인을 확인합니다. 초기화와 권한 검증을 완료하고 승인한 범위와 일치하는지 확인한 뒤 배포합니다. 앱 관리 ID의 인증과 실제 연결은 배포 후 확인합니다.

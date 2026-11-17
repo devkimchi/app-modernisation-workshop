@@ -107,7 +107,7 @@ VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배�
 | 8. 편집기 및 현대화 도구 | GitHub Copilot app | 공식 `github/app` 최신 정식 x64 MSI. SHA-256과 GitHub 서명 확인 |
 | 8. 편집기 및 현대화 도구 | Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
 
-도우미는 설치 후 또는 재실행 시 정상 작동하는 PostgreSQL 18 클라이언트의 경로를 사용자 PATH에 중복 없이 추가합니다. 기존 항목과 순서를 유지하며 시스템 PATH는 바꾸지 않습니다. Windows Terminal을 완전히 종료하고 다시 열어 `psql --version`으로 확인하세요. 다른 `psql`이 먼저 실행되면 경고를 표시합니다. PostgreSQL 18을 직접 확인하려면 `& "$env:ProgramFiles/PostgreSQL/18/bin/psql.exe" --version`을 실행하세요.
+Windows Terminal을 완전히 종료하고 다시 열어 `psql --version`으로 확인하세요.
 
 ### 설치 후 수동 작업
 

@@ -223,6 +223,8 @@ namespace Appmod {
     & {
         $script:PsqlVersion='psql (PostgreSQL) 17.9'; $script:PsqlCode=0
         $script:PsqlInstalls=0; $script:Approved=$false; $script:VmRestartRequired=$false
+        $messages = [Collections.Generic.List[string]]::new()
+        function Write-WorkshopMessage { param($Message); $messages.Add($Message) }
         function Get-Command { [pscustomobject]@{Source='C:\fixture-postgres\psql.exe'} }
         function Update-ProcessPath { }
         function Test-Path { return $true }
@@ -246,8 +248,69 @@ namespace Appmod {
         Assert-True (Install-VmPostgresClient) 'psql 18 is verified even when its directory is not in PATH'
         Assert-True (Install-VmPostgresClient) 'existing psql 18 does not reinstall'
         Assert-True ($script:PsqlInstalls -eq 1) 'PostgreSQL client installs once'
-        $script:PsqlCode=1
+        $script:PsqlCode=-1073741515; $script:PsqlVersion=''
         Assert-True (-not (Test-VmPostgresClient)) 'nonzero psql exit cannot satisfy verification'
+        Assert-True (@($messages | Where-Object {
+            $_ -match "\[WARN\].*psql.exe.*exit code -1073741515"
+        }).Count -gt 0) 'silent native startup failure reports the executable path and exit code'
+    }
+
+    & {
+        $script:RuntimeReady=$false; $script:ClientPresent=$true
+        $script:RuntimeApproved=$false; $script:ClientApproved=$false
+        $script:RuntimeRestart=$false; $script:VmRestartRequired=$false
+        $script:ClientInstalls=[Collections.Generic.List[string]]::new()
+        $clientPath = Join-Path $env:ProgramFiles 'PostgreSQL\18\bin\psql.exe'
+        function Get-Command { [pscustomobject]@{Source=$clientPath} }
+        function Update-ProcessPath { }
+        function Test-Path {
+            param($LiteralPath,$PathType)
+            if ($LiteralPath -eq $clientPath) { return $script:ClientPresent }
+            if ($LiteralPath -match '\\System32\\(vcruntime140|vcruntime140_1|msvcp140)\.dll$') { return $script:RuntimeReady }
+            throw "Unexpected path: $LiteralPath"
+        }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True ($Name -eq $clientPath -and ($Arguments -join ' ') -eq '--version') 'client dependency verification does not connect to a database'
+            if (-not $script:RuntimeReady) { return [pscustomobject]@{Code=-1073741515;Text=''} }
+            [pscustomobject]@{Code=0;Text='psql (PostgreSQL) 18.7'}
+        }
+        function Confirm-VmAction {
+            param($Message)
+            if ($Message -match 'Microsoft\.VCRedist') { return $script:RuntimeApproved }
+            return $script:ClientApproved
+        }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -eq 'winget') 'client dependencies use the existing consented package installer'
+            $id = $Arguments[[Array]::IndexOf($Arguments, '--id') + 1]
+            $script:ClientInstalls.Add($id)
+            switch ($id) {
+                'Microsoft.VCRedist.2015+.x64' {
+                    $script:RuntimeReady=$true
+                    $script:VmRestartRequired=$script:RuntimeRestart
+                }
+                'PostgreSQL.PostgreSQL.18' { $script:ClientPresent=$true }
+                default { throw "Unexpected package: $id" }
+            }
+            return $true
+        }
+        Assert-True (-not (Install-VmPostgresClient) -and $script:ClientInstalls.Count -eq 0) 'declining the runtime prevents PostgreSQL installation'
+        $script:RuntimeApproved=$true
+        Assert-True (Install-VmPostgresClient) 'installing the missing runtime repairs an existing PostgreSQL client'
+        Assert-True (($script:ClientInstalls -join ',') -eq 'Microsoft.VCRedist.2015+.x64') 'working client is not reinstalled after repairing its runtime'
+        Assert-True ((Install-VmPostgresClient) -and $script:ClientInstalls.Count -eq 1) 'existing runtime and PostgreSQL client are preserved'
+        $script:RuntimeReady=$false; $script:ClientPresent=$false; $script:ClientApproved=$true
+        $script:ClientInstalls.Clear()
+        Assert-True (Install-VmPostgresClient) 'fresh client installation includes its runtime prerequisite'
+        Assert-True (($script:ClientInstalls -join ',') -eq 'Microsoft.VCRedist.2015+.x64,PostgreSQL.PostgreSQL.18') 'x64 runtime installs before the client'
+        $script:RuntimeReady=$false; $script:ClientPresent=$false; $script:RuntimeRestart=$true
+        $script:ClientInstalls.Clear()
+        Assert-True (-not (Install-VmPostgresClient) -and $script:VmRestartRequired) 'runtime restart requirement is preserved'
+        Assert-True (($script:ClientInstalls -join ',') -eq 'Microsoft.VCRedist.2015+.x64') 'PostgreSQL installation waits for the runtime restart'
+        $script:VmRestartRequired=$false; $script:RuntimeReady=$false
+        function Invoke-VmInstaller { throw 'fixture runtime installation failure' }
+        Assert-Throws { Install-VmPostgresClient } 'runtime installation failure' 'runtime installation errors are not hidden'
     }
 
     & {

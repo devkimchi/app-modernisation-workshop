@@ -273,6 +273,13 @@ function Install-VmDotnetSdk {
         })
 }
 
+function Test-VmVisualCppRuntime {
+    foreach ($name in @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $env:SystemRoot "System32\$name") -PathType Leaf)) { return $false }
+    }
+    return $true
+}
+
 function Test-VmPostgresClient {
     $paths = @((Join-Path $env:ProgramFiles 'PostgreSQL\18\bin\psql.exe'))
     $command = Get-Command psql -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -281,11 +288,18 @@ function Test-VmPostgresClient {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
         $probe = Invoke-ToolProbe $path @('--version')
         if ($probe.Code -eq 0 -and $probe.Text -match '^psql \(PostgreSQL\) 18\.\d+(?:\s|$)') { return $true }
+        Write-WorkshopMessage "[WARN] Could not verify PostgreSQL 18 at '$path' (exit code $($probe.Code)). Output: $($probe.Text)"
     }
+    Write-WorkshopMessage "[INFO] No working PostgreSQL 18 client was found. Checked: $($paths -join ', ')"
     return $false
 }
 
 function Install-VmPostgresClient {
+    if (-not (Install-VmPackage -Id Microsoft.VCRedist.2015+.x64 -Name 'Microsoft Visual C++ v14 Redistributable (x64)' `
+        -TestInstalled { Test-VmVisualCppRuntime })) {
+        Write-WorkshopMessage '[MANUAL] PostgreSQL 18 client requires the x64 Visual C++ runtime. Complete that installation and any requested restart first.'
+        return $false
+    }
     return (Install-VmPackage -Id PostgreSQL.PostgreSQL.18 -Name 'PostgreSQL 18 command-line tools (client only)' `
         -ExtraArguments @('--override', '--mode unattended --unattendedmodeui minimal --enable-components commandlinetools --disable-components server,pgAdmin,stackbuilder') `
         -TestInstalled { Test-VmPostgresClient })

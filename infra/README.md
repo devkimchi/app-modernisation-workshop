@@ -124,6 +124,7 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 | Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
 | .NET 10 SDK | `Microsoft.DotNet.SDK.10`, 안정 10.x. 기존 다른 메이저 유지 |
 | .NET 11 SDK | `Microsoft.DotNet.SDK.11`, 안정 11.x. .NET 10과 별도 동의 후 함께 설치 |
+| Visual C++ x64 런타임 | PostgreSQL 클라이언트보다 먼저 `Microsoft.VCRedist.2015+.x64`를 별도 동의 후 설치. 필요한 런타임 DLL 확인 |
 | PostgreSQL 18 클라이언트 | `PostgreSQL.PostgreSQL.18`의 `commandlinetools`만 설치하고 `psql --version` 확인. 서버, pgAdmin과 Stack Builder는 설치하지 않으며 DB도 생성하지 않음 |
 | Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 및 .NET 데스크톱 빌드 도구, 4.8 Targeting Pack과 SDK |
 | IIS Express | Microsoft 공식 x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인 |
@@ -138,6 +139,8 @@ Visual Studio Community IDE는 설치하지 않습니다. 기존 IDE가 있으�
 nvm 1.x나 출처가 불명확한 기존 Node 설치는 자동 교체하지 않습니다. nvm의 `auto_install`이 켜져 있으면 별도 동의 후 끕니다. 기존 Ubuntu가 WSL1이면 삭제하거나 자동 변환하지 않고 중단합니다.
 
 PostgreSQL 설치 프로그램은 PATH를 자동으로 변경하지 않습니다. 새 터미널에서는 `& "$env:ProgramFiles/PostgreSQL/18/bin/psql.exe" --version`으로 확인하세요.
+
+`psql.exe`가 아무 출력 없이 종료되면 Visual C++ 런타임이 누락되었을 수 있습니다. 설치 도우미를 다시 실행하면 런타임을 먼저 확인하고, 이미 설치된 PostgreSQL 18 클라이언트가 정상 실행되면 재설치하지 않습니다. 클라이언트 검증 실패 시에는 확인한 경로, 종료 코드와 출력을 표시합니다.
 
 ### 설치 후 수동 작업
 

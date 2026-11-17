@@ -61,8 +61,8 @@ VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배�
 ## 로그인과 도구 설치
 
 1. Azure portal에서 VM의 **연결 > Bastion**을 선택하고 `.\appmoduser`와 배포 시 입력한 암호로 로그인합니다.
-2. PowerShell을 **관리자 권한으로 실행**합니다.
-3. 다음 명령을 실행하고 필요한 항목에 동의합니다.
+1. PowerShell을 **관리자 권한으로 실행**합니다.
+1. 다음 명령을 실행하고 필요한 항목에 동의합니다.
 
    ```powershell
    & "$HOME/scripts/install-vm-tools.ps1"
@@ -74,7 +74,7 @@ VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배�
    & "$HOME/scripts/install-vm-tools.ps1" -Yes
    ```
 
-4. 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요.
+1. 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요.
 
 ### 설치 대상
 
@@ -111,29 +111,9 @@ PostgreSQL 18 클라이언트 설치 후 PATH 변경을 반영하려면 Windows 
 
 ### 설치 후 수동 작업
 
-1. VM 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.
-
-   ```powershell
-   wsl -d Ubuntu
-   ```
-
-2. Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요.
-
-3. GitHub Copilot app에 로그인하고, `copilot`을 실행해 CLI 인증을 진행하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계부터 gh 인증과 Modernize CLI를 확인하세요.
-
-도우미는 Azure/GitHub 로그인, 구독 변경, Resource Provider 등록과 실습 DB 생성을 하지 않습니다. WSL2 중첩 가상화, Docker 실행과 앱 빌드는 VM에서 직접 확인하세요. Trusted Launch는 자동으로 끄지 않습니다.
-
-## 파일 배치와 재배포
-
-`preprovision` 훅은 공통 도우미 6개, VM 설치 스크립트와 `buildtools.vsconfig`를 압축해 `infra/.generated/payload.json`을 만듭니다. Bicep에 포함하므로 별도 스토리지나 SAS, 공개 저장소가 필요하지 않습니다.
-
-Windows에서는 `.ps1`, macOS/Linux에서는 `.sh` 훅을 실행합니다. `postprovision` 훅은 Bastion 접속과 도구 설치 명령을 안내합니다.
-
-VM 생성 후 Managed Run Command가 `appmoduser`의 프로필을 찾아 `scripts` 폴더에 파일을 복사합니다. 프로필이 없으면 먼저 생성합니다.
-
-프로필 생성에 실패하면 오류를 해결한 뒤 같은 azd 환경에서 `azd provision`을 다시 실행하세요. VM이나 리소스 그룹을 삭제할 필요는 없습니다.
-
-내용이 같은 파일은 유지하며, 다른 파일을 덮어쓰거나 지정 폴더 밖의 경로와 reparse point를 사용하려 하면 배포가 실패합니다. 파일이 충돌하거나 새 도우미로 교체하려면 VM에서 해당 파일을 백업해 다른 위치로 옮긴 뒤 `azd provision`을 다시 실행하세요.
+1. Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요.
+1. Windows 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.
+1. GitHub Copilot app에 로그인하세요.
 
 ## 유지보수 검증
 

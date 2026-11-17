@@ -155,6 +155,34 @@ namespace Appmod {
     }
 
     & {
+        function Confirm-VmAction { return $true }
+        function Update-ProcessPath { }
+        function Test-VmPowerShell7 { return $script:PowerShellInstalled }
+        function winget {
+            $global:LASTEXITCODE=0
+            return $script:PowerShellVersions
+        }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            $versionIndex = [Array]::IndexOf($Arguments, '--version')
+            Assert-True ($Command -eq 'winget' -and $Arguments -contains 'Microsoft.PowerShell' -and
+                $versionIndex -ge 0 -and $Arguments[$versionIndex + 1] -eq $script:ExpectedPowerShellVersion) 'PowerShell installs the exact stable WinGet package version'
+            $script:PowerShellInstalled=$true
+            return $true
+        }
+        foreach ($case in @(
+            @{ Text="Version`n8.0.0.0`n7.7.0.0-preview.1`n7.6.9.0`n7.6.10.0`n6.2.7.0"; Expected='7.6.10.0' },
+            @{ Text="Version`n7.5.9`n7.5.10`n7.6.0-preview.1"; Expected='7.5.10' }
+        )) {
+            $script:PowerShellVersions=$case.Text
+            $script:ExpectedPowerShellVersion=$case.Expected
+            $script:PowerShellInstalled=$false
+            $script:VmRestartRequired=$false
+            Assert-True (Install-VmPowerShell) 'PowerShell accepts three- and four-part stable versions and excludes previews and other majors'
+        }
+    }
+
+    & {
         function Get-Command { [pscustomobject]@{Source='Invoke-FixtureNative'} }
         function Invoke-FixtureNative { $global:LASTEXITCODE=$script:NativeCode }
         foreach ($code in @(1641,3010)) {

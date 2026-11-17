@@ -105,7 +105,7 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 | --- | --- |
 | WSL2 플랫폼 | 배포판 없이 `wsl.exe --install --no-distribution`으로 설치. 설치 후 직접 재부팅 |
 | Ubuntu | WSL2 플랫폼 준비 후 설치. `appmoduser`에 등록 |
-| PowerShell | 안정 7.x, 기존 버전은 자동 업데이트하지 않음 |
+| PowerShell | 안정 7.x(`7.x.y`와 `7.x.y.z` 패키지 버전 지원), 기존 버전은 자동 업데이트하지 않음 |
 | MSMQ | Server 기능과 서비스 시작. 큐와 데이터는 생성하지 않음 |
 | .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
 | Framework 빌드 도구 | 4.8 Targeting Pack과 SDK, MSBuild 웹 빌드 구성요소 |

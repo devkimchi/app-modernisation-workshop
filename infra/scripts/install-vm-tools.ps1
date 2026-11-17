@@ -121,6 +121,11 @@ function Test-VmPowerShell7 {
     return $true
 }
 
+function Install-VmPowerShell {
+    return (Install-VmPackage Microsoft.PowerShell 'PowerShell 7.x' `
+        -VersionPattern '^7\.\d+\.\d+(?:\.\d+)?$' -TestInstalled { Test-VmPowerShell7 })
+}
+
 function Get-VmWslExecutable {
     $command = Get-Command wsl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($command) { return $command.Source }
@@ -453,7 +458,7 @@ else {
         $script:VmRestartRequired = $false
         if (Test-VmRebootPending) { Write-Host '[MANUAL] Restart manually and rerun this script.'; exit 3010 }
         if (-not (Initialize-VmWinget)) { Write-Host '[MANUAL] winget is not ready.'; exit 1 }
-        if (-not (Install-VmPackage Microsoft.PowerShell 'PowerShell 7.x' -VersionPattern '^7\.\d+\.\d+$' -TestInstalled { Test-VmPowerShell7 })) {
+        if (-not (Install-VmPowerShell)) {
             if ($script:VmRestartRequired) { exit 3010 }
             exit 1
         }

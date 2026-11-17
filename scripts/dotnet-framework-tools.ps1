@@ -14,9 +14,9 @@ function Invoke-FrameworkProbe {
 function Get-DotnetFrameworkBuildTools {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
     $result = Invoke-FrameworkProbe $vswhere @('-products', '*', '-version', '[17.0,19.0)', '-requires', 'Microsoft.Component.MSBuild', '-format', 'json', '-utf8')
-    if ($result.Code -ne 0) { throw 'Visual Studio Installer의 vswhere를 실행할 수 없습니다.' }
+    if ($result.Code -ne 0) { throw 'Could not run vswhere from Visual Studio Installer.' }
     try { $instances = @($result.Text | ConvertFrom-Json -ErrorAction Stop) }
-    catch { throw 'vswhere 출력 해석에 실패했습니다.' }
+    catch { throw 'Could not parse vswhere output.' }
     foreach ($instance in ($instances | Sort-Object { [version]$_.installationVersion } -Descending)) {
         if (-not $instance.installationPath) { continue }
         $major = ([version]$instance.installationVersion).Major
@@ -27,7 +27,7 @@ function Get-DotnetFrameworkBuildTools {
             return [pscustomobject]@{ MSBuild = $msbuild; WebTools = $webTools; Version = "$major.0" }
         }
     }
-    throw 'VS 2022/2026 IDE 또는 Build Tools의 MSBuild.exe와 WebApplications\Microsoft.WebApplication.targets가 필요합니다. ASP.NET 웹 빌드 구성요소를 확인하세요.'
+    throw 'MSBuild.exe and WebApplications\Microsoft.WebApplication.targets from VS 2022/2026 IDE or Build Tools are required. Check the ASP.NET web build components.'
 }
 
 function Get-WorkshopIisExpress {
@@ -38,5 +38,5 @@ function Get-WorkshopIisExpress {
             return [pscustomobject]@{ Exe = $exe; Template = $template }
         }
     }
-    throw 'IIS Express 실행 파일과 AppServer\applicationhost.config 템플릿이 필요합니다.'
+    throw 'The IIS Express executable and AppServer\applicationhost.config template are required.'
 }

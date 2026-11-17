@@ -11,14 +11,14 @@ function Get-WorkshopReleaseVersion {
 
 function Get-WorkshopNvmConfiguration {
     $probe = Invoke-ToolProbe nvm @('config', 'get', 'root', 'mode', 'auto_install', 'enabled', '--json')
-    if ($probe.Code -ne 0) { Write-Host '[FAIL] nvm-windows 2 설정 조회 실패.'; return }
+    if ($probe.Code -ne 0) { Write-WorkshopMessage '[FAIL] Could not query nvm-windows 2 configuration.'; return }
     try { $config = $probe.Text | ConvertFrom-Json -ErrorAction Stop }
-    catch [ArgumentException] { Write-Host '[FAIL] nvm-windows 2 설정 JSON이 올바르지 않습니다.'; return }
+    catch [ArgumentException] { Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 configuration JSON.'; return }
     if ($config.root -isnot [string] -or -not [IO.Path]::IsPathFullyQualified($config.root) -or
         -not (Split-Path $config.root.TrimEnd('\') -Parent) -or
         $config.mode -cnotin @('shim', 'link') -or $config.enabled -isnot [bool] -or
         $config.auto_install -isnot [bool] -or -not $config.enabled -or $config.auto_install) {
-        Write-Host '[MANUAL] nvm-windows 2의 root/mode/enabled 설정을 확인하세요. 개별 동의 없는 설치를 막기 위해 auto_install=true 환경에서는 진행하지 않습니다.'
+        Write-WorkshopMessage '[MANUAL] Check nvm-windows 2 root/mode/enabled settings. This script will not continue with auto_install=true, to prevent installation without individual consent.'
         return
     }
     return $config
@@ -26,17 +26,17 @@ function Get-WorkshopNvmConfiguration {
 
 function Get-WorkshopNvmSelection {
     $list = Invoke-ToolProbe nvm @('list', '--json')
-    if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-Host '[FAIL] nvm-windows 2 설치 버전 목록 조회 실패.'; return }
+    if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-WorkshopMessage '[FAIL] Could not list installed nvm-windows 2 versions.'; return }
     try { $versions = @($list.Text | ConvertFrom-Json -ErrorAction Stop) }
-    catch [ArgumentException] { Write-Host '[FAIL] nvm-windows 2 버전 목록 JSON이 올바르지 않습니다.'; return }
+    catch [ArgumentException] { Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 version list JSON.'; return }
     foreach ($entry in $versions) {
         if (-not (Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$entry.version })) -or
             $entry.installed -isnot [bool] -or $entry.default -isnot [bool]) {
-            Write-Host '[FAIL] nvm-windows 2 버전 목록 형식이 올바르지 않습니다.'; return
+            Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 version list format.'; return
         }
     }
     $defaults = @($versions | Where-Object { $_.installed -eq $true -and $_.default -eq $true })
-    if ($defaults.Count -gt 1) { Write-Host '[FAIL] nvm-windows 2 기본 버전이 여러 개입니다.'; return }
+    if ($defaults.Count -gt 1) { Write-WorkshopMessage '[FAIL] Multiple default nvm-windows 2 versions were found.'; return }
     return [pscustomobject]@{ Version = if ($defaults.Count) {
         Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$defaults[0].version })
     } else { $null } }
@@ -114,24 +114,24 @@ function Install-WorkshopNode {
         $defaultLink = if ($env:ProgramFiles) { Join-Path $env:ProgramFiles 'nodejs' }
         if ($node -or $env:NVM_HOME -or $env:NVM_SYMLINK -or
             ($defaultLink -and (Test-Path -LiteralPath $defaultLink))) {
-            Write-Host '[MANUAL] 기존 Node.js/NVM 경로를 보존합니다. 원래 설치 관리자를 확인하고 nvm-windows 전환을 직접 준비하세요.'
+            Write-WorkshopMessage '[MANUAL] Existing Node.js/NVM paths will be preserved. Identify the original installer and prepare the switch to nvm-windows manually.'
             return $false
         }
         if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-            Write-Host '[MANUAL] nvm-windows 설치에 기존 winget이 필요합니다.'
+            Write-WorkshopMessage '[MANUAL] winget must already be installed to install nvm-windows.'
             return $false
         }
-        if (-not (Confirm-ToolInstall 'winget의 AuthorSoftware.NVMWindows를 설치합니다. 네트워크/관리자 승인과 약관 확인이 필요할 수 있습니다.')) { return $false }
+        if (-not (Confirm-ToolInstall 'Install AuthorSoftware.NVMWindows through winget. Network access, administrator approval, and a review of the terms may be required.')) { return $false }
         & winget install --id AuthorSoftware.NVMWindows --exact --source winget | Out-Host
-        if ($LASTEXITCODE -ne 0) { Write-Host '[FAIL] nvm-windows 설치 실패.'; return $false }
+        if ($LASTEXITCODE -ne 0) { Write-WorkshopMessage '[FAIL] nvm-windows installation failed.'; return $false }
         Update-ProcessPath
     }
     if (-not (Test-WorkshopNvmOwnership $node.Source)) {
-        Write-Host '[MANUAL] nvm-windows 설정 또는 활성 Node.js의 관리 출처가 불명확합니다. 경로를 삭제하거나 덮어쓰지 않습니다.'
+        Write-WorkshopMessage '[MANUAL] Could not establish ownership of the nvm-windows configuration or active Node.js installation. No paths will be deleted or overwritten.'
         return $false
     }
     $nvmVersion = Get-WorkshopReleaseVersion (Invoke-ToolProbe nvm @('version'))
-    if (-not $nvmVersion -or $nvmVersion.Major -notin @(1, 2)) { Write-Host '[FAIL] 지원하는 nvm-windows 버전을 확인하지 못했습니다.'; return $false }
+    if (-not $nvmVersion -or $nvmVersion.Major -notin @(1, 2)) { Write-WorkshopMessage '[FAIL] Could not verify a supported nvm-windows version.'; return $false }
     $root = $env:NVM_HOME
     $hasActive = [bool]$node
     if ($nvmVersion -and $nvmVersion.Major -eq 2) {
@@ -141,40 +141,40 @@ function Install-WorkshopNode {
         $selection = Get-WorkshopNvmSelection
         if (-not $selection) { return $false }
         $hasActive = $null -ne $selection.Version
-        if ($hasActive -and -not $node) { Write-Host '[MANUAL] nvm-windows의 Node.js 실행 경로가 PATH에 없습니다. 새 터미널에서 다시 실행하세요.'; return $false }
+        if ($hasActive -and -not $node) { Write-WorkshopMessage '[MANUAL] The nvm-windows Node.js executable directory is not in PATH. Rerun in a new terminal.'; return $false }
     }
-    if (-not $root) { Write-Host '[FAIL] nvm-windows 설치 루트를 확인하지 못했습니다.'; return $false }
+    if (-not $root) { Write-WorkshopMessage '[FAIL] Could not verify the nvm-windows installation root.'; return $false }
     $currentProbe = if ($node) { Invoke-ToolProbe node @('--version') }
     $current = if ($currentProbe) { Get-WorkshopReleaseVersion $currentProbe }
-    if ($node -and -not $current -and ($hasActive -or $currentProbe.Code -eq 0)) { Write-Host '[FAIL] Node.js 정식 버전 확인 실패.'; return $false }
+    if ($node -and -not $current -and ($hasActive -or $currentProbe.Code -eq 0)) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js version.'; return $false }
     $hasActive = [bool]$current
     if ($current -and -not $Update) {
-        Write-Host "[INFO] Node.js $current 유지 (-Update 없음)."
+        Write-WorkshopMessage "[INFO] Keeping Node.js $current (no -Update)."
         return $current.Major -ge 22
     }
     $major = if ($current -and $current.Major -ge 22) { $current.Major } else { 22 }
-    if (-not (Confirm-ToolInstall "nvm으로 Node.js 최신 $major.x를 조회하고 필요하면 추가 설치합니다. 기존 버전은 보존합니다.")) {
-        return ($current -and $current.Major -ge 22)
-    }
     try { $latest = Get-WorkshopNodeRelease $major }
-    catch { Write-Host "[FAIL] Node.js 릴리스 조회 실패: $($_.Exception.Message)"; return $false }
-    if (-not $latest -or $latest.Major -ne $major) { Write-Host '[FAIL] 정식 Node.js 릴리스를 확인하지 못했습니다.'; return $false }
-    if ($current -and $current -ge $latest) { Write-Host "[PASS] Node.js $current 유지 (다운그레이드 없음)."; return $true }
+    catch { Write-WorkshopMessage "[FAIL] Could not query Node.js releases: $($_.Exception.Message)"; return $false }
+    if (-not $latest -or $latest.Major -ne $major) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js release.'; return $false }
+    if ($current -and $current -ge $latest) { Write-WorkshopMessage "[PASS] Keeping Node.js $current (no downgrade)."; return $true }
     $installedNode = Join-Path $root "v$latest\node.exe"
     if (-not (Test-Path -LiteralPath $installedNode -PathType Leaf)) {
+        if (-not (Confirm-ToolInstall "Install Node.js $latest through nvm. Existing versions will be preserved.")) {
+            return ($current -and $current.Major -ge 22)
+        }
         $install = Invoke-ToolProbe nvm @('install', "$latest")
-        if ($install.Code -ne 0) { Write-Host "[FAIL] nvm install 실패: $($install.Text)"; return $false }
+        if ($install.Code -ne 0) { Write-WorkshopMessage "[FAIL] nvm install failed: $($install.Text)"; return $false }
     }
     $probe = Invoke-ToolProbe $installedNode @('--version')
-    if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-Host '[FAIL] 설치된 Node.js 버전 검증 실패.'; return $false }
-    if (-not (Confirm-ToolInstall "nvm use $latest 실행: Windows 공용 Node.js 선택(shim/link)을 변경합니다. 이후 터미널에도 적용되지만 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 관리자 승인이 필요할 수 있습니다.")) {
-        Write-Host "[INFO] 활성화하지 않았습니다. 필요하면 직접 nvm use $latest 실행 후 점검하세요."
+    if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-WorkshopMessage '[FAIL] Installed Node.js version verification failed.'; return $false }
+    if (-not (Confirm-ToolInstall "Run nvm use $latest`: change the shared Windows Node.js selection (shim/link). This affects subsequent terminals, but not running Node.js processes. Administrator approval may be required.")) {
+        Write-WorkshopMessage "[INFO] Activation skipped. If needed, run nvm use $latest manually and verify the result."
         return ($current -and $current.Major -ge 22)
     }
     # Recheck immediately before a link change; never take over a new collision.
     $liveNode = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not (Test-WorkshopNvmOwnership $liveNode.Source)) {
-        Write-Host '[MANUAL] nvm-windows 관리 설정이 변경되어 활성화하지 않습니다.'
+        Write-WorkshopMessage '[MANUAL] nvm-windows management settings changed. Activation will not proceed.'
         return $false
     }
     if ($nvmVersion.Major -eq 2) {
@@ -182,13 +182,13 @@ function Install-WorkshopNode {
         $liveSelection = Get-WorkshopNvmSelection
         if (-not $liveConfig -or -not $liveSelection -or $liveConfig.root -ine $root -or
             $liveConfig.mode -cne $config.mode -or $liveSelection.Version -ne $selection.Version) {
-            Write-Host '[MANUAL] nvm-windows 2 설정 또는 기본 선택이 변경되어 활성화하지 않습니다.'
+            Write-WorkshopMessage '[MANUAL] nvm-windows 2 configuration or default selection changed. Activation will not proceed.'
             return $false
         }
     }
     $liveVersion = if ($liveNode -and $hasActive) { Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version')) }
     if ($liveVersion -ne $current) {
-        Write-Host '[MANUAL] Node.js 경로 충돌 또는 활성 버전 변경을 발견했습니다. 활성화하지 않습니다.'
+        Write-WorkshopMessage '[MANUAL] Detected a Node.js path conflict or active version change. Activation will not proceed.'
         return $false
     }
     $useArguments = @('use', "$latest")
@@ -199,17 +199,11 @@ function Install-WorkshopNode {
     if ($use.Code -ne 0 -or -not $activeNode -or
         -not (Test-WorkshopNvmOwnership $activeNode.Source) -or
         (Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version'))) -ne $latest) {
-        Write-Host '[FAIL] nvm 활성화/실행 버전 검증 실패. 새 터미널에서 PATH와 nvm list를 확인하세요.'
+        Write-WorkshopMessage '[FAIL] Could not verify nvm activation or the running Node.js version. Check PATH and nvm list in a new terminal.'
         return $false
     }
-    Write-Host "[PASS] [Windows 호스트] nvm Node.js $latest"
+    Write-WorkshopMessage "[PASS] [Windows host] nvm Node.js $latest"
     return $true
-}
-
-function Get-WorkshopWslVersion {
-    $probe = Invoke-ToolProbe (Get-WorkshopWslExecutable) @('--version')
-    $first = ($probe.Text -replace "`0", '' -split '\r?\n')[0]
-    if ($probe.Code -eq 0 -and $first -match ':\s*(\d+\.\d+\.\d+(?:\.\d+)?)\s*$') { return [version]$Matches[1] }
 }
 
 function Get-WorkshopManagedPowerShell {
@@ -238,14 +232,15 @@ $ErrorActionPreference = 'Stop'
 try {
     Wait-Process -Id __PID__ -ErrorAction SilentlyContinue
     & '__WINGET__' upgrade --id Microsoft.PowerShell --exact --source winget --version '__VERSION__' --disable-interactivity | Out-Host
-    if ($LASTEXITCODE -in @(1641, 3010)) { Write-Host '[WARN] Restart Windows manually, then verify pwsh --version.'; exit 1 }
+    if ($LASTEXITCODE -in @(1641, 3010)) { Write-WorkshopMessage '[WARN] Restart Windows manually, then verify pwsh --version.'; exit 1 }
     if ($LASTEXITCODE -ne 0) { throw "winget failed: $LASTEXITCODE" }
     $actual = & '__EXE__' -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString()'
     if ($LASTEXITCODE -ne 0 -or "$actual".Trim() -ne '__VERSION__') { throw 'Installed PowerShell version verification failed.' }
-    Write-Host '[PASS] PowerShell __VERSION__ updated. Open a new terminal.'
+    Write-WorkshopMessage '[PASS] PowerShell __VERSION__ updated. Open a new terminal.'
 }
-catch { Write-Host "[FAIL] $($_.Exception.Message) Update was not verified; check the original installer manually."; exit 1 }
+catch { Write-WorkshopMessage "[FAIL] $($_.Exception.Message) Update was not verified; check the original installer manually."; exit 1 }
 '@
+    $worker = "function Test-WorkshopOutputTerminal {`n${function:Test-WorkshopOutputTerminal}`n}`nfunction Write-WorkshopMessage {`n${function:Write-WorkshopMessage}`n}`n" + $worker
     $worker = $worker.Replace('__PID__', "$PID").Replace('__WINGET__', $winget.Replace("'", "''")).
         Replace('__EXE__', $Executable.Replace("'", "''")).Replace('__VERSION__', "$Version")
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($worker))
@@ -257,25 +252,9 @@ catch { Write-Host "[FAIL] $($_.Exception.Message) Update was not verified; chec
 
 function Update-WorkshopWindowsHost {
     if (-not (Test-WorkshopBootstrapInteractive)) { return 1 }
-    $failed = $false
-    $before = Get-WorkshopWslVersion
-    if (-not $before) {
-        Write-Host '[MANUAL] WSL --version 확인 불가 (inbox WSL 포함). 원래 설치 방식으로 수동 업데이트하세요. 배포판은 변경하지 않습니다.'
-        $failed = $true
-    }
-    elseif (Confirm-ToolInstall "WSL $before 플랫폼을 wsl.exe --update로 업데이트합니다. 네트워크/관리자 승인이 필요할 수 있습니다. 배포판 업데이트/삭제나 자동 재부팅은 하지 않습니다.") {
-        $result = Invoke-ToolProbe (Get-WorkshopWslExecutable) @('--update')
-        $after = Get-WorkshopWslVersion
-        if ($result.Code -ne 0 -or -not $after -or $after -lt $before -or -not (Test-WorkshopWsl2)) {
-            Write-Host "[FAIL] WSL 업데이트 검증 실패 (종료 코드 $($result.Code)). 필요하면 직접 재부팅 후 점검하세요."
-            $failed = $true
-        }
-        else { Write-Host "[PASS] WSL 플랫폼 $before -> $after (동일 버전이면 최신 상태)." }
-    }
     $managed = Get-WorkshopManagedPowerShell
     if (-not $managed) {
-        Write-Host '[MANUAL] 실행 중인 PowerShell 7의 winget/MSI 관리 출처를 확인하지 못해 자동 업데이트를 건너뜁니다. 원래 설치 관리자로 업데이트하세요. 필수 도구 확인은 계속합니다.'
-        if ($failed) { return 1 }
+        Write-WorkshopMessage '[MANUAL] Could not verify that the running PowerShell 7 is managed by winget/MSI. Skipping automatic update; use the original installer. Required tool checks will continue.'
         return 0
     }
     $show = Invoke-ToolProbe winget @('show', '--id', 'Microsoft.PowerShell', '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
@@ -283,16 +262,15 @@ function Update-WorkshopWindowsHost {
     $versions = @([regex]::Matches($show.Text, '(?m)^\s*(7\.\d+\.\d+)\s*$') |
         ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object -Descending)
     if ($show.Code -ne 0 -or -not $versions.Count) {
-        Write-Host '[FAIL] winget PowerShell 7 정식 최신 버전 확인 실패.'
+        Write-WorkshopMessage '[FAIL] Could not query the latest stable PowerShell 7 version from winget.'
         return 1
     }
     $latest = $versions[0]
-    if ($latest -gt $managed.Version -and (Confirm-ToolInstall "winget Microsoft.PowerShell $($managed.Version) -> $latest 업데이트를 별도 Windows PowerShell 프로세스에 예약합니다. 네트워크/관리자 승인이 필요할 수 있습니다. 현재 pwsh 종료 후 실행하며 새 터미널이 필요합니다.")) {
+    if ($latest -gt $managed.Version -and (Confirm-ToolInstall "Schedule a winget Microsoft.PowerShell update from $($managed.Version) to $latest in a separate Windows PowerShell process. Network access and administrator approval may be required. The update runs after the current pwsh exits; a new terminal is required.")) {
         try { Start-WorkshopPowerShellUpdate $managed.Path $latest }
-        catch { Write-Host "[FAIL] PowerShell 업데이트 프로세스 시작 실패: $($_.Exception.Message)"; return 1 }
-        Write-Host '[WARN] PowerShell 업데이트 예약됨 (아직 성공 아님). 이 pwsh가 종료되어야 실행됩니다. 작업 프로세스의 PASS/FAIL을 확인하고 새 터미널에서 다시 실행하세요.'
+        catch { Write-WorkshopMessage "[FAIL] Could not start the PowerShell update process: $($_.Exception.Message)"; return 1 }
+        Write-WorkshopMessage '[WARN] PowerShell update scheduled (not yet successful). It runs only after this pwsh exits. Check the worker process PASS/FAIL result and rerun in a new terminal.'
         return 3010
     }
-    if ($failed) { return 1 }
     return 0
 }

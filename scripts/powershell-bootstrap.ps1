@@ -1,4 +1,24 @@
 ﻿# Keep this helper compatible with Windows PowerShell 5.1.
+function Test-WorkshopOutputTerminal {
+    return -not [Console]::IsOutputRedirected
+}
+
+function Write-WorkshopMessage {
+    param([string]$Message)
+    $options = @{}
+    if (-not $env:NO_COLOR -and -not $env:CI -and $env:TERM -ne 'dumb' -and
+        (Test-WorkshopOutputTerminal) -and $Message -match '^\[(PASS|FAIL|WARN|MANUAL|INFO)\]') {
+        $options.ForegroundColor = switch ($Matches[1]) {
+            'PASS' { 'Green' }
+            'FAIL' { 'Red' }
+            'WARN' { 'Yellow' }
+            'MANUAL' { 'Cyan' }
+            'INFO' { 'Blue' }
+        }
+    }
+    Write-Host $Message @options
+}
+
 function Test-WorkshopPowerShellExecutable {
     param([string]$Path)
     try {
@@ -34,54 +54,23 @@ function Find-WorkshopPowerShell {
     }
 }
 
-function Get-WorkshopWslExecutable {
-    $command = Get-Command wsl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($command) { return $command.Source }
-    foreach ($directory in @('Sysnative', 'System32')) {
-        if ($env:SystemRoot) {
-            $path = Join-Path $env:SystemRoot "$directory\wsl.exe"
-            if (Test-Path -LiteralPath $path -PathType Leaf) { return $path }
-        }
-    }
-}
-
-function Test-WorkshopWsl2 {
-    $executable = Get-WorkshopWslExecutable
-    if (-not $executable) { return $false }
-    try {
-        # This read-only feature query needs no elevation. Do not equate an
-        # installed wsl.exe (or a WSL1 distro) with an enabled WSL2 platform.
-        $feature = Get-CimInstance Win32_OptionalFeature -Filter "Name='VirtualMachinePlatform'" -ErrorAction Stop
-        if (-not $feature -or $feature.InstallState -ne 1) { return $false }
-        & $executable --status 2>&1 | Out-Null
-        return $LASTEXITCODE -eq 0
-    }
-    catch { return $false }
-}
-
 function Get-WorkshopHostPrerequisites {
     $windows = [Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT
     $executable = if ($PSVersionTable.PSVersion.Major -ge 7) {
         Join-Path $PSHOME $(if ($windows) { 'pwsh.exe' } else { 'pwsh' })
     }
     else { Find-WorkshopPowerShell }
-    $wsl2 = if ($windows) { Test-WorkshopWsl2 } else { $true }
-    return [pscustomobject]@{ Windows = $windows; PowerShell = $executable; Wsl2 = $wsl2 }
+    return [pscustomobject]@{ Windows = $windows; PowerShell = $executable }
 }
 
 function Write-WorkshopHostGuidance {
     param($State)
-    Write-Host '[FAIL] PowerShell 7 and WSL2 are required on Windows. No workshop actions were performed.'
+    Write-WorkshopMessage '[FAIL] PowerShell 7 is required on Windows. No workshop actions were performed.'
     $powerShellStatus = if ($State.PowerShell) { 'PASS' } else { 'FAIL' }
-    $wslStatus = if ($State.Wsl2) { 'PASS' } else { 'FAIL' }
-    Write-Host "[$powerShellStatus] PowerShell 7"
-    Write-Host "[$wslStatus] WSL2 platform (a Linux distribution is checked separately for Java)"
+    Write-WorkshopMessage "[$powerShellStatus] PowerShell 7"
     Write-Host 'PowerShell 7: https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows'
     Write-Host 'Manual installation: winget install --id Microsoft.PowerShell --exact --source winget'
-    Write-Host 'WSL2: https://learn.microsoft.com/windows/wsl/install'
-    Write-Host 'Manual platform installation (administrator terminal): wsl.exe --install --no-distribution'
-    Write-Host 'WSL2 may require enabling virtualization, Windows Update and a reboot. Restart manually, then rerun.'
-    Write-Host 'Installer: powershell.exe -File .\scripts\install-prerequisites.ps1 -Track java|dotnet'
+    Write-Host 'Installer: ./scripts/install-prerequisites.ps1 -Track java|dotnet'
 }
 
 function Test-WorkshopBootstrapInteractive {
@@ -99,64 +88,30 @@ function Confirm-WorkshopPowerShellInstall {
 
 function Install-WorkshopPowerShell {
     if (-not (Test-WorkshopBootstrapInteractive)) {
-        Write-Host '[FAIL] Noninteractive/CI sessions cannot install PowerShell 7.'
+        Write-WorkshopMessage '[FAIL] Noninteractive/CI sessions cannot install PowerShell 7.'
         return
     }
     if (-not (Get-Command winget -CommandType Application -ErrorAction SilentlyContinue)) {
-        Write-Host '[FAIL] winget is unavailable. Install PowerShell 7 manually.'
+        Write-WorkshopMessage '[FAIL] winget is unavailable. Install PowerShell 7 manually.'
         return
     }
     if (-not (Confirm-WorkshopPowerShellInstall)) { return }
     try {
         & winget install --id Microsoft.PowerShell --exact --source winget | Out-Host
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "[FAIL] PowerShell 7 installation failed (exit code $LASTEXITCODE)."
+            Write-WorkshopMessage "[FAIL] PowerShell 7 installation failed (exit code $LASTEXITCODE)."
             return
         }
     }
     catch {
-        Write-Host "[FAIL] PowerShell 7 installation failed: $($_.Exception.Message)"
+        Write-WorkshopMessage "[FAIL] PowerShell 7 installation failed: $($_.Exception.Message)"
         return
     }
     $executable = Find-WorkshopPowerShell
     if (-not $executable) {
-        Write-Host '[FAIL] Installed PowerShell 7 could not be located or started. Open a new terminal and retry.'
+        Write-WorkshopMessage '[FAIL] Installed PowerShell 7 could not be located or started. Open a new terminal and retry.'
     }
     return $executable
-}
-
-function Confirm-WorkshopWsl2Install {
-    Write-Host 'WSL2 is missing. Enable/install the WSL2 platform with wsl.exe --install --no-distribution?'
-    Write-Host 'This changes Windows features, may download WSL, requires administrator approval and may require a reboot.'
-    Write-Host 'No Linux distribution will be installed. This script will not restart Windows.'
-    $answer = Read-Host 'Install WSL2 platform? [y/N]'
-    return $answer -ceq 'y' -or $answer -ceq 'Y'
-}
-
-function Install-WorkshopWsl2 {
-    if (-not (Test-WorkshopBootstrapInteractive)) {
-        Write-Host '[FAIL] Noninteractive/CI sessions cannot install WSL2.'
-        return $false
-    }
-    $executable = Get-WorkshopWslExecutable
-    if (-not $executable) {
-        Write-Host '[FAIL] wsl.exe is unavailable. Follow the WSL2 manual installation guidance.'
-        return $false
-    }
-    if (-not (Confirm-WorkshopWsl2Install)) { return $false }
-    try {
-        & $executable --install --no-distribution | Out-Host
-        if ($LASTEXITCODE -notin @(0, 1641, 3010)) {
-            Write-Host "[FAIL] WSL2 installation failed (exit code $LASTEXITCODE). Use an administrator terminal and check Windows support."
-            return $false
-        }
-    }
-    catch {
-        Write-Host "[FAIL] WSL2 installation failed: $($_.Exception.Message)"
-        return $false
-    }
-    Write-Host '[INFO] WSL2 installation requested. Restart Windows manually if required, then rerun this script.'
-    return $true
 }
 
 function Initialize-WorkshopScript {
@@ -174,7 +129,6 @@ function Initialize-WorkshopScript {
         return [pscustomobject]@{ Handled = $false; Code = 0 }
     }
     $state = Get-WorkshopHostPrerequisites
-    $wslChanged = $false
     $validEngine = (-not $BoundParameters['ContainerEngine'] -or $BoundParameters['ContainerEngine'] -cin @('docker', 'podman')) -and
         (-not $env:AZD_CONTAINER_RUNTIME -or $env:AZD_CONTAINER_RUNTIME -cin @('docker', 'podman')) -and
         (-not $BoundParameters['ContainerEngine'] -or -not $env:AZD_CONTAINER_RUNTIME -or
@@ -182,10 +136,9 @@ function Initialize-WorkshopScript {
     if ($AllowInstall -and $BoundParameters['Track'] -cin @('java', 'dotnet') -and
         -not $BoundParameters['Help'] -and $validEngine) {
         if (-not $state.PowerShell) { $null = Install-WorkshopPowerShell }
-        if ($state.Windows -and -not $state.Wsl2) { $wslChanged = Install-WorkshopWsl2 }
         $state = Get-WorkshopHostPrerequisites
     }
-    if (-not $state.PowerShell -or ($state.Windows -and -not $state.Wsl2) -or $wslChanged) {
+    if (-not $state.PowerShell) {
         Write-WorkshopHostGuidance $state
         return [pscustomobject]@{ Handled = $true; Code = 1 }
     }

@@ -2,64 +2,125 @@
 
 [전체 목차](../../README.md) | [Java 목차](README.md) | [이전: 평가와 계획](02-assess-and-plan.md) | [다음: Azure 서비스 이전](04-migrate-azure-services.md) | [문제 해결](08-troubleshooting.md)
 
-## 목표와 시작 조건
+## 목표
 
-Copilot app의 **`modernize`**, **앱 루트**에서 승인한 계획의 업그레이드 부분만 실행합니다. 이전 Java 앱 프로세스를 먼저 정지하고 DB와 RabbitMQ는 유지합니다. 서로 다른 JDK로 같은 포트를 사용하는 프로세스를 중복 실행하지 마세요.
+검토한 계획에 따라 앱을 Java 25로 업그레이드하고 Azure 이전에 필요한 코드와 배포 산출물을 준비합니다.
 
-## Java 8 기준 테스트
+## 실습 범위
 
-```text
-승인한 계획 중 로컬 기준 테스트만 실행해 줘.
-Java 8에서 기존 동작을 표현하는 테스트를 추가하고 실행해 기준을 남겨 줘.
-테스트가 없거나 DB/큐가 필요한 항목은 실행 조건을 명시해 줘.
-SDKMAN의 설치된 JDK 8을 해당 실행 셸에 적용하고 Maven Wrapper로 빌드해 줘.
-Windows에서는 앞서 지정한 WSL2 환경을 사용해 줘.
-실패한 테스트를 삭제/건너뛰어 성공시키지 말고 원인을 수정하거나 보고해 줘.
-아직 업그레이드, Azure 서비스 이전이나 배포 작업은 하지 말고 검증 결과와 diff를 보여 줘.
-```
+이 실습에서는 승인한 Modernize 계획을 실행해 Java와 Spring Boot를 업그레이드하고, Azure 서비스 이전 코드와 배포 산출물을 준비합니다.
 
-Java 8 빌드와 기준 테스트가 통과하면 변경 내용을 검토하고 기준 테스트를 커밋합니다. 불필요한 UI 변경, 비밀 값과 거대한 생성물이 포함되지 않았는지 확인하세요.
+| 단계 | 다루는 내용 | 이 단계에서 하지 않는 작업 |
+| --- | --- | --- |
+| 실습 3: JDK 25로 업그레이드하기 (이 문서) | Java 업그레이드, Azure 서비스 이전 코드와 배포 산출물 준비, 로컬 빌드 및 모의 테스트 | Azure 리소스 생성, 실제 Azure 연결, 앱 배포 |
+| [4. Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md) | 이전된 애플리케이션 코드와 동작 검토, 필요한 수정과 외부 서비스 없는 테스트 | Azure 리소스 생성 및 연결 |
+| [5. azd 배포 산출물 준비하기](05-prepare-azd.md) | Dockerfile, `azure.yaml`, Bicep, DB 초기화 절차와 배포 설정 검토 | 프로비저닝, DB 초기화, 이미지 게시, 배포 |
+| [6. azd로 ACA에 배포하기](06-deploy-aca.md) | 승인 후 Azure 리소스 프로비저닝, DB 초기화, 로컬 이미지 빌드, 배포와 실제 기능 확인 | 승인하지 않은 리소스나 데이터 변경 |
 
-## JDK 25 최종 업그레이드
+## 실습 전 확인 사항
 
-[Spring Boot 4.1.2의 공식 요구사항](https://github.com/spring-projects/spring-boot/blob/v4.1.2/documentation/spring-boot-docs/src/docs/antora/modules/ROOT/pages/system-requirements.adoc)은 Java 17~27을 지원 범위로 설명합니다. 이는 개별 의존성이나 이 앱의 호환성까지 보장한다는 뜻은 아닙니다. 실제 사용할 라이브러리 조합을 확인합니다.
+평가 보고서, 현대화 지침, `plan.md`, `tasks.json`을 커밋해 둡니다. [실습 2: 평가하고 계획 승인하기](02-assess-and-plan.md)에서 사용한 터미널을 계속 사용합니다.
 
-```text
-이제 승인한 계획의 최종 JDK 25 업그레이드만 실행해 줘.
-중간 단계가 필요하면 승인한 계획의 버전과 검증 기준을 따라 줘.
-SDKMAN의 JDK 25를 사용하고 Spring Boot 4.1.2를 기준으로
-Spring 라이브러리, 테스트 도구, 빌드 플러그인의 호환성을 확인해 줘.
-다른 안정 버전이 필요하면 변경 이유와 공식 근거를 제시하고 승인을 기다려 줘.
-최종 JDK는 정식 25 버전으로 맞추고 EA 버전은 선택하지 마.
-javax -> jakarta, 보안 설정, 직렬화와 ORM 변경을 점검하고 기존 기능을 유지해 줘.
+## 승인한 계획 실행
 
-루트/하위 pom, compiler release, 테스트 JVM과 실행 환경의 Java 버전을 맞춰 줘.
-기존 동작을 유지하면서 필요 변경만 하고 Maven Wrapper로 clean verify를 실행해 줘.
-web/worker를 로컬 PostgreSQL/RabbitMQ와 실행하고 기준 동작을 다시 확인해 줘.
-도구가 확인한 결과와 사람이 확인해야 할 UI 결과를 구분해서 보고해 줘.
-```
-
-참가자 Bash에서도 직접 확인합니다.
+앱 루트에서 JDK 8을 선택하고 Modernize CLI를 실행합니다. 계획의 첫 단계인 Java 8 기준 테스트부터 시작합니다.
 
 ```bash
-source ../scripts/use-java.sh --jdk 25
-```
-
-스크립트가 현재 셸에서 Java 25를 선택하고 Java/Javac 버전을 표시합니다. Maven Wrapper와 전체 검증은 앱 루트에서 별도로 실행합니다. 에이전트가 SDKMAN을 다른 프로세스에서 전환해도 현재 터미널의 JDK는 자동으로 바뀌지 않습니다. 생성/수정한 로컬 실행 명령에 따라 web과 worker를 다시 실행하고 실습 1의 입력을 재사용합니다. 원본 Docker 스크립트는 이미 존재하는 컨테이너를 재생성하려 하므로 무조건 반복 실행하지 않습니다.
-
-```bash
-bash ./mvnw -version
-bash ./mvnw clean verify
-```
-
-```bash
+# zsh/bash
+source ../scripts/use-java.sh --jdk 8
 git status --short
-git diff
-git add .
-git diff --cached --stat
-git commit -m "Upgrade sample to JDK 25"
+before=$(git rev-parse HEAD)
+modernize
 ```
 
-## 완료 기준과 문제 해결
+```powershell
+# PowerShell
+. ../scripts/use-java.ps1 -Jdk 8
+git status --short
+$before = git rev-parse HEAD
+modernize
+```
 
-최종 Maven/컴파일/실행 JVM이 모두 25이고, 루트 빌드와 기존 기능이 통과해야 합니다. Boot 버전만 바뀌었거나 테스트를 제외한 패키징만 성공한 것은 완료가 아닙니다. 실패한 단계에서 멈춰 [문제 해결](08-troubleshooting.md)을 확인하고, 검토하지 않은 변경을 삭제하는 `reset --hard`로 복구하지 않습니다.
+> [!NOTE]
+>
+> Modernize는 작업별로 커밋을 만들 수 있습니다. `$before`에 실행 직전의 커밋 ID를 저장해 두면, 실행 중 추가된 커밋과 변경 사항을 결과 검토 단계에서 확인할 수 있습니다.
+
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to modernize your app? | Execute |
+| Execute modernization plan | 선택 |
+| Select a plan | `modernization-plan` (java) |
+| Execute the plan | 선택 |
+
+화면의 안내에 따라 계획을 선택하고 `Enter`를 눌러 실행합니다. 이후 에이전트가 질문하면 내용을 읽고 권장 옵션을 선택하거나 직접 답변합니다.
+
+> [!CAUTION]
+>
+> 실행이 중간에 멈추고 더 이상 진행되지 않을 수 있습니다. 이때는 Copilot app에서 원인을 확인하고 문제를 해결한 뒤 계속 진행합니다.
+
+## 업그레이드 결과 검증
+
+업그레이드 결과를 검증하려면 앱 루트에서 아래 명령을 실행합니다.
+
+```bash
+# zsh/bash
+source ../scripts/use-java.sh --jdk 25
+./mvnw -version
+./mvnw clean verify
+```
+
+```powershell
+# PowerShell
+. ../scripts/use-java.ps1 -Jdk 25
+./mvnw.cmd -version
+./mvnw.cmd clean verify
+```
+
+`BUILD SUCCESS`를 확인합니다. 실패하면 문제를 해결한 뒤 다음 단계로 진행합니다.
+
+아래 명령은 web/worker를 실행하지 않고, 외부 서비스를 모의 객체로 대체한 테스트로 동작을 검증합니다.
+
+```bash
+# zsh/bash
+./mvnw -pl web,worker -am verify
+```
+
+```powershell
+# PowerShell
+./mvnw.cmd -pl web,worker -am verify
+```
+
+> [!NOTE]
+>
+> 여기서는 web/worker를 실행하지 않고 빌드와 모의 테스트만 확인합니다. 테스트가 실패하면 Copilot app에서 원인을 확인하고 수정합니다.
+
+## 실행 결과 커밋하기
+
+앱 루트에서 `$before` 이후 생성된 커밋과 아직 커밋하지 않은 변경을 확인합니다. Modernize가 이미 커밋한 변경은 다시 스테이징할 필요가 없습니다. 커밋할 변경이 남아 있다면 `<검토한-파일-경로>`를 실제 경로로 바꿔 해당 파일만 추가합니다. 스테이징된 내용을 검토하고, 남은 변경이 없으면 이 단계를 건너뜁니다.
+
+```text
+git status --short
+git log --oneline "$before..HEAD"
+git diff "$before"
+git add <검토한-파일-경로>
+git status --short
+git diff --cached --stat
+git diff --cached
+```
+
+검토한 변경만 포함됐고 비밀정보나 불필요한 파일이 없을 때 커밋합니다.
+
+```bash
+git commit -m "Modernize: upgrade Java application"
+```
+
+## 완료 및 다음 단계
+
+- [ ] Maven Wrapper와 테스트가 JDK 25를 사용하고 `clean verify`가 통과했습니다.
+- [ ] web/worker의 모의 테스트가 통과했습니다.
+- [ ] Modernize가 만든 커밋과 아직 커밋하지 않은 변경을 검토하고, 필요한 변경만 커밋했습니다.
+- [ ] 이 단계에서 실제 Azure 리소스 연결이나 앱 실행을 검증하지 않았음을 확인했습니다.
+
+위 항목을 모두 마쳤다면 [4. Azure 서비스로 의존성 이전하기](04-migrate-azure-services.md)로 이동해 이전 코드와 동작을 검토합니다.

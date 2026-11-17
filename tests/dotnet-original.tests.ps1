@@ -1,6 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 

@@ -35,6 +35,22 @@ VM에는 Entra ID 로그인 확장, 로그인 역할 할당과 관리 ID를 만�
 - [Azure에서 Windows 클라이언트를 사용할 라이선스 자격](https://learn.microsoft.com/azure/virtual-machines/windows/windows-desktop-multitenant-hosting-deployment)
 - Windows, Visual Studio Community, Docker Desktop과 GitHub Copilot의 사용 조건
 
+Copilot app 터미널에서 azd가 AI 에이전트 환경을 감지해 질문을 생략하면, 직접 입력할 수 있는 같은 터미널에서 **아래 배포 명령을 실행하기 전에** 비대화형 모드 자동 감지를 해제하세요.
+
+PowerShell:
+
+```powershell
+$env:AZD_NON_INTERACTIVE = 'false'
+```
+
+macOS/Linux Bash:
+
+```bash
+export AZD_NON_INTERACTIVE=false
+```
+
+현재 셸 세션과 자식 프로세스에만 적용됩니다. 일반 터미널에서는 보통 필요하지 않으며, CI나 무인 실행에서는 설정하지 마세요. 이 설정은 질문을 허용할 뿐 필수 환경 값의 누락이나 Bicep 기본값에 따른 질문 생략을 해결하지는 않습니다.
+
 아래 명령은 Windows PowerShell 7과 macOS/Linux Bash에서 동일합니다. `<subscription-id>`를 사용할 구독 ID로 바꾸세요.
 
 ```powershell

@@ -377,6 +377,42 @@ function Enable-WindowsOptionalFeature {
     }
 
     & {
+        $emptyList = "Windows Subsystem for Linux has no installed distributions.`r`n`r`nUse 'wsl.exe --list --online' to list available distributions`r`nand 'wsl.exe --install <Distro>' to install."
+        $script:DistroText = $emptyList.ToCharArray() -join "`0"
+        $script:DistroCode = -1; $script:UbuntuInstalls = 0; $script:UbuntuApproved = $false
+        $script:VmRestartRequired = $false
+        function Test-VmWslPlatform { return $true }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True ($Name -eq 'wsl.exe' -and ($Arguments -join ' ') -eq '--list --verbose') 'Ubuntu detection only lists distributions'
+            [pscustomobject]@{ Code=$script:DistroCode; Text=$script:DistroText }
+        }
+        function Confirm-VmAction { return $script:UbuntuApproved }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -eq 'wsl.exe' -and ($Arguments -join ' ') -eq '--install --distribution Ubuntu --no-launch') 'empty distribution list reaches the consented Ubuntu installer'
+            $script:UbuntuInstalls++
+            $script:DistroCode = 0
+            $script:DistroText = "  NAME      STATE      VERSION`r`n* Ubuntu    Stopped    2"
+            return $true
+        }
+        Assert-True ((Get-VmUbuntuVersion) -eq 0) 'nonzero empty-list response with NUL characters means Ubuntu is absent'
+        Assert-True (-not (Install-VmUbuntu) -and $script:UbuntuInstalls -eq 0) 'first Ubuntu installation still requires consent'
+        $script:UbuntuApproved = $true
+        Assert-True (Install-VmUbuntu) 'first Ubuntu installation succeeds after the empty-list response'
+        Assert-True ((Get-VmUbuntuVersion) -eq 2) 'installed Ubuntu version is parsed from the real list format'
+        Assert-True ((Install-VmUbuntu) -and $script:UbuntuInstalls -eq 1) 'existing Ubuntu is preserved after first installation'
+        $script:DistroText = "  NAME      STATE      VERSION`r`n* Debian    Stopped    2"
+        Assert-True ((Get-VmUbuntuVersion) -eq 0) 'other distributions do not count as Ubuntu'
+        $script:DistroText = "  NAME      STATE      VERSION`r`n* Ubuntu    Stopped    1"
+        Assert-Throws { Install-VmUbuntu } 'WSL1' 'parsed WSL1 installation is not replaced'
+        $script:DistroCode = 1; $script:DistroText = 'Access is denied.'
+        Assert-Throws { Install-VmUbuntu } 'Access is denied' 'real distribution-list errors still propagate'
+        $script:DistroText = ''
+        Assert-Throws { Get-VmUbuntuVersion } 'Failed to list' 'unexplained nonzero status is not treated as an empty list'
+    }
+
+    & {
         $script:WslVersion=0; $script:WslCalls=0
         function Test-VmWslPlatform { return $false }
         function Get-VmUbuntuVersion { throw 'must not query distributions before the platform is ready' }

@@ -202,8 +202,13 @@ function Install-VmWslPlatform {
 
 function Get-VmUbuntuVersion {
     $list = Invoke-ToolProbe wsl.exe @('--list', '--verbose')
-    if ($list.Code -ne 0) { throw "Failed to list WSL distributions: $($list.Text)" }
-    if (($list.Text -replace "`0", '') -match '(?m)^\s*\*?\s*Ubuntu\s+\S+\s+([12])\s*$') {
+    $text = $list.Text -replace "`0", ''
+    if ($list.Code -ne 0) {
+        # WSL reports an empty distribution list as a nonzero exit code.
+        if ($text -match '^\s*Windows Subsystem for Linux has no installed distributions\.(?:\s|$)') { return 0 }
+        throw "Failed to list WSL distributions: $text"
+    }
+    if ($text -match '(?m)^\s*\*?\s*Ubuntu\s+\S+\s+([12])\s*$') {
         return [int]$Matches[1]
     }
     return 0

@@ -217,8 +217,8 @@ webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)
 workerApp=$(azd env get-value WORKER_CONTAINER_APP_NAME)
 webIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$webApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
 workerIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$workerApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
-webIdentity=$(az identity show --subscription "$subscription" --ids "$webIdentityId" --query name --output tsv)
-workerIdentity=$(az identity show --subscription "$subscription" --ids "$workerIdentityId" --query name --output tsv)
+webIdentity=$(az identity show --ids "$webIdentityId" --query name --output tsv)
+workerIdentity=$(az identity show --ids "$workerIdentityId" --query name --output tsv)
 migrationIdentity=$(azd env get-value MIGRATION_IDENTITY_NAME)
 pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
 printf 'Web: %s\nWorker: %s\nSchema-migration: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$migrationIdentity" "$pgDatabase"
@@ -227,18 +227,35 @@ printf 'Web: %s\nWorker: %s\nSchema-migration: %s\nDatabase: %s\n' "$webIdentity
 ```powershell
 # PowerShell
 $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
+if ($LASTEXITCODE -ne 0 -or -not $subscription) { throw "Subscription lookup failed." }
 $rg = azd env get-value AZURE_RESOURCE_GROUP
+if ($LASTEXITCODE -ne 0 -or -not $rg) { throw "Resource group lookup failed." }
 $webApp = azd env get-value WEB_CONTAINER_APP_NAME
+if ($LASTEXITCODE -ne 0 -or -not $webApp) { throw "Web app lookup failed." }
 $workerApp = azd env get-value WORKER_CONTAINER_APP_NAME
-$webIdentityId = az containerapp show --subscription $subscription --resource-group $rg --name $webApp --query "keys(identity.userAssignedIdentities)" --output tsv
-$workerIdentityId = az containerapp show --subscription $subscription --resource-group $rg --name $workerApp --query "keys(identity.userAssignedIdentities)" --output tsv
-$webIdentity = az identity show --subscription $subscription --ids $webIdentityId --query name --output tsv
-$workerIdentity = az identity show --subscription $subscription --ids $workerIdentityId --query name --output tsv
+if ($LASTEXITCODE -ne 0 -or -not $workerApp) { throw "Worker app lookup failed." }
 $migrationIdentity = azd env get-value MIGRATION_IDENTITY_NAME
+if ($LASTEXITCODE -ne 0 -or -not $migrationIdentity) { throw "Migration identity lookup failed." }
 $pgDatabase = azd env get-value POSTGRESQL_DATABASE
+if ($LASTEXITCODE -ne 0 -or -not $pgDatabase) { throw "Database lookup failed." }
+
+$identityNames = @{}
+foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerator()) {
+    $identityJson = az containerapp show --subscription $subscription --resource-group $rg --name $app.Value --query identity.userAssignedIdentities --output json
+    if ($LASTEXITCODE -ne 0 -or -not $identityJson) { throw "$($app.Key) identity lookup failed." }
+    $identities = $identityJson | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+    if (-not $identities -or $identities.Count -ne 1) {
+        throw "$($app.Key) must have exactly one user-assigned identity. Review the app configuration."
+    }
+    $identityId = @($identities.Keys)[0]
+    $identityName = az identity show --ids $identityId --query name --output tsv
+    if ($LASTEXITCODE -ne 0 -or -not $identityName) { throw "$($app.Key) identity name lookup failed." }
+    $identityNames[$app.Key] = $identityName
+}
+
 [pscustomobject]@{
-    Web = $webIdentity
-    Worker = $workerIdentity
+    Web = $identityNames.Web
+    Worker = $identityNames.Worker
     "Schema-migration" = $migrationIdentity
     Database = $pgDatabase
 } | Format-List

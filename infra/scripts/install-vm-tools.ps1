@@ -520,6 +520,9 @@ function Invoke-VmToolInstallation {
                 $probe.Code -eq 0 -and (Test-MinimumVersion $probe.Text '2.45.0')
             }
         } },
+        @{ Name='GitHub Copilot CLI'; Run={
+            Install-VmPackage GitHub.Copilot 'GitHub Copilot CLI' -TestInstalled { Test-VmCommand copilot }
+        } },
         @{ Name='nvm and Node.js'; Run={ Install-VmNvm } },
         @{ Name='Azure CLI'; Run={ Install-VmPackage Microsoft.AzureCLI 'Azure CLI' -TestInstalled { Test-VmCommand az } } },
         @{ Name='azd'; Run={ Install-VmPackage Microsoft.Azd azd -TestInstalled { Test-VmCommand azd @('version') } } },
@@ -560,7 +563,7 @@ function Invoke-VmToolInstallation {
             return 3010
         }
     }
-    Write-WorkshopMessage '[MANUAL] Set up the first Ubuntu user, start Docker Desktop and confirm Linux containers, sign in to the Copilot app, authenticate gh, and verify Modernize CLI.'
+    Write-WorkshopMessage '[MANUAL] Set up the first Ubuntu user, start Docker Desktop and confirm Linux containers, sign in to the Copilot app, authenticate gh and Copilot CLI, and verify Modernize CLI.'
     Write-WorkshopMessage '[INFO] Azure/GitHub sign-in, subscription changes, provider registration and lab database creation were not performed.'
     if ($failed) { return 1 }
     Write-WorkshopMessage '[PASS] Verified the tool installations. Validate app builds and the VM runtime separately.'

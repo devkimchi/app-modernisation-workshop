@@ -646,13 +646,20 @@ function Enable-WindowsOptionalFeature {
 
     & {
         $script:RuntimeSteps=[Collections.Generic.List[string]]::new()
+        $script:CliSteps=[Collections.Generic.List[string]]::new()
+        $script:CopilotCliCheck=$null
         function Test-VmRebootPending { return $false }
         function Get-PSDrive { [pscustomobject]@{Free=100GB} }
         function Install-VmWslPlatform { return $true }
         function Install-VmUbuntu { return $true }
         function Install-VmMsmq { return $true }
-        function Install-VmPackage { return $true }
-        function Install-VmNvm { return $true }
+        function Install-VmPackage {
+            param($Id,$Name,$TestInstalled)
+            if ($Id -in @('GitHub.cli','GitHub.Copilot')) { $script:CliSteps.Add($Id) }
+            if ($Id -eq 'GitHub.Copilot') { $script:CopilotCliCheck=$TestInstalled }
+            return $true
+        }
+        function Install-VmNvm { $script:CliSteps.Add('nvm'); return $true }
         function Install-VmDotnetSdk { return $true }
         function Install-VmPostgresClient { return $true }
         function Install-VmCopilot { return $true }
@@ -676,6 +683,16 @@ function Enable-WindowsOptionalFeature {
             $env:CI = ''; $env:NO_COLOR = ''; $env:TERM = 'xterm'
             Assert-True ((Invoke-VmToolInstallation) -eq 0) 'Build Tools-only flow completes with separate runtime tools'
             Assert-True (($script:RuntimeSteps -join ',') -eq 'BuildTools,IIS Express,LocalDB,Verify') 'standalone runtime tools install after Build Tools and before final verification'
+            Assert-True (($script:CliSteps -join ',') -eq 'GitHub.cli,GitHub.Copilot,nvm') 'Copilot CLI installs immediately after GitHub CLI and before nvm'
+            $script:CopilotCliCode=0
+            function Invoke-ToolProbe {
+                param($Name,$Arguments)
+                Assert-True ($Name -eq 'copilot' -and ($Arguments -join ' ') -eq '--version') 'Copilot CLI verification only probes its version without starting a session'
+                [pscustomobject]@{ Code=$script:CopilotCliCode; Text='fixture Copilot CLI version' }
+            }
+            Assert-True (& $script:CopilotCliCheck) 'working Copilot CLI is recognized as installed'
+            $script:CopilotCliCode=1
+            Assert-True (-not (& $script:CopilotCliCheck)) 'failed Copilot CLI probe does not count as installed'
             foreach ($case in @(
                 @{ Status='PASS'; Color='Green' },
                 @{ Status='MANUAL'; Color='Cyan' },

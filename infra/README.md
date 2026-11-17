@@ -117,6 +117,7 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 | .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
 | Git | `Git.Git` |
 | GitHub CLI | `GitHub.cli`, 2.45.0 이상 확인 |
+| GitHub Copilot CLI | GitHub CLI 다음에 `GitHub.Copilot` 설치. `copilot --version`으로 확인 |
 | nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의 |
 | Azure CLI | `Microsoft.AzureCLI` |
 | azd | `Microsoft.Azd` |
@@ -146,7 +147,7 @@ VM의 사용자 터미널에서 Ubuntu를 처음 실행하고 Linux 사용자 �
 wsl -d Ubuntu
 ```
 
-Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요. GitHub Copilot app을 실행해 로그인하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계에서 gh 인증과 Modernize CLI를 확인하고 실습 준비를 진행합니다.
+Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요. GitHub Copilot app을 실행해 로그인하세요. Copilot CLI는 `copilot`을 실행하고 필요한 인증을 직접 진행하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계에서 gh 인증과 Modernize CLI를 확인하고 실습 준비를 진행합니다.
 
 이 도우미는 Azure/GitHub 로그인, 구독 변경, 공급자 등록과 실습 DB 생성을 실행하지 않습니다. WSL2 중첩 가상화, Docker 실행과 실제 앱 빌드는 VM에서 별도로 확인해야 합니다. 오류 해결을 위해 Trusted Launch를 자동으로 끄지 않습니다.
 

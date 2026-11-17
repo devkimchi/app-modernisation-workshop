@@ -82,7 +82,7 @@ JDK 8을 먼저 선택하고 `mvnw`로 빌드해 줘.
 - RabbitMQ 관리 화면 `http://localhost:15672`에서 로컬 데모 계정 `guest`/`guest`로 로그인합니다. **Queues and Streams**의 `image-processing` 큐에서 Ready, Unacked, Consumers를 확인합니다.
 - Ready가 0인 것만으로 처리가 성공했다고 판단하지 않습니다. worker의 `Successfully generated thumbnail` 로그와 실제 썸네일을 함께 확인합니다.
 - web 로그에서 `HikariPool-1 - Start completed` 메시지와 그 이후에 발생한 오류를 확인합니다. 앱을 시작할 때 DB에 연결됐더라도 이후 연결 상태는 달라질 수 있습니다.
-- `dev` 프로필에서는 이미지를 업로드해도 DB에 메타데이터를 기록하지 않습니다. 화면에 이미지가 표시되고 `storage`에 파일이 저장되어도 DB에 해당 이미지의 메타데이터가 없는 것이 정상입니다. `dev` 프로필이 아닌 S3 처리 경로의 메타데이터는 다음 평가 단계에서 따로 확인합니다.
+- `dev` 프로필에서는 이미지를 업로드해도 DB에 메타데이터를 기록하지 않습니다. 화면에 이미지가 표시되고 `storage`에 파일이 저장되더라도 DB에 메타데이터가 없는 것이 정상입니다. `dev` 프로필을 사용하지 않는 S3 처리 경로의 메타데이터는 다음 평가 단계에서 따로 확인합니다.
 
 macOS와 Linux에서는 앱 루트에 있는 로그 파일을 확인합니다.
 
@@ -93,7 +93,7 @@ grep -n -F 'HikariPool-1 - Start completed' logs/web.log
 grep -inE -C 3 'error|exception|connection refused|connection timed out' logs/web.log
 ```
 
-Windows에서는 시작 스크립트가 연 창에서 로그를 확인합니다. 로그를 파일로 따로 저장한 경우에만 다음 명령의 경로를 해당 파일 경로로 바꿔 실행합니다.
+Windows에서는 시작 스크립트가 띄운 창에서 로그를 확인합니다. 로그를 파일로 따로 저장했다면 다음 명령의 경로를 해당 파일 경로로 바꿔 실행합니다.
 
 ```powershell
 # PowerShell
@@ -120,7 +120,7 @@ Select-String -Path "<web-로그-경로>" -Pattern 'error|exception|connection r
 
 ## 원본 앱 상태 커밋
 
-개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 기존 제외 규칙을 유지하면서 빌드 결과물과 비밀 정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
+개인 실습용으로 복제한 저장소에 원본 앱의 상태를 커밋으로 남깁니다. 기존 `.gitignore` 규칙을 유지하고 빌드 결과물과 비밀정보를 커밋 대상에서 제외합니다. `local.storage.directory`를 바꿨다면 해당 경로도 제외합니다.
 
 ```bash
 # zsh/bash
@@ -141,7 +141,7 @@ git diff --cached --stat
 git diff --cached
 ```
 
-업로드한 파일, 로그, 토큰이나 비밀 정보가 담긴 연결 설정이 있으면 커밋 대상에서 제외하고 다시 검토합니다. 검토를 마친 뒤 문제가 없을 때만 커밋합니다.
+업로드한 파일, 로그, 토큰이나 비밀정보가 담긴 연결 설정은 커밋 대상에서 제외합니다. 다시 검토해 문제가 없을 때만 커밋합니다.
 
 ```bash
 git commit -m "Baseline: verified Java 8 sample"

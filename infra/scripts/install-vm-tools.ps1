@@ -332,7 +332,7 @@ function Get-VmVsInstance {
 }
 
 function Install-VmVisualStudio {
-    param([ValidateSet('Community', 'BuildTools')][string]$Product, [string]$ConfigFile)
+    param([ValidateSet('BuildTools')][string]$Product, [string]$ConfigFile)
     $config = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json -ErrorAction Stop
     $components = @($config.components)
     if (Get-VmVsInstance $Product $components) { Write-Host "[PASS] Verified the Visual Studio 2026 $Product configuration."; return $true }
@@ -419,11 +419,49 @@ function Test-VmDesktopApp {
     return @($Paths | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }).Count -gt 0
 }
 
-function Test-VmFrameworkTools {
-    $framework = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\mscorlib.dll'
-    if (-not (Test-Path -LiteralPath $framework)) { throw '.NET Framework 4.8 Targeting Pack is missing.' }
-    if (-not (Get-DotnetFrameworkBuildTools)) { throw 'MSBuild or the .NET Framework web build tools are missing.' }
-    if (-not (Get-WorkshopIisExpress)) { throw 'IIS Express was not found.' }
+function Install-VmMicrosoftMsi {
+    param([string]$Name, [string]$Uri, [string]$Sha256, [scriptblock]$TestInstalled, [string]$Properties = '')
+    if (& $TestInstalled) { Write-Host "[PASS] $Name is installed. Keeping the existing installation."; return $true }
+    if (-not (Confirm-VmAction "Install $Name from the official Microsoft MSI and accept its license terms. Review https://www.microsoft.com/licensing/terms/ before continuing. No database or instance will be created.")) {
+        return $false
+    }
+    $path = Join-Path $env:TEMP ("appmod-microsoft-$([guid]::NewGuid().ToString('N')).msi")
+    try {
+        Invoke-WebRequest -Uri $Uri -OutFile $path -UseBasicParsing -ErrorAction Stop
+        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $Sha256) { throw "The $Name MSI hash does not match." }
+        $signature = Get-AuthenticodeSignature -LiteralPath $path
+        if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch '(^|,\s*)O=Microsoft Corporation(,|$)') {
+            throw "Could not verify a valid Microsoft signature on the $Name MSI."
+        }
+        $process = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\msiexec.exe') `
+            -ArgumentList "/i `"$path`" /passive /norestart $Properties" -Wait -PassThru -ErrorAction Stop
+        if ($process.ExitCode -in @(1641, 3010)) { $script:VmRestartRequired=$true; return $false }
+        if ($process.ExitCode -ne 0) { throw "$Name MSI installation failed (exit code $($process.ExitCode))." }
+        Update-ProcessPath
+        if (-not (& $TestInstalled)) { throw "Could not verify $Name after installation." }
+        Write-Host "[PASS] Verified the $Name installation."
+        return $true
+    }
+    finally {
+        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force -ErrorAction Stop }
+    }
+}
+
+function Test-VmIisExpress {
+    foreach ($base in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+        if ((Test-Path -LiteralPath (Join-Path $base 'IIS Express\iisexpress.exe') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $base 'IIS Express\AppServer\applicationhost.config') -PathType Leaf)) { return $true }
+    }
+    return $false
+}
+
+function Install-VmIisExpress {
+    return (Install-VmMicrosoftMsi -Name 'IIS Express 10 x64' `
+        -Uri 'https://download.visualstudio.microsoft.com/download/pr/4c26ccd0-4528-45dc-aa5c-72c557a58703/341a554d60163f8b275d1d6f97149d03a18f59bb340a15f1bd70659f237537fe/iisexpress_amd64_en-us.msi' `
+        -Sha256 '341a554d60163f8b275d1d6f97149d03a18f59bb340a15f1bd70659f237537fe' -TestInstalled { Test-VmIisExpress })
+}
+
+function Test-VmLocalDb {
     $localDb = Get-Command SqlLocalDB.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     $candidates = @()
     if ($localDb) { $candidates += $localDb.Source }
@@ -434,7 +472,22 @@ function Test-VmFrameworkTools {
     foreach ($path in $candidates) {
         if ((Test-Path -LiteralPath $path) -and (Test-VmCommand $path @('versions'))) { $found = $true; break }
     }
-    if (-not $found) { throw 'Could not verify the SQL Server LocalDB version.' }
+    return $found
+}
+
+function Install-VmLocalDb {
+    return (Install-VmMicrosoftMsi -Name 'SQL Server 2025 Express LocalDB x64' `
+        -Uri 'https://download.visualstudio.microsoft.com/download/pr/4c26ccd0-4528-45dc-aa5c-72c557a58703/0891bf47652d88f06d76a339a5db37ddc9c801d1e973e14b3b551609f1cfa4cb/SqlLocalDB.msi' `
+        -Sha256 '0891bf47652d88f06d76a339a5db37ddc9c801d1e973e14b3b551609f1cfa4cb' `
+        -Properties 'IACCEPTSQLLOCALDBLICENSETERMS=YES' -TestInstalled { Test-VmLocalDb })
+}
+
+function Test-VmFrameworkTools {
+    $framework = Join-Path ${env:ProgramFiles(x86)} 'Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\mscorlib.dll'
+    if (-not (Test-Path -LiteralPath $framework)) { throw '.NET Framework 4.8 Targeting Pack is missing.' }
+    if (-not (Get-DotnetFrameworkBuildTools)) { throw 'MSBuild or the .NET Framework web build tools are missing.' }
+    if (-not (Get-WorkshopIisExpress)) { throw 'IIS Express was not found.' }
+    if (-not (Test-VmLocalDb)) { throw 'Could not verify the SQL Server LocalDB version.' }
     Write-Host '[PASS] Verified the .NET Framework 4.8 Targeting Pack, web build tools, IIS Express and LocalDB.'
     return $true
 }
@@ -471,8 +524,9 @@ function Invoke-VmToolInstallation {
         @{ Name='.NET 10 SDK'; Run={ Install-VmDotnetSdk 10 } },
         @{ Name='.NET 11 SDK'; Run={ Install-VmDotnetSdk 11 } },
         @{ Name='PostgreSQL 18 client'; Run={ Install-VmPostgresClient } },
-        @{ Name='Visual Studio Community'; Run={ Install-VmVisualStudio Community (Join-Path $PSScriptRoot 'visualstudio.vsconfig') } },
         @{ Name='Visual Studio Build Tools'; Run={ Install-VmVisualStudio BuildTools (Join-Path $PSScriptRoot 'buildtools.vsconfig') } },
+        @{ Name='IIS Express'; Run={ Install-VmIisExpress } },
+        @{ Name='SQL Server LocalDB'; Run={ Install-VmLocalDb } },
         @{ Name='Framework build and run tools'; Run={ Test-VmFrameworkTools } },
         @{ Name='VS Code'; Run={
             Install-VmPackage Microsoft.VisualStudioCode 'VS Code' -TestInstalled {

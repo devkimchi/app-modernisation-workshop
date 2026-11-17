@@ -33,7 +33,7 @@ VM에는 Entra ID 로그인 확장, 로그인 역할 할당과 관리 ID를 만�
 - Azure 구독에서 리소스 그룹, VM, 네트워크와 자동 종료 일정을 생성할 권한
 - 선택한 리전의 VM 크기, vCPU 할당량과 Bastion Developer 지원
 - [Azure에서 Windows 클라이언트를 사용할 라이선스 자격](https://learn.microsoft.com/azure/virtual-machines/windows/windows-desktop-multitenant-hosting-deployment)
-- Windows, Visual Studio Community, Docker Desktop과 GitHub Copilot의 사용 조건
+- Windows, Visual Studio Build Tools, Docker Desktop과 GitHub Copilot의 사용 조건
 
 Copilot app 터미널에서 azd가 AI 에이전트 환경을 감지해 질문을 생략하면, 직접 입력할 수 있는 같은 터미널에서 **아래 배포 명령을 실행하기 전에** 비대화형 모드 자동 감지를 해제하세요.
 
@@ -120,14 +120,15 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 | .NET 10 SDK | `Microsoft.DotNet.SDK.10`, 안정 10.x. 기존 다른 메이저 유지 |
 | .NET 11 SDK | `Microsoft.DotNet.SDK.11`, 안정 11.x. .NET 10과 별도 동의 후 함께 설치 |
 | PostgreSQL 18 클라이언트 | `PostgreSQL.PostgreSQL.18`의 `commandlinetools`만 설치하고 `psql --version` 확인. 서버, pgAdmin과 Stack Builder는 설치하지 않으며 DB도 생성하지 않음 |
-| Visual Studio 2026 Community | 안정 18.x, [visualstudio.vsconfig](scripts/visualstudio.vsconfig)의 웹 및 데스크톱 개발 구성 |
-| Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 빌드 구성 |
-| Framework 빌드 및 실행 도구 확인 | 앞서 설치한 Visual Studio 구성요소의 4.8 Targeting Pack, MSBuild 웹 빌드 도구, IIS Express와 SQL Server LocalDB 확인. DB를 만들거나 초기화하지 않음 |
+| Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 및 .NET 데스크톱 빌드 도구, 4.8 Targeting Pack과 SDK |
+| IIS Express | Microsoft 공식 x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인 |
+| SQL Server LocalDB | Microsoft 공식 SQL Server 2025 Express LocalDB x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인. DB나 인스턴스는 생성하지 않음 |
+| Framework 빌드 및 실행 도구 확인 | 4.8 Targeting Pack, MSBuild 웹 빌드 도구, IIS Express와 SQL Server LocalDB 확인. DB를 만들거나 초기화하지 않음 |
 | VS Code | `Microsoft.VisualStudioCode` |
 | GitHub Copilot app | 공식 `github/app` 최신 정식 x64 MSI. 제공된 SHA-256과 GitHub 서명을 확인한 뒤 실행 |
 | Docker Desktop | WSL2 백엔드로 설치. 최초 실행과 약관 확인은 수동 진행 |
 
-전체 IDE와 Build Tools는 별도 설치 항목입니다. 설치 전 시스템 드라이브에 최소 50 GiB의 여유 공간을 요구하며, 이후 Docker 이미지와 WSL 데이터에 필요한 공간은 별도로 확보하세요.
+Visual Studio Community IDE는 설치하지 않습니다. 기존 IDE가 있으면 제거하지 않습니다. IIS Express와 LocalDB는 Build Tools의 구성요소가 아니므로 별도 설치합니다. 설치 전 시스템 드라이브에 최소 50 GiB의 여유 공간을 요구하며, 이후 Docker 이미지와 WSL 데이터에 필요한 공간은 별도로 확보하세요.
 
 nvm 1.x나 출처가 불명확한 기존 Node 설치는 자동 교체하지 않습니다. nvm의 `auto_install`이 켜져 있으면 별도 동의 후 끕니다. 기존 Ubuntu가 WSL1이면 삭제하거나 자동 변환하지 않고 중단합니다.
 
@@ -147,7 +148,7 @@ Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테�
 
 ## 파일 배치와 재배포
 
-`preprovision` 훅은 로컬 공통 도우미 6개, VM 설치 스크립트와 `.vsconfig` 2개를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
+`preprovision` 훅은 로컬 공통 도우미 6개, VM 설치 스크립트와 `buildtools.vsconfig`를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
 
 azd는 Windows에서 `preprovision.ps1`, macOS/Linux에서 `preprovision.sh`를 실행합니다. Bash 구현도 파일의 원본 바이트, JSON 형식과 크기 제한을 유지합니다. `postprovision.ps1`과 `postprovision.sh`는 각 환경의 셸로 Bastion 접속과 VM 내부 설치 명령을 안내합니다.
 

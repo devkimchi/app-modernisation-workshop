@@ -30,6 +30,8 @@ try {
     $bundle = New-VmPayload $sources
     $payload = Expand-VmPayload $bundle.content
     Assert-True ($payload.files.Count -eq $sources.Count) 'payload contains every required file'
+    Assert-True (@($payload.files | Where-Object name -like '*.vsconfig').Count -eq 1 -and
+        $payload.files.name -contains 'buildtools.vsconfig') 'payload delivers only the Build Tools configuration'
     Assert-True ($bundle.content.Length -le 90000) 'compressed payload stays below inline limit'
     foreach ($file in $payload.files) {
         Assert-True ((Get-VmBytesHash ([Convert]::FromBase64String($file.content))) -eq
@@ -445,18 +447,27 @@ function Enable-WindowsOptionalFeature {
         function Get-VmVsInstance { return $null }
         function Install-VmPackage {
             param($Id,$Name,$TestInstalled,$VersionPattern,$ExtraArguments)
-            Assert-True ($Id -eq 'Microsoft.VisualStudio.Community' -and $VersionPattern -eq '^18\.\d+\.\d+$') 'VS 2026 maps to stable 18.x package'
+            Assert-True ($Id -eq 'Microsoft.VisualStudio.BuildTools' -and $VersionPattern -eq '^18\.\d+\.\d+$') 'VS 2026 installs only the stable 18.x Build Tools package'
             Assert-True ($ExtraArguments[0] -eq '--override' -and $ExtraArguments[1] -match '--norestart' -and
-                $ExtraArguments[1].Contains('visualstudio.vsconfig')) 'VS configuration and no-restart options are forwarded'
+                $ExtraArguments[1].Contains('buildtools.vsconfig')) 'Build Tools configuration and no-restart options are forwarded'
             return $true
         }
-        Assert-True (Install-VmVisualStudio Community (Join-Path $root 'infra\scripts\visualstudio.vsconfig')) 'VS installer plans explicit workload config'
+        Assert-True (Install-VmVisualStudio BuildTools (Join-Path $root 'infra\scripts\buildtools.vsconfig')) 'Build Tools installer plans explicit workload config'
     }
 
     & {
         $script:VsReady=$false
         function Get-VmVsInstance {
             param($Product,$Requires=@())
+            if ($Requires.Count) {
+                Assert-True ($Product -eq 'BuildTools' -and
+                    $Requires -contains 'Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools' -and
+                    $Requires -contains 'Microsoft.VisualStudio.Workload.WebBuildTools' -and
+                    $Requires -contains 'Microsoft.Net.Component.4.8.TargetingPack' -and
+                    $Requires -contains 'Microsoft.Net.Component.4.8.SDK') 'Build Tools verifies web and desktop workloads and Framework development tools'
+                Assert-True ($Requires -notcontains 'Microsoft.VisualStudio.Component.IISExpress' -and
+                    $Requires -notcontains 'Microsoft.VisualStudio.Component.SQL.LocalDB.Runtime') 'unsupported runtime components are not passed to Build Tools'
+            }
             if (-not $Requires.Count -or $script:VsReady) { [pscustomobject]@{installationPath='C:\fixture with spaces\VS'} }
         }
         function Confirm-VmAction { return $true }
@@ -468,6 +479,73 @@ function Enable-WindowsOptionalFeature {
             [pscustomobject]@{ExitCode=0}
         }
         Assert-True (Install-VmVisualStudio BuildTools (Join-Path $root 'infra\scripts\buildtools.vsconfig')) 'existing VS workloads are verified after modification'
+    }
+
+    & {
+        $script:MsiReady=$false; $script:MsiApprovals=$false; $script:MsiInstalls=0
+        $script:MsiHash='fixture-hash'; $script:MsiSignature='Valid'; $script:MsiPublisher='Microsoft Corporation'
+        $script:MsiCode=0; $script:VerifyMsi=$true; $script:VmRestartRequired=$false
+        function Confirm-VmAction {
+            param($Message)
+            Assert-True ($Message -match 'accept its license terms') 'standalone MSI consent includes license acceptance'
+            return $script:MsiApprovals
+        }
+        function Invoke-WebRequest {
+            param($Uri,$OutFile,[switch]$UseBasicParsing,$ErrorAction)
+            $script:MsiDownload=$OutFile
+            [IO.File]::WriteAllText($OutFile,'fixture')
+        }
+        function Get-FileHash { [pscustomobject]@{Hash=$script:MsiHash} }
+        function Get-AuthenticodeSignature {
+            [pscustomobject]@{Status=$script:MsiSignature;SignerCertificate=[pscustomobject]@{Subject="CN=Microsoft Corporation, O=$script:MsiPublisher, C=US"}}
+        }
+        function Update-ProcessPath { }
+        function Start-Process {
+            param($FilePath,$ArgumentList,[switch]$Wait,[switch]$PassThru,$ErrorAction)
+            Assert-True ($FilePath.EndsWith('System32\msiexec.exe') -and
+                $ArgumentList.Contains("/i `"$script:MsiDownload`" /passive /norestart IACCEPTSQLLOCALDBLICENSETERMS=YES") -and
+                $Wait -and $PassThru) 'standalone MSI uses quoted paths, license acceptance and no automatic restart'
+            $script:MsiInstalls++
+            $script:MsiReady=$script:VerifyMsi
+            [pscustomobject]@{ExitCode=$script:MsiCode}
+        }
+        $options=@{Name='fixture';Uri='https://download.visualstudio.microsoft.com/fixture.msi';Sha256='fixture-hash'
+            TestInstalled={ $script:MsiReady };Properties='IACCEPTSQLLOCALDBLICENSETERMS=YES'}
+        Assert-True (-not (Install-VmMicrosoftMsi @options)) 'declined standalone MSI does not install'
+        Assert-True (-not $script:MsiDownload -and $script:MsiInstalls -eq 0) 'decline occurs before any download'
+        $script:MsiApprovals=$true
+        Assert-True (Install-VmMicrosoftMsi @options) 'standalone MSI is verified after installation'
+        Assert-True (-not (Test-Path -LiteralPath $script:MsiDownload)) 'successful MSI is cleaned up'
+        Assert-True (Install-VmMicrosoftMsi @options) 'existing standalone tool is kept without reinstalling'
+        Assert-True ($script:MsiInstalls -eq 1) 'existing tool never launches another MSI'
+        $script:MsiReady=$false; $script:MsiHash='wrong-hash'
+        Assert-Throws { Install-VmMicrosoftMsi @options } 'hash' 'wrong MSI hash blocks execution'
+        $script:MsiHash='fixture-hash'; $script:MsiSignature='NotSigned'
+        Assert-Throws { Install-VmMicrosoftMsi @options } 'signature' 'unsigned MSI blocks execution'
+        $script:MsiSignature='Valid'; $script:MsiPublisher='Other Publisher'
+        Assert-Throws { Install-VmMicrosoftMsi @options } 'signature' 'valid signature from another publisher blocks execution'
+        Assert-True ($script:MsiInstalls -eq 1 -and -not (Test-Path -LiteralPath $script:MsiDownload)) 'failed integrity checks clean up without executing'
+        $script:MsiPublisher='Microsoft Corporation'; $script:VerifyMsi=$false; $script:MsiCode=1603
+        Assert-Throws { Install-VmMicrosoftMsi @options } '1603' 'MSI installation failure propagates'
+        $script:MsiCode=0
+        Assert-Throws { Install-VmMicrosoftMsi @options } 'after installation' 'MSI exit zero without installed files is not success'
+        $script:MsiCode=3010
+        Assert-True (-not (Install-VmMicrosoftMsi @options)) 'MSI reboot request remains incomplete'
+        Assert-True ($script:VmRestartRequired -and -not (Test-Path -LiteralPath $script:MsiDownload)) 'MSI reboot request is reported and download cleaned up'
+    }
+
+    & {
+        function Install-VmMicrosoftMsi {
+            param($Name,$Uri,$Sha256,$TestInstalled,$Properties)
+            Assert-True ($Uri.StartsWith('https://download.visualstudio.microsoft.com/') -and
+                $Sha256 -match '^[a-f0-9]{64}$') 'runtime MSI uses official Microsoft URL and pinned SHA-256'
+            if ($Name -like '*LocalDB*') {
+                Assert-True ($Properties -eq 'IACCEPTSQLLOCALDBLICENSETERMS=YES') 'LocalDB wrapper passes its required license acceptance only after MSI consent'
+            }
+            return $true
+        }
+        Assert-True (Install-VmIisExpress) 'IIS Express uses standalone Microsoft MSI installation'
+        Assert-True (Install-VmLocalDb) 'LocalDB uses standalone Microsoft MSI installation'
     }
 
     & {
@@ -528,6 +606,31 @@ function Enable-WindowsOptionalFeature {
         $script:CopilotVersion=$null; $script:SignatureStatus='NotSigned'
         Assert-Throws { Install-VmCopilot } 'signature' 'unsigned MSI never executes'
         Assert-True ($script:MsiCalls -eq 1 -and -not (Test-Path -LiteralPath $script:DownloadedMsi)) 'failed MSI verification cleans up without execution'
+    }
+
+    & {
+        $script:RuntimeSteps=[Collections.Generic.List[string]]::new()
+        function Test-VmRebootPending { return $false }
+        function Get-PSDrive { [pscustomobject]@{Free=100GB} }
+        function Install-VmWslPlatform { return $true }
+        function Install-VmUbuntu { return $true }
+        function Install-VmMsmq { return $true }
+        function Install-VmPackage { return $true }
+        function Install-VmNvm { return $true }
+        function Install-VmDotnetSdk { return $true }
+        function Install-VmPostgresClient { return $true }
+        function Install-VmCopilot { return $true }
+        function Install-VmVisualStudio {
+            param($Product,$ConfigFile)
+            Assert-True ($Product -eq 'BuildTools') 'installer never requests a Community installation'
+            $script:RuntimeSteps.Add('BuildTools')
+            return $true
+        }
+        function Install-VmIisExpress { $script:RuntimeSteps.Add('IIS Express'); return $true }
+        function Install-VmLocalDb { $script:RuntimeSteps.Add('LocalDB'); return $true }
+        function Test-VmFrameworkTools { $script:RuntimeSteps.Add('Verify'); return $true }
+        Assert-True ((Invoke-VmToolInstallation) -eq 0) 'Build Tools-only flow completes with separate runtime tools'
+        Assert-True (($script:RuntimeSteps -join ',') -eq 'BuildTools,IIS Express,LocalDB,Verify') 'standalone runtime tools install after Build Tools and before final verification'
     }
 
     & {

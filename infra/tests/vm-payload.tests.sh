@@ -36,7 +36,7 @@ expected = {
 }
 expected.update({
     name: root / "infra" / "scripts" / name
-    for name in ("install-vm-tools.ps1", "visualstudio.vsconfig", "buildtools.vsconfig")
+    for name in ("install-vm-tools.ps1", "buildtools.vsconfig")
 })
 assert len(payload["files"]) == len(expected)
 assert {item["name"] for item in payload["files"]} == set(expected)

@@ -19,7 +19,7 @@ work="$(mktemp -d "$(dirname -- "$target")/.payload.XXXXXX")"
 names=(
     powershell-bootstrap.ps1 install-prerequisites.ps1 windows-prerequisite-updates.ps1
     check-prerequisites.ps1 dotnet-framework-tools.ps1 java-tools.ps1
-    install-vm-tools.ps1 visualstudio.vsconfig buildtools.vsconfig
+    install-vm-tools.ps1 buildtools.vsconfig
 )
 printf '{"schemaVersion":1,"files":[' > "$work/files.json"
 separator=''

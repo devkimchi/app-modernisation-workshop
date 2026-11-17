@@ -13,7 +13,7 @@ hooks:
     posix:
       shell: sh
       interactive: false
-      run: bash ./infra/scripts/preprovision.sh
+      run: ./infra/scripts/preprovision.sh
   postprovision:
     windows:
       shell: pwsh
@@ -22,4 +22,4 @@ hooks:
     posix:
       shell: sh
       interactive: false
-      run: bash ./infra/scripts/postprovision.sh
+      run: ./infra/scripts/postprovision.sh

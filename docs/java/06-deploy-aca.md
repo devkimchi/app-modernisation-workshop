@@ -151,7 +151,7 @@ az postgres flexible-server firewall-rule list --subscription $subscription --re
 
 규칙의 시작과 끝 IP가 같고 승인한 주소만 허용했는지 확인합니다. 적용까지 몇 분 걸릴 수 있습니다. 계속 연결 시간이 초과되면 PC가 연결된 네트워크에서 외부로 나가는 TCP 5432 포트를 차단하는지도 확인합니다. 방화벽을 허용해도 DB 인증과 권한 설정은 별도로 필요합니다.
 
-공인 IP가 바뀌면 새 주소를 확인해 등록하고, 기존 규칙은 별도 승인 후 삭제합니다. 위 규칙은 해당 PC에만 적용됩니다. 마이그레이션 관리 ID를 사용하는 별도 호스트와 ACA의 DB 연결 경로도 각각 확인하고 승인한 주소만 허용해야 합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
+공인 IP가 바뀌면 새 주소를 확인해 등록하고, 기존 규칙은 별도 승인 후 삭제합니다. 위 규칙은 해당 PC에만 적용됩니다. ACA의 DB 연결 경로도 확인하고 승인한 주소만 허용해야 합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
 
 ### DB 연결용 루트 인증서 준비
 
@@ -204,11 +204,18 @@ $env:PGSSLROOTCERT = $caFile.FullName
 
 앱 루트에서 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 합니다. 안내, 대상 또는 권한이 불분명하면 중단하고, 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.
 
-서버의 Entra 인증과 관리자, DB 이름, web/worker와 마이그레이션 관리 ID를 확인합니다. 실행 호스트에서 DB에 접근할 수 있는지, TLS 인증서를 신뢰할 수 있는지도 확인합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)와 [관리 ID 연결 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-connect-with-managed-identity)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고 재연결 시 만료되었다면 다시 발급합니다.
+워크숍에서는 **로컬 PC에서 Entra 관리자 계정으로 DB 사용자 생성, 테이블 생성과 권한 부여를 모두 수행**합니다. 별도 실행 호스트나 마이그레이션 관리 ID로 로그인할 필요는 없습니다. 앱은 관리자 계정이 아닌 web/worker 관리 ID로 연결합니다. 운영 환경에서는 별도 마이그레이션 주체와 실행 환경으로 분리합니다.
+
+서버의 Entra 인증과 관리자, DB 이름, web/worker 관리 ID를 확인합니다. 현재 PC에서 DB에 접근할 수 있는지, TLS 인증서를 신뢰할 수 있는지도 확인합니다. 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고 재연결 시 만료되었다면 다시 발급합니다.
 
 다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다. 조회 명령은 순서대로 실행하고, 오류나 빈 값이 나오면 다음 명령을 실행하지 마세요.
 
-`bootstrap-identities.sql`을 실행하기 전에 앱 루트에서 아래 네 값을 조회해 준비합니다. web과 worker는 각 Container App에 연결된 사용자 할당 관리 ID를 조회합니다. 이 예시는 앱마다 관리 ID가 하나인 경우에 사용합니다. 여러 ID가 조회되면 임의로 하나를 선택하지 말고 앱 설정과 초기화 안내에서 사용할 ID를 확인하세요.
+초기화 SQL과 README가 로컬 관리자 방식으로 준비되어 있는지 확인합니다. 마이그레이션 관리 ID 입력이나 별도 호스트를 요구한다면 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 해당 SQL, 안내와 관련 검사를 먼저 수정합니다.
+
+> [!NOTE]
+> 기존 절차에서 Entra 관리자의 사용자 생성과 권한 설정을 이미 완료했다면 1단계를 반복하지 말고, DB 상태를 확인한 뒤 2단계부터 진행합니다. 이미 생성된 마이그레이션 관리 ID와 DB 역할은 이 절차에서 사용하지 않으며, 전환을 위해 삭제하거나 다시 프로비저닝할 필요는 없습니다.
+
+`bootstrap-identities.sql`을 실행하기 전에 앱 루트에서 아래 세 값을 조회해 준비합니다. web과 worker는 각 Container App에 연결된 사용자 할당 관리 ID를 조회합니다. 이 예시는 앱마다 관리 ID가 하나인 경우에 사용합니다. 여러 ID가 조회되면 임의로 하나를 선택하지 말고 앱 설정과 초기화 안내에서 사용할 ID를 확인하세요.
 
 ```bash
 # zsh/bash
@@ -218,10 +225,9 @@ subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)
 workerApp=$(azd env get-value WORKER_CONTAINER_APP_NAME)
-migrationIdentity=$(azd env get-value MIGRATION_IDENTITY_NAME)
 pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
 if [ -z "$subscription" ] || [ -z "$rg" ] || [ -z "$webApp" ] ||
-   [ -z "$workerApp" ] || [ -z "$migrationIdentity" ] || [ -z "$pgDatabase" ]; then
+   [ -z "$workerApp" ] || [ -z "$pgDatabase" ]; then
     printf '%s\n' "Required azd environment value is empty." >&2
     exit 1
 fi
@@ -244,7 +250,7 @@ read_identity_name() {
 
 webIdentity=$(read_identity_name "$webApp")
 workerIdentity=$(read_identity_name "$workerApp")
-printf 'Web: %s\nWorker: %s\nSchema-migration: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$migrationIdentity" "$pgDatabase"
+printf 'Web: %s\nWorker: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$pgDatabase"
 )
 ```
 
@@ -258,8 +264,6 @@ $webApp = azd env get-value WEB_CONTAINER_APP_NAME
 if ($LASTEXITCODE -ne 0 -or -not $webApp) { throw "Web app lookup failed." }
 $workerApp = azd env get-value WORKER_CONTAINER_APP_NAME
 if ($LASTEXITCODE -ne 0 -or -not $workerApp) { throw "Worker app lookup failed." }
-$migrationIdentity = azd env get-value MIGRATION_IDENTITY_NAME
-if ($LASTEXITCODE -ne 0 -or -not $migrationIdentity) { throw "Migration identity lookup failed." }
 $pgDatabase = azd env get-value POSTGRESQL_DATABASE
 if ($LASTEXITCODE -ne 0 -or -not $pgDatabase) { throw "Database lookup failed." }
 
@@ -280,7 +284,6 @@ foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerato
 [pscustomobject]@{
     Web = $identityNames.Web
     Worker = $identityNames.Worker
-    "Schema-migration" = $migrationIdentity
     Database = $pgDatabase
 } | Format-List
 ```
@@ -291,12 +294,11 @@ foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerato
 | --- | --- |
 | `Web managed identity name:` | `Web` |
 | `Worker managed identity name:` | `Worker` |
-| `Schema-migration managed identity name:` | `Schema-migration` |
 | `Application database name:` | `Database` |
 
-관리 ID는 Client ID나 Object ID가 아닌 **리소스 이름**을 입력합니다. 네 값을 모두 입력하면 DB 사용자 생성과 권한 부여가 시작됩니다. 2단계의 초기화 스크립트에서도 같은 web과 worker 이름이 필요하므로 별도 호스트에서 사용할 수 있도록 준비하세요.
+관리 ID는 Client ID나 Object ID가 아닌 **리소스 이름**을 입력합니다. 세 값을 모두 입력하면 DB 사용자 생성과 권한 부여가 시작됩니다. 2단계의 초기화 스크립트에서도 같은 web과 worker 이름이 필요합니다.
 
-1. **Entra 관리자:** `postgres` DB에 보안 주체와 연결 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker, 마이그레이션 관리 ID와 앱 DB 이름을 입력합니다.
+1. **DB 사용자와 기본 권한 설정:** `postgres` DB에 Entra 관리자로 연결해 web/worker 보안 주체와 DB 연결 및 스키마 사용 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker 관리 ID와 앱 DB 이름을 입력합니다.
 
    ```bash
    # zsh/bash
@@ -324,7 +326,7 @@ foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerato
    Remove-Item Env:\PGPASSWORD
    ```
 
-2. **마이그레이션 관리 ID:** 관리자 연결을 종료하고 이 ID가 연결된 승인된 호스트에서 별도로 인증합니다. 해당 호스트에 같은 azd 환경의 비밀이 아닌 출력값과 앱 파일이 준비되어 있어야 합니다. DB에 접근할 수 있는 호스트의 앱 루트에서 아래 값을 먼저 조회합니다. Azure 조회 권한이 없다면 권한을 임의로 추가하지 말고 승인된 조회 주체가 확인한 값을 안전하게 전달합니다. `az login --identity`는 Azure CLI 로그인 주체를 마이그레이션 ID로 바꾸므로 해당 호스트에서만 실행합니다. SQL 프롬프트에는 web과 worker 관리 ID 이름을 입력합니다.
+2. **테이블 생성과 앱 권한 설정:** 같은 로컬 PC와 Entra 관리자 계정으로 앱 DB에 연결해 테이블을 만들고 web/worker에 필요한 테이블 권한을 부여합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 앱 루트에서 아래 값을 조회하고 SQL 프롬프트에는 앞서 확인한 web과 worker 관리 ID 이름을 입력합니다.
 
    ```bash
    # zsh/bash
@@ -332,13 +334,11 @@ foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerato
    rg=$(azd env get-value AZURE_RESOURCE_GROUP)
    server=$(azd env get-value POSTGRESQL_SERVER)
    pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
-   pgUser=$(azd env get-value MIGRATION_IDENTITY_NAME)
+   pgAdmin=$(azd env get-value POSTGRESQL_ADMIN_NAME)
    pgHost=$(az postgres flexible-server show --subscription "$subscription" --resource-group "$rg" --name "$server" --query fullyQualifiedDomainName --output tsv)
-   migrationClientId=$(az identity show --subscription "$subscription" --resource-group "$rg" --name "$pgUser" --query clientId --output tsv)
-   az login --identity --client-id "$migrationClientId" --allow-no-subscriptions --output none &&
    PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
    export PGPASSWORD &&
-   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgUser" --file "infra/db/initialize-image-metadata.sql"
+   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgAdmin" --file "infra/db/initialize-image-metadata.sql"
    unset PGPASSWORD
    ```
 
@@ -348,35 +348,32 @@ foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerato
    $rg = azd env get-value AZURE_RESOURCE_GROUP
    $server = azd env get-value POSTGRESQL_SERVER
    $pgDatabase = azd env get-value POSTGRESQL_DATABASE
-   $pgUser = azd env get-value MIGRATION_IDENTITY_NAME
+   $pgAdmin = azd env get-value POSTGRESQL_ADMIN_NAME
    $pgHost = az postgres flexible-server show --subscription $subscription --resource-group $rg --name $server --query fullyQualifiedDomainName --output tsv
-   $migrationClientId = az identity show --subscription $subscription --resource-group $rg --name $pgUser --query clientId --output tsv
-   az login --identity --client-id $migrationClientId --allow-no-subscriptions --output none
-   if ($LASTEXITCODE -ne 0) { throw "Managed identity login failed." }
    $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
    if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
-   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgUser --file "infra/db/initialize-image-metadata.sql"
+   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgAdmin --file "infra/db/initialize-image-metadata.sql"
    Remove-Item Env:\PGPASSWORD
    ```
 
-마이그레이션 관리 ID는 테이블을 만들고 소유하며 앱에는 연결하지 않습니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
+테이블은 초기화를 수행한 관리자 DB 역할이 소유합니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
 실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
 
-초기화 후에는 2단계와 같은 호스트와 셸에서 조회한 변수와 마이그레이션 ID 인증을 사용해 앱 DB에 연결합니다. 토큰은 다시 발급하고, 조회 실패나 빈 값이 있으면 진행하지 마세요.
+초기화 후에는 같은 로컬 PC의 셸에서 2단계의 변수와 Entra 관리자 인증을 사용해 앱 DB에 연결합니다. 토큰은 다시 발급하고, 조회 실패나 빈 값이 있으면 진행하지 마세요.
 
 ```bash
 # zsh/bash
 PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
 export PGPASSWORD &&
-psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgUser"
+psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgAdmin"
 ```
 
 ```powershell
 # PowerShell
 $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
 if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
-psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgUser
+psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgAdmin
 ```
 
 연결된 `psql`에서 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
@@ -406,7 +403,7 @@ FROM pg_class
 WHERE oid = to_regclass('public.image_metadata');
 ```
 
-web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 마이그레이션 관리 ID여야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다.
+web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 초기화를 수행한 관리자 DB 역할이어야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다.
 
 결과를 앞서 검토한 초기화 절차의 대상과 권한에 대조해 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다.
 

@@ -24,7 +24,9 @@ VM에는 Entra ID 로그인 확장, 로그인 역할 할당과 관리 ID를 만�
 
 ## 배포
 
-**배포할 PC의 직접 연 PowerShell 7 터미널에서 저장소 루트를 작업 디렉터리로 사용하세요.** azd CLI와 PowerShell 7이 필요합니다. 이 저장소의 `infra`만 떼어 복사하면 공통 `scripts` 파일을 패키징할 수 없습니다.
+**배포할 PC에서 저장소 루트를 작업 디렉터리로 사용하세요.** Windows에서는 PowerShell 7, macOS와 Linux 데스크톱에서는 Bash 3.2 이상 터미널을 사용합니다. 모든 환경에 azd CLI가 필요하며, Bash 훅은 `gzip`, `base64` 등 기본 명령을 사용하므로 PowerShell을 설치할 필요가 없습니다. 생성되는 VM과 VM 내부 설치 도우미는 모든 배포 환경에서 동일한 Windows 구성입니다.
+
+이 저장소의 `infra`만 떼어 복사하면 공통 `scripts` 파일을 패키징할 수 없습니다.
 
 먼저 다음 조건을 확인하세요.
 
@@ -33,7 +35,7 @@ VM에는 Entra ID 로그인 확장, 로그인 역할 할당과 관리 ID를 만�
 - [Azure에서 Windows 클라이언트를 사용할 라이선스 자격](https://learn.microsoft.com/azure/virtual-machines/windows/windows-desktop-multitenant-hosting-deployment)
 - Windows, Visual Studio Community, Docker Desktop과 GitHub Copilot의 사용 조건
 
-아래 명령의 `<subscription-id>`를 사용할 구독 ID로 바꾸세요.
+아래 명령은 Windows PowerShell 7과 macOS/Linux Bash에서 동일합니다. `<subscription-id>`를 사용할 구독 ID로 바꾸세요.
 
 ```powershell
 azd auth login
@@ -125,6 +127,8 @@ Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테�
 
 `preprovision` 훅은 로컬 공통 도우미 6개, VM 설치 스크립트와 `.vsconfig` 2개를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
 
+azd는 Windows에서 `build-payload.ps1`, macOS/Linux에서 `build-payload.sh`를 실행합니다. Bash 구현도 파일의 원본 바이트, JSON 형식과 크기 제한을 유지합니다. `postprovision`은 각 환경의 셸로 Bastion 접속과 VM 내부 설치 명령을 안내합니다.
+
 VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고, 없으면 Windows `CreateProfile` API로 준비합니다. SYSTEM의 `$HOME`이나 추측한 사용자 경로를 쓰지 않습니다. 실제 프로필의 `scripts` 아래에 UTF-8 BOM과 LF를 보존해 파일을 배치합니다. 이 배치 스크립트만 PowerShell 7 검사 없이 Windows PowerShell 5.1에서 실행됩니다.
 
 동일한 파일은 그대로 두고 다른 내용의 기존 파일, 경로 이탈과 reparse point는 거부합니다. 배치 실패는 배포 실패로 처리합니다. 사용자 수정 파일과 충돌하면 VM에서 충돌 파일을 별도 위치에 백업하고 원래 경로에서 옮긴 뒤 `azd provision`을 다시 실행하세요. 변경된 설치 도우미를 전달할 때도 동일하게 처리합니다.
@@ -141,6 +145,16 @@ powershell.exe -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTempla
 ```
 
 Bicep을 수동 컴파일할 때도 먼저 payload를 생성해야 합니다. `.generated`와 `.azure`는 Git에서 제외됩니다. 관련 공통 도우미의 회귀 테스트는 [CONTRIBUTING](../CONTRIBUTING.md#local-checks)에 있습니다.
+
+macOS/Linux에서는 다음 명령으로 패키징과 Bash 회귀 테스트를 실행합니다. 테스트에만 Python 3가 추가로 필요하며, macOS에서는 기본 Bash 3.2로 실행하세요.
+
+```bash
+bash ./infra/scripts/build-payload.sh
+az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
+bash ./infra/tests/vm-payload.tests.sh
+```
+
+Bash 테스트는 파일의 바이트 일치, 공백 경로, 크기 제한, 누락 파일과 압축 실패 시 오류 전파 및 접속 안내를 확인합니다. CI의 macOS/Linux 작업에서도 실행합니다.
 
 테스트는 임시 파일과 mock으로 프로필 조회, 파일 충돌, 설치 동의, 버전 선택, 실패와 재부팅 경계를 검증합니다. 의도적인 거절과 오류가 `FAIL`로 출력될 수 있으므로 마지막 `PASS` 요약과 테스트 프로세스 종료 코드로 판단하세요. 실제 프로필 생성, 도구 설치나 Azure 배포를 수행하지 않습니다.
 

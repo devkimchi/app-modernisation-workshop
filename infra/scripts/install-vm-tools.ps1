@@ -2,7 +2,8 @@
 param(
     [ValidateSet('dotnet')]
     [string]$Track = 'dotnet',
-    [switch]$Help
+    [switch]$Help,
+    [switch]$Yes
 )
 
 function Get-VmHelperDirectory {
@@ -29,6 +30,10 @@ function Assert-VmInstallerContext {
 function Confirm-VmAction {
     param([string]$Message)
     if (-not (Test-WorkshopBootstrapInteractive)) { return $false }
+    if ($Yes) {
+        Write-WorkshopMessage "[INFO] Approved by -Yes: $Message"
+        return $true
+    }
     Write-Host $Message
     return (Read-Host 'Continue? [y/N]') -cmatch '^[yY]$'
 }
@@ -54,7 +59,9 @@ function Invoke-VmInstaller {
 
 function Get-VmWingetVersion {
     param([string]$Id, [string]$VersionPattern)
-    $text = (& winget show --id $Id --exact --source winget --versions --disable-interactivity 2>&1 | Out-String)
+    $arguments = @('show', '--id', $Id, '--exact', '--source', 'winget', '--versions', '--disable-interactivity')
+    if ($Yes) { $arguments += '--accept-source-agreements' }
+    $text = (& winget @arguments 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to query $Id versions. Check the source agreements and network access in winget: $text"
     }
@@ -78,6 +85,7 @@ function Install-VmPackage {
         return $false
     }
     $arguments = @('install', '--id', $Id, '--exact', '--source', 'winget')
+    if ($Yes) { $arguments += @('--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity') }
     if ($VersionPattern) { $arguments += @('--version', (Get-VmWingetVersion $Id $VersionPattern)) }
     $arguments += $ExtraArguments
     $null = Invoke-VmInstaller winget $arguments
@@ -335,6 +343,16 @@ function Install-VmNvm {
     if (-not (Get-WorkshopNvmConfiguration)) {
         throw 'Set auto_install to false in the nvm config, check root, mode and enabled, and rerun.'
     }
+    if ($Yes) {
+        # Limit the shared Node installer's consent override to this VM call.
+        return (& {
+            function Confirm-ToolInstall {
+                param([string]$Message)
+                return (Confirm-VmAction $Message)
+            }
+            Install-WorkshopNode
+        })
+    }
     return Install-WorkshopNode
 }
 
@@ -589,7 +607,8 @@ if ($MyInvocation.InvocationName -eq '.') {
 }
 elseif ($Help) {
     Write-Host 'Run from an elevated appmoduser terminal: powershell.exe -NoProfile -File "$HOME\scripts\install-vm-tools.ps1"'
-    Write-Host 'Each item requires consent. After a restart, rerun the same command. No automatic sign-in or Azure deployment is performed.'
+    Write-Host 'Use -Yes to approve all tool installations, related license terms and installation settings in this interactive VM session.'
+    Write-Host 'Without -Yes, each item requires consent. After a restart, rerun with the same options. No automatic sign-in or Azure deployment is performed.'
 }
 else {
     $ErrorActionPreference = 'Stop'
@@ -604,7 +623,7 @@ else {
             if ($script:VmRestartRequired) { exit 3010 }
             exit 1
         }
-        $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{ Track='dotnet' } `
+        $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{ Track='dotnet'; Yes=[bool]$Yes } `
             -RemainingArguments @() -AllowInstall
         if ($bootstrap.Handled) { exit $bootstrap.Code }
         if ($PSVersionTable.PSVersion.Major -ne 7) { throw 'Run this script in PowerShell 7.x.' }

@@ -26,6 +26,48 @@ function Assert-Throws([scriptblock]$Action, [string]$Pattern, [string]$Message)
 $fixture = Join-Path ([IO.Path]::GetTempPath()) ("appmod-vm-test-" + [guid]::NewGuid().ToString('N'))
 $null = [IO.Directory]::CreateDirectory($fixture)
 try {
+    & {
+        $Yes = $false
+        $script:VmInteractive = $true; $script:VmAnswer = 'n'; $script:VmPrompts = 0
+        function Test-WorkshopBootstrapInteractive { return $script:VmInteractive }
+        function Read-Host { $script:VmPrompts++; return $script:VmAnswer }
+        Assert-True (-not (Confirm-VmAction 'fixture action')) 'default VM consent still allows declining'
+        $script:VmAnswer = 'y'
+        Assert-True (Confirm-VmAction 'fixture action') 'default VM consent accepts explicit approval'
+        $Yes = $true
+        Assert-True ((Confirm-VmAction 'fixture action') -and $script:VmPrompts -eq 2) 'Yes approves VM actions without reading input'
+        $script:VmInteractive = $false
+        Assert-True (-not (Confirm-VmAction 'fixture action')) 'Yes never approves actions in a noninteractive or CI context'
+    }
+
+    & {
+        $Yes = $true
+        $script:VmPackagePresent = $false; $script:VmRestartRequired = $false
+        function Test-WorkshopBootstrapInteractive { return $true }
+        function Read-Host { throw 'Yes must not prompt' }
+        function Update-ProcessPath { }
+        function winget {
+            Assert-True ($args -contains '--accept-source-agreements' -and
+                $args -contains '--disable-interactivity') 'Yes accepts source agreements during version discovery too'
+            $global:LASTEXITCODE=0
+            "Versions`n2.0.1"
+        }
+        Assert-True ((Get-VmWingetVersion Fixture.Package '^2\.\d+\.\d+$') -eq '2.0.1') 'Yes retains stable package version selection'
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -eq 'winget' -and
+                $Arguments -contains '--accept-package-agreements' -and
+                $Arguments -contains '--accept-source-agreements' -and
+                $Arguments -contains '--disable-interactivity') 'Yes passes explicit agreement acceptance to WinGet'
+            $script:VmPackagePresent = $true
+            return $true
+        }
+        Assert-True (Install-VmPackage Fixture.Package Fixture -TestInstalled { $script:VmPackagePresent }) 'Yes uses the regular installer and verifies installation'
+        function Invoke-VmInstaller { $script:VmRestartRequired=$true; return $true }
+        Assert-True (-not (Install-VmPackage Fixture.Package Fixture -TestInstalled { $false })) 'Yes does not bypass reboot boundaries'
+        $script:VmRestartRequired=$false
+    }
+
     $sources = Get-VmPayloadSources
     $bundle = New-VmPayload $sources
     $payload = Expand-VmPayload $bundle.content
@@ -133,6 +175,8 @@ namespace Appmod {
             param($Command,$Arguments)
             $script:Installs++
             Assert-True ($Command -eq 'winget' -and $Arguments -contains '--version' -and $Arguments -contains '2.0.1') 'major-constrained version is pinned'
+            Assert-True ($Arguments -notcontains '--accept-package-agreements' -and
+                $Arguments -notcontains '--accept-source-agreements') 'default installation does not automatically accept WinGet agreements'
             return $true
         }
         $script:VmRestartRequired=$false
@@ -543,6 +587,31 @@ function Enable-WindowsOptionalFeature {
     }
 
     & {
+        $Yes = $true
+        . (Join-Path $root 'scripts\install-prerequisites.ps1') -Track dotnet
+        function Test-WorkshopBootstrapInteractive { return $true }
+        function Read-Host { throw 'Yes must not prompt for Node installation or activation' }
+        function Get-Command { [pscustomobject]@{ Source='fixture-nvm.exe' } }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            if ($Arguments[0] -eq 'version') { return [pscustomobject]@{Code=0;Text='2.0.1'} }
+            return [pscustomobject]@{Code=0;Text='{"auto_install":false}'}
+        }
+        function Get-WorkshopNvmConfiguration { return [pscustomobject]@{ auto_install=$false } }
+        function Install-WorkshopNode {
+            Assert-True (Confirm-ToolInstall 'fixture Node installation') 'Yes covers the shared Node installation prompt'
+            Assert-True (Confirm-ToolInstall 'fixture Node activation') 'Yes covers the shared Node activation prompt'
+            return $true
+        }
+        $originalConsent = ${function:Confirm-ToolInstall}.ToString()
+        Assert-True (Install-VmNvm) 'Yes completes the VM Node flow'
+        Assert-True (${function:Confirm-ToolInstall}.ToString() -ceq $originalConsent) 'VM Yes does not change consent in shared scripts'
+        $Yes = $false
+        function Read-Host { return 'n' }
+        Assert-True (-not (Confirm-ToolInstall 'fixture unrelated action')) 'shared installer still requires explicit approval outside the VM call'
+    }
+
+    & {
         function Get-VmVsInstance { return $null }
         function Install-VmPackage {
             param($Id,$Name,$TestInstalled,$VersionPattern,$ExtraArguments)
@@ -802,6 +871,29 @@ function Enable-WindowsOptionalFeature {
         Assert-True ($LASTEXITCODE -eq 0) 'Windows PowerShell 5.1 can parse installer and show help'
         & powershell.exe -NoProfile -NonInteractive -File $installer 2>&1 | Out-Host
         Assert-True ($LASTEXITCODE -eq 1) 'real 5.1 noninteractive entry refuses installation'
+        & powershell.exe -NoProfile -NonInteractive -File $installer -Yes 2>&1 | Out-Host
+        Assert-True ($LASTEXITCODE -eq 1) 'Yes does not bypass the real 5.1 noninteractive entry guard'
+        $yesFixture = Join-Path $fixture 'yes-entry'
+        $null = [IO.Directory]::CreateDirectory($yesFixture)
+        Copy-Item -LiteralPath $installer -Destination (Join-Path $yesFixture 'install-vm-tools.ps1')
+        $yesBootstrap = @'
+function Assert-VmInstallerContext { }
+function Test-VmRebootPending { return $false }
+function Initialize-VmWinget { return $true }
+function Install-VmPowerShell { return $true }
+function Initialize-WorkshopScript {
+    param($ScriptPath,$BoundParameters,$RemainingArguments,[switch]$AllowInstall)
+    if (-not $AllowInstall -or $BoundParameters.Track -ne 'dotnet' -or
+        -not $BoundParameters.ContainsKey('Yes') -or $BoundParameters.Yes -ne $true) {
+        throw 'VM Yes was not forwarded through the PowerShell bootstrap'
+    }
+    Write-Host 'verified VM Yes forwarding'
+    return [pscustomobject]@{Handled=$true;Code=0}
+}
+'@
+        [IO.File]::WriteAllText((Join-Path $yesFixture 'powershell-bootstrap.ps1'),$yesBootstrap,[Text.UTF8Encoding]::new($true))
+        & powershell.exe -NoProfile -NonInteractive -File (Join-Path $yesFixture 'install-vm-tools.ps1') -Yes | Out-Host
+        Assert-True ($LASTEXITCODE -eq 0) 'VM Yes reaches the 5.1 bootstrap delegation parameters'
         $escaped = $installer.Replace("'", "''")
         & powershell.exe -NoProfile -NonInteractive -Command "try { . '$escaped'; exit 99 } catch { Write-Output 'expected dot-source rejection'; exit 0 }" | Out-Host
         Assert-True ($LASTEXITCODE -eq 0) '5.1 dot-sourcing throws without exiting caller'

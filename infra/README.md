@@ -97,11 +97,17 @@ pwsh -NoProfile -File "$HOME/scripts/install-vm-tools.ps1"
 
 WSL2와 MSMQ의 Windows 기능 상태 조회 및 MSMQ 기능 활성화는 별도 Windows PowerShell 5.1 프로세스에서 수행합니다. 이는 MSIX PowerShell 7의 DISM 명령에서 발생할 수 있는 `Class not registered` 오류를 피하기 위한 것으로, 설치 동의와 수동 재부팅 절차는 동일합니다.
 
-재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 자동 재부팅, 자동 로그인과 예약 작업에 의한 재개는 없습니다. 기존 설치본과 데이터를 유지하며, 아직 준비되지 않은 항목을 다시 확인합니다.
+이 VM 설치 도우미에 한해 `-Yes`로 모든 도구 설치, 관련 약관 수락과 설치 설정 변경(nvm 설정 및 Node.js 활성화 포함)에 일괄 동의할 수 있습니다. WinGet의 패키지 및 원본 약관도 수락합니다. 옵션을 생략하면 기존처럼 항목별로 질문합니다. 관리자 권한의 대화형 터미널에서 실행하세요.
+
+```powershell
+powershell.exe -NoProfile -File "$HOME/scripts/install-vm-tools.ps1" -Yes
+```
+
+재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 옵션으로 명령을 다시 실행하세요. `-Yes`도 자동 재부팅, 자동 로그인과 예약 작업에 의한 재개는 하지 않습니다. 기존 설치본과 데이터를 유지하며, 아직 준비되지 않은 항목을 다시 확인합니다.
 
 WSL2 플랫폼만 설치된 상태의 `Windows Subsystem for Linux has no installed distributions.` 응답은 빈 배포판 목록으로 처리하고 Ubuntu 설치 동의를 요청합니다. 다른 배포판 조회 오류는 실패로 표시합니다.
 
-CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 실행하면 설치하지 않습니다. 설치에 동의하지 않으면 해당 항목은 미완료로 남습니다. 모든 설치 후 상태 검사가 끝나야 종료 코드 `0`을 반환합니다. 미완료나 실패는 `1`, 재부팅 대기는 `3010`입니다.
+`-Yes`를 지정해도 CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 실행하면 설치하지 않습니다. 설치에 동의하지 않으면 해당 항목은 미완료로 남습니다. 모든 설치 후 상태 검사가 끝나야 종료 코드 `0`을 반환합니다. 미완료나 실패는 `1`, 재부팅 대기는 `3010`입니다.
 
 상태 메시지는 공통 도우미와 같은 색으로 표시합니다. `PASS`는 초록색, `FAIL`은 빨간색, `MANUAL`은 청록색, `INFO`는 파란색입니다. `NO_COLOR`, CI, `TERM=dumb` 또는 출력 리디렉션 환경에서는 상태 메시지의 색상을 끕니다.
 
@@ -118,7 +124,7 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 | Git | `Git.Git` |
 | GitHub CLI | `GitHub.cli`, 2.45.0 이상 확인 |
 | GitHub Copilot CLI | GitHub CLI 다음에 `GitHub.Copilot` 설치. `copilot --version`으로 확인 |
-| nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의 |
+| nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의(`-Yes` 사용 시 일괄 동의에 포함) |
 | Azure CLI | `Microsoft.AzureCLI` |
 | azd | `Microsoft.Azd` |
 | Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |

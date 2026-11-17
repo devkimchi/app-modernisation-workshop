@@ -156,6 +156,18 @@ $clientIp = "<확인한-공인-IPv4>"
 
 공인 IP가 바뀌면 새 주소를 확인해 등록하고, 기존 규칙은 별도 승인 후 삭제합니다. 위 규칙은 해당 PC에만 적용되므로 ACA의 DB 연결도 별도로 허용해야 합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
 
+#### Azure CLI로 Azure 서비스 접근 허용
+
+공개 네트워크 접근이 활성화된 서버에서는 [Azure CLI로도 Azure 서비스 접근을 허용](https://learn.microsoft.com/en-us/cli/azure/postgres/flexible-server/firewall-rule#az-postgres-flexible-server-firewall-rule-create)할 수 있습니다. Azure Portal에서 위 옵션을 이미 켰다면 이 명령은 생략합니다.
+
+**다른 구독의 Azure 서비스에도 네트워크 접근을 허용하는 범위**를 확인하고 승인한 경우에만 실행합니다. 아래 예시의 구독 ID, 리소스 그룹과 서버 이름을 실제 대상으로 바꿉니다. PowerShell과 Bash/Zsh에서 같은 한 줄 명령을 사용합니다.
+
+```bash
+az postgres flexible-server firewall-rule create --subscription "<구독-ID>" --resource-group "<리소스-그룹>" --server-name "<서버-이름>" --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+```
+
+시작과 끝 IP가 모두 `0.0.0.0`인 규칙은 Azure 내부 연결을 허용하는 특수 규칙입니다. 모든 인터넷 IP를 허용하는 규칙은 아니며, DB 인증과 권한 설정은 여전히 필요합니다.
+
 ### DB 연결용 루트 인증서 준비
 
 `psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 도우미를 실행해 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받습니다. 도우미가 출력한 PEM 파일 경로를 `PGSSLROOTCERT`에 지정합니다. Bash 도우미에는 `curl`과 `openssl`이 필요합니다. 시스템 인증서 저장소는 변경하지 않습니다.

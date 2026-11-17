@@ -26,6 +26,11 @@ function Get-WorkshopNvmConfiguration {
 
 function Get-WorkshopNvmSelection {
     $list = Invoke-ToolProbe nvm @('list', '--json')
+    # nvm 2.0.x prints text instead of JSON before the first Node installation.
+    if ($list.Code -eq 0 -and $list.Text.Trim() -ceq 'No versions installed.') {
+        Write-WorkshopMessage '[INFO] nvm has no installed Node.js versions.'
+        return [pscustomobject]@{ Version = $null; IsEmpty = $true }
+    }
     if ($list.Code -ne 0 -or $list.Text.Trim() -notmatch '^\[[\s\S]*\]$') { Write-WorkshopMessage '[FAIL] Could not list installed nvm-windows 2 versions.'; return }
     try { $versions = @($list.Text | ConvertFrom-Json -ErrorAction Stop) }
     catch [ArgumentException] { Write-WorkshopMessage '[FAIL] Invalid nvm-windows 2 version list JSON.'; return }
@@ -39,7 +44,7 @@ function Get-WorkshopNvmSelection {
     if ($defaults.Count -gt 1) { Write-WorkshopMessage '[FAIL] Multiple default nvm-windows 2 versions were found.'; return }
     return [pscustomobject]@{ Version = if ($defaults.Count) {
         Get-WorkshopReleaseVersion ([pscustomobject]@{ Code=0; Text=[string]$defaults[0].version })
-    } else { $null } }
+    } else { $null }; IsEmpty = $versions.Count -eq 0 }
 }
 
 function Test-WorkshopNvmOwnership {
@@ -158,8 +163,13 @@ function Install-WorkshopNode {
     if (-not $latest -or $latest.Major -ne $major) { Write-WorkshopMessage '[FAIL] Could not verify a stable Node.js release.'; return $false }
     if ($current -and $current -ge $latest) { Write-WorkshopMessage "[PASS] Keeping Node.js $current (no downgrade)."; return $true }
     $installedNode = Join-Path $root "v$latest\node.exe"
+    $firstInstall = $nvmVersion.Major -eq 2 -and $selection.IsEmpty -and -not $current
     if (-not (Test-Path -LiteralPath $installedNode -PathType Leaf)) {
-        if (-not (Confirm-ToolInstall "Install Node.js $latest through nvm. Existing versions will be preserved.")) {
+        $description = "Install Node.js $latest through nvm. Existing versions will be preserved."
+        if ($firstInstall) {
+            $description += ' nvm 2 automatically selects the first installed version as the default. This also authorizes that activation for subsequent terminals.'
+        }
+        if (-not (Confirm-ToolInstall $description)) {
             return ($current -and $current.Major -ge 22)
         }
         $install = Invoke-ToolProbe nvm @('install', "$latest")
@@ -167,6 +177,19 @@ function Install-WorkshopNode {
     }
     $probe = Invoke-ToolProbe $installedNode @('--version')
     if ((Get-WorkshopReleaseVersion $probe) -ne $latest) { Write-WorkshopMessage '[FAIL] Installed Node.js version verification failed.'; return $false }
+    if ($firstInstall) {
+        Update-ProcessPath
+        $liveNode = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        $liveConfig = Get-WorkshopNvmConfiguration
+        $liveSelection = Get-WorkshopNvmSelection
+        if ($liveConfig -and $liveSelection -and $liveConfig.root -ieq $root -and
+            $liveConfig.mode -ceq $config.mode -and $liveSelection.Version -eq $latest -and
+            $liveNode -and (Test-WorkshopNvmOwnership $liveNode.Source) -and
+            (Get-WorkshopReleaseVersion (Invoke-ToolProbe node @('--version'))) -eq $latest) {
+            Write-WorkshopMessage "[PASS] [Windows host] nvm installed and selected the first Node.js $latest."
+            return $true
+        }
+    }
     if (-not (Confirm-ToolInstall "Run nvm use $latest`: change the shared Windows Node.js selection (shim/link). This affects subsequent terminals, but not running Node.js processes. Administrator approval may be required.")) {
         Write-WorkshopMessage "[INFO] Activation skipped. If needed, run nvm use $latest manually and verify the result."
         return ($current -and $current.Major -ge 22)

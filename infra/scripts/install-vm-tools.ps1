@@ -259,6 +259,33 @@ function Test-VmFrameworkRuntime {
     return (Get-ItemProperty $path -Name Release -ErrorAction Stop).Release -ge 528040
 }
 
+function Install-VmDotnetSdk {
+    param([ValidateSet(10, 11)][int]$Major)
+    return (Install-VmPackage -Id "Microsoft.DotNet.SDK.$Major" -Name ".NET $Major SDK" `
+        -VersionPattern "^$Major\.\d+\.\d+$" -TestInstalled {
+            $probe = Invoke-ToolProbe dotnet @('--list-sdks')
+            $probe.Code -eq 0 -and $probe.Text -match "(?m)^$Major\.\d+\.\d+\s+\["
+        })
+}
+
+function Test-VmPostgresClient {
+    $paths = @((Join-Path $env:ProgramFiles 'PostgreSQL\18\bin\psql.exe'))
+    $command = Get-Command psql -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($command) { $paths += $command.Source }
+    foreach ($path in $paths) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+        $probe = Invoke-ToolProbe $path @('--version')
+        if ($probe.Code -eq 0 -and $probe.Text -match '^psql \(PostgreSQL\) 18\.\d+(?:\s|$)') { return $true }
+    }
+    return $false
+}
+
+function Install-VmPostgresClient {
+    return (Install-VmPackage -Id PostgreSQL.PostgreSQL.18 -Name 'PostgreSQL 18 command-line tools (client only)' `
+        -ExtraArguments @('--override', '--mode unattended --unattendedmodeui minimal --enable-components commandlinetools --disable-components server,pgAdmin,stackbuilder') `
+        -TestInstalled { Test-VmPostgresClient })
+}
+
 function Install-VmNvm {
     $nvm = Get-Command nvm -CommandType Application -ErrorAction SilentlyContinue
     if ($nvm) {
@@ -441,11 +468,9 @@ function Invoke-VmToolInstallation {
         @{ Name='Modernize CLI'; Run={
             Install-VmPackage GitHub.Copilot.modernization.agent 'Modernize CLI' -TestInstalled { Test-VmCommand modernize }
         } },
-        @{ Name='.NET 10 SDK'; Run={
-            if (-not (Install-WorkshopDotnetSdk)) { return $false }
-            $probe = Invoke-ToolProbe dotnet @('--list-sdks')
-            $probe.Code -eq 0 -and $probe.Text -match '(?m)^10\.\d+\.\d+\s+\['
-        } },
+        @{ Name='.NET 10 SDK'; Run={ Install-VmDotnetSdk 10 } },
+        @{ Name='.NET 11 SDK'; Run={ Install-VmDotnetSdk 11 } },
+        @{ Name='PostgreSQL 18 client'; Run={ Install-VmPostgresClient } },
         @{ Name='Visual Studio Community'; Run={ Install-VmVisualStudio Community (Join-Path $PSScriptRoot 'visualstudio.vsconfig') } },
         @{ Name='Visual Studio Build Tools'; Run={ Install-VmVisualStudio BuildTools (Join-Path $PSScriptRoot 'buildtools.vsconfig') } },
         @{ Name='Framework build and run tools'; Run={ Test-VmFrameworkTools } },

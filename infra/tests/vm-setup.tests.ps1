@@ -183,6 +183,72 @@ namespace Appmod {
     }
 
     & {
+        $script:SdkText="9.0.100 [C:\fixture\sdk]`n11.0.100-preview.1 [C:\fixture\sdk]"
+        $script:SdkInstalls=0; $script:Approved=$true; $script:VerifySdk=$true
+        $script:VmRestartRequired=$false
+        function Confirm-VmAction { $script:Approved }
+        function Update-ProcessPath { }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True ($Name -eq 'dotnet' -and ($Arguments -join ' ') -eq '--list-sdks') 'SDK verification lists installed SDKs instead of relying on the default SDK'
+            [pscustomobject]@{Code=0;Text=$script:SdkText}
+        }
+        function winget {
+            $global:LASTEXITCODE=0
+            "Version`n11.0.101`n11.0.100`n11.0.102-preview.1`n10.0.101`n10.0.100"
+        }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -eq 'winget' -and $Arguments -contains "Microsoft.DotNet.SDK.$script:ExpectedMajor" -and
+                $Arguments -contains "$script:ExpectedMajor.0.101") 'SDK installs pin the requested stable major'
+            $script:SdkInstalls++
+            if ($script:VerifySdk) { $script:SdkText += "`n$script:ExpectedMajor.0.101 [C:\fixture\sdk]" }
+            return $true
+        }
+        foreach ($major in @(10,11)) {
+            $script:ExpectedMajor=$major
+            Assert-True (Install-VmDotnetSdk $major) ".NET $major SDK can be installed alongside other majors"
+            Assert-True (Install-VmDotnetSdk $major) "existing stable .NET $major SDK is preserved"
+        }
+        Assert-True ($script:SdkInstalls -eq 2) 'each SDK major installs once, including when another major or preview exists'
+        $script:SdkText='10.0.101 [C:\fixture\sdk]'; $script:Approved=$false
+        Assert-True (-not (Install-VmDotnetSdk 11)) 'declining SDK 11 remains incomplete even with SDK 10 installed'
+        Assert-True ($script:SdkInstalls -eq 2) 'declining SDK 11 never runs its installer'
+        $script:Approved=$true; $script:VerifySdk=$false
+        Assert-Throws { Install-VmDotnetSdk 11 } 'after installation' 'SDK 11 must be verified after installer success'
+    }
+
+    & {
+        $script:PsqlVersion='psql (PostgreSQL) 17.9'; $script:PsqlCode=0
+        $script:PsqlInstalls=0; $script:Approved=$false; $script:VmRestartRequired=$false
+        function Get-Command { [pscustomobject]@{Source='C:\fixture-postgres\psql.exe'} }
+        function Update-ProcessPath { }
+        function Test-Path { return $true }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True (($Arguments -join ' ') -eq '--version') 'psql verification does not connect to or create a database'
+            [pscustomobject]@{Code=$script:PsqlCode;Text=$script:PsqlVersion}
+        }
+        function Confirm-VmAction { $script:Approved }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -eq 'winget' -and $Arguments -contains 'PostgreSQL.PostgreSQL.18' -and
+                $Arguments -contains '--override' -and $Arguments[-1] -eq
+                '--mode unattended --unattendedmodeui minimal --enable-components commandlinetools --disable-components server,pgAdmin,stackbuilder') 'PostgreSQL installer selects only client tools without server or database setup'
+            $script:PsqlInstalls++; $script:PsqlVersion='psql (PostgreSQL) 18.7'
+            return $true
+        }
+        Assert-True (-not (Install-VmPostgresClient)) 'client installation requires consent and does not accept psql 17'
+        Assert-True ($script:PsqlInstalls -eq 0) 'declined psql installation never launches winget'
+        $script:Approved=$true
+        Assert-True (Install-VmPostgresClient) 'psql 18 is verified even when its directory is not in PATH'
+        Assert-True (Install-VmPostgresClient) 'existing psql 18 does not reinstall'
+        Assert-True ($script:PsqlInstalls -eq 1) 'PostgreSQL client installs once'
+        $script:PsqlCode=1
+        Assert-True (-not (Test-VmPostgresClient)) 'nonzero psql exit cannot satisfy verification'
+    }
+
+    & {
         function Get-Command { [pscustomobject]@{Source='Invoke-FixtureNative'} }
         function Invoke-FixtureNative { $global:LASTEXITCODE=$script:NativeCode }
         foreach ($code in @(1641,3010)) {

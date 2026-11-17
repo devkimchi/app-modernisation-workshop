@@ -105,20 +105,24 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 
 | 도구 | 설치와 확인 방식 |
 | --- | --- |
+| WinGet | App Installer를 등록하거나 항목별 동의 후 준비 |
+| PowerShell | 안정 7.x(`7.x.y`와 `7.x.y.z` 패키지 버전 지원), 기존 버전은 자동 업데이트하지 않음 |
 | WSL2 플랫폼 | 배포판 없이 `wsl.exe --install --no-distribution`으로 설치. 설치 후 직접 재부팅 |
 | Ubuntu | WSL2 플랫폼 준비 후 설치. `appmoduser`에 등록 |
-| PowerShell | 안정 7.x(`7.x.y`와 `7.x.y.z` 패키지 버전 지원), 기존 버전은 자동 업데이트하지 않음 |
 | MSMQ | Server 기능과 서비스 시작. 큐와 데이터는 생성하지 않음 |
 | .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
-| Framework 빌드 도구 | 4.8 Targeting Pack과 SDK, MSBuild 웹 빌드 구성요소 |
-| nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지, 설치와 활성화에 별도 동의 |
-| Git, GitHub CLI | `Git.Git`, `GitHub.cli`. GitHub CLI는 2.45.0 이상 확인 |
-| Azure CLI, azd | `Microsoft.AzureCLI`, `Microsoft.Azd` |
+| Git | `Git.Git` |
+| GitHub CLI | `GitHub.cli`, 2.45.0 이상 확인 |
+| nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의 |
+| Azure CLI | `Microsoft.AzureCLI` |
+| azd | `Microsoft.Azd` |
 | Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
-| .NET SDK | 안정 10.x, 기존 다른 메이저 유지 |
+| .NET 10 SDK | `Microsoft.DotNet.SDK.10`, 안정 10.x. 기존 다른 메이저 유지 |
+| .NET 11 SDK | `Microsoft.DotNet.SDK.11`, 안정 11.x. .NET 10과 별도 동의 후 함께 설치 |
+| PostgreSQL 18 클라이언트 | `PostgreSQL.PostgreSQL.18`의 `commandlinetools`만 설치하고 `psql --version` 확인. 서버, pgAdmin과 Stack Builder는 설치하지 않으며 DB도 생성하지 않음 |
 | Visual Studio 2026 Community | 안정 18.x, [visualstudio.vsconfig](scripts/visualstudio.vsconfig)의 웹 및 데스크톱 개발 구성 |
 | Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 빌드 구성 |
-| IIS Express, SQL Server LocalDB | Visual Studio 구성요소로 설치. DB를 만들거나 초기화하지 않음 |
+| Framework 빌드 및 실행 도구 확인 | 앞서 설치한 Visual Studio 구성요소의 4.8 Targeting Pack, MSBuild 웹 빌드 도구, IIS Express와 SQL Server LocalDB 확인. DB를 만들거나 초기화하지 않음 |
 | VS Code | `Microsoft.VisualStudioCode` |
 | GitHub Copilot app | 공식 `github/app` 최신 정식 x64 MSI. 제공된 SHA-256과 GitHub 서명을 확인한 뒤 실행 |
 | Docker Desktop | WSL2 백엔드로 설치. 최초 실행과 약관 확인은 수동 진행 |
@@ -126,6 +130,8 @@ CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 
 전체 IDE와 Build Tools는 별도 설치 항목입니다. 설치 전 시스템 드라이브에 최소 50 GiB의 여유 공간을 요구하며, 이후 Docker 이미지와 WSL 데이터에 필요한 공간은 별도로 확보하세요.
 
 nvm 1.x나 출처가 불명확한 기존 Node 설치는 자동 교체하지 않습니다. nvm의 `auto_install`이 켜져 있으면 별도 동의 후 끕니다. 기존 Ubuntu가 WSL1이면 삭제하거나 자동 변환하지 않고 중단합니다.
+
+PostgreSQL 설치 프로그램은 PATH를 자동으로 변경하지 않습니다. 새 터미널에서는 `& "$env:ProgramFiles/PostgreSQL/18/bin/psql.exe" --version`으로 확인하세요.
 
 ### 설치 후 수동 작업
 

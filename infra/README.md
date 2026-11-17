@@ -115,29 +115,6 @@ PostgreSQL 18 클라이언트 설치 후 PATH 변경을 반영하려면 Windows 
 1. Windows 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.
 1. GitHub Copilot app에 로그인하세요.
 
-## 유지보수 검증
-
-저장소 루트에서 실행하세요. Azure CLI의 Bicep 도구가 필요합니다. 먼저 로컬 파일을 패키징한 뒤 컴파일하고, PowerShell 7과 5.1 진입 경로를 각각 검증합니다.
-
-```powershell
-pwsh -NoProfile -File ./infra/scripts/preprovision.ps1
-az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
-pwsh -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
-powershell.exe -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
-```
-
-생성 파일이 있는 `.generated`와 `.azure`는 Git에서 제외됩니다. 공통 도우미의 테스트는 [CONTRIBUTING](../CONTRIBUTING.md#local-checks)을 참고하세요.
-
-macOS/Linux 테스트에는 Python 3가 필요합니다. macOS에서는 기본 Bash 3.2를 사용하세요.
-
-```bash
-bash ./infra/scripts/preprovision.sh
-az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
-bash ./infra/tests/vm-payload.tests.sh
-```
-
-테스트는 임시 파일, Windows의 임시 레지스트리 키와 mock을 사용하며 실제 도구 설치나 Azure 배포는 하지 않습니다. 의도적인 오류로 `FAIL`이 출력될 수 있으니 마지막 `PASS` 요약과 종료 코드로 결과를 확인하세요. **로컬 테스트만으로 실제 VM 배포와 도구 작동을 검증할 수는 없습니다.**
-
 ## 리소스 정리
 
 사용이 끝나면 추가 비용을 막기 위해 배포한 PC의 저장소 루트에서 해당 환경의 리소스를 삭제하세요. 확인 없이 삭제하고 soft-delete 대상도 영구 삭제하므로 필요한 데이터는 먼저 백업하세요.

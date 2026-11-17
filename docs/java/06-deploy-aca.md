@@ -212,17 +212,40 @@ $env:PGSSLROOTCERT = $caFile.FullName
 
 ```bash
 # zsh/bash
+(
+set -e
 subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)
 workerApp=$(azd env get-value WORKER_CONTAINER_APP_NAME)
-webIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$webApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
-workerIdentityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$workerApp" --query "keys(identity.userAssignedIdentities)" --output tsv)
-webIdentity=$(az identity show --ids "$webIdentityId" --query name --output tsv)
-workerIdentity=$(az identity show --ids "$workerIdentityId" --query name --output tsv)
 migrationIdentity=$(azd env get-value MIGRATION_IDENTITY_NAME)
 pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
+if [ -z "$subscription" ] || [ -z "$rg" ] || [ -z "$webApp" ] ||
+   [ -z "$workerApp" ] || [ -z "$migrationIdentity" ] || [ -z "$pgDatabase" ]; then
+    printf '%s\n' "Required azd environment value is empty." >&2
+    exit 1
+fi
+
+read_identity_name() {
+    identityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$1" --query "identity.userAssignedIdentities | keys(@)" --output tsv) || return
+    case "$identityId" in
+        ''|*[[:space:]]*)
+            printf '%s\n' "$1 must have exactly one user-assigned identity. Review the app configuration." >&2
+            return 1
+            ;;
+    esac
+    identityName=$(az identity show --ids "$identityId" --query name --output tsv) || return
+    if [ -z "$identityName" ]; then
+        printf '%s\n' "$1 identity name lookup returned an empty value." >&2
+        return 1
+    fi
+    printf '%s\n' "$identityName"
+}
+
+webIdentity=$(read_identity_name "$webApp")
+workerIdentity=$(read_identity_name "$workerApp")
 printf 'Web: %s\nWorker: %s\nSchema-migration: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$migrationIdentity" "$pgDatabase"
+)
 ```
 
 ```powershell

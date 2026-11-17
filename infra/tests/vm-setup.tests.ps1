@@ -111,7 +111,7 @@ try {
         $script:VmRestartRequired=$false
         Assert-Throws {
             Install-VmPackage Fixture.Package Fixture -VersionPattern '^2\.\d+\.\d+$' -TestInstalled { $false }
-        } 'after|설치 후' 'exit zero alone is not installation success'
+        } 'after installation' 'exit zero alone is not installation success'
         function Invoke-VmInstaller { throw 'fixture native failure' }
         Assert-Throws { Install-VmPackage Fixture.Package Fixture -TestInstalled { $false } } 'native failure' 'installer failures propagate'
         function Invoke-VmInstaller { $script:VmRestartRequired=$true; return $true }
@@ -124,9 +124,9 @@ try {
             "Versions`n3.0.0`n2.0.0`n2.0.1`n2.1.0-preview.1"
         }
         Assert-True ((Get-VmWingetVersion AuthorSoftware.NVMWindows '^2\.\d+\.\d+$') -eq '2.0.1') 'release selection excludes other majors and previews'
-        Assert-Throws { Get-VmWingetVersion Fixture.Package '^18\.\d+\.\d+$' } '정식 버전' 'missing required major fails'
+        Assert-Throws { Get-VmWingetVersion Fixture.Package '^18\.\d+\.\d+$' } 'No stable' 'missing required major fails'
         function winget { $global:LASTEXITCODE=1; 'fixture lookup failure' }
-        Assert-Throws { Get-VmWingetVersion Fixture.Package '^2\.\d+\.\d+$' } '조회 실패' 'version discovery failure never falls back'
+        Assert-Throws { Get-VmWingetVersion Fixture.Package '^2\.\d+\.\d+$' } 'Failed to query' 'version discovery failure never falls back'
     }
 
     & {
@@ -147,10 +147,10 @@ try {
         function Test-WorkshopBootstrapInteractive { return $false }
         function Read-Host { throw 'must not prompt' }
         Assert-True (-not (Confirm-VmAction 'fixture')) 'noninteractive mode cannot consent'
-        Assert-Throws { Assert-VmInstallerContext } '비대화형|Windows x64' 'noninteractive identity guard runs before installation'
+        Assert-Throws { Assert-VmInstallerContext } 'non-interactive|Windows x64' 'noninteractive identity guard runs before installation'
         function Test-WorkshopBootstrapInteractive { return $true }
         function Get-LocalUser { [pscustomobject]@{SID=[pscustomobject]@{Value='S-1-5-21-123-456-789-1001'}} }
-        Assert-Throws { Assert-VmInstallerContext } 'appmoduser로|Windows x64' 'another Windows account cannot install tools'
+        Assert-Throws { Assert-VmInstallerContext } 'Sign in as appmoduser|Windows x64' 'another Windows account cannot install tools'
     }
 
     & {
@@ -278,7 +278,7 @@ try {
         Assert-True (Install-VmNvm) 'consented nvm preparation uses shared Node installer'
         Assert-True ($script:NodeCalls -eq 1 -and -not $script:AutoInstall) 'nvm auto-install disabled before Node work'
         function Invoke-ToolProbe { [pscustomobject]@{Code=0;Text='1.2.2'} }
-        Assert-Throws { Install-VmNvm } '자동 교체' 'nvm 1.x is never silently replaced'
+        Assert-Throws { Install-VmNvm } 'not replaced automatically' 'nvm 1.x is never silently replaced'
     }
 
     & {
@@ -366,7 +366,7 @@ try {
         Assert-True (Install-VmCopilot) 'Copilot verifies digest, signature and installed version'
         Assert-True (-not (Test-Path -LiteralPath $script:DownloadedMsi)) 'successful MSI download is cleaned up'
         $script:CopilotVersion=$null; $script:SignatureStatus='NotSigned'
-        Assert-Throws { Install-VmCopilot } '서명' 'unsigned MSI never executes'
+        Assert-Throws { Install-VmCopilot } 'signature' 'unsigned MSI never executes'
         Assert-True ($script:MsiCalls -eq 1 -and -not (Test-Path -LiteralPath $script:DownloadedMsi)) 'failed MSI verification cleans up without execution'
     }
 

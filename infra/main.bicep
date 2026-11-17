@@ -9,13 +9,13 @@ param location string = 'koreacentral'
 @secure()
 @minLength(12)
 @maxLength(123)
-@description('appmoduser 로컬 관리자 암호입니다. 대문자, 소문자, 숫자, 특수 문자 중 3가지 이상을 포함하세요.')
+@description('Local administrator password for appmoduser. Include at least three of uppercase letters, lowercase letters, digits and special characters.')
 param adminPassword string
 
 @allowed([
   true
 ])
-@description('Windows 11 클라이언트를 Azure에서 사용할 라이선스 자격을 확인한 경우에만 true로 진행하세요.')
+@description('Set to true only after confirming that you are eligible to run Windows 11 client licenses on Azure.')
 param confirmWindowsClientLicense bool
 
 @allowed([
@@ -34,7 +34,7 @@ param autoShutdownEnabled bool = true
 
 @minLength(4)
 @maxLength(4)
-@description('한국 시간 기준 자동 할당 취소 시각입니다. 24시간제 HHmm 형식을 사용하세요.')
+@description('Daily auto-shutdown (deallocation) time in Korea Standard Time, in 24-hour HHmm format.')
 param autoShutdownTime string = '2000'
 
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))

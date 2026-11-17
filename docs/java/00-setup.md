@@ -123,16 +123,18 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 psql --version
 ```
 
-**Windows (PowerShell 7)**
+**Windows**
 
 ```powershell
-winget install --id PostgreSQL.PostgreSQL.17 --exact --source winget --interactive
+# PowerShell
+winget install --id PostgreSQL.PostgreSQL.18 --exact --source winget --interactive
 ```
 
 설치 화면에서 **Command Line Tools만 선택**하고 PostgreSQL Server, pgAdmin과 Stack Builder는 해제합니다. 기본 경로에 설치했다면 현재 PowerShell 창에 실행 경로를 추가합니다. 다른 경로에 설치했다면 실제 `bin` 경로로 바꾸세요.
 
 ```powershell
-$env:PATH = "C:/Program Files/PostgreSQL/17/bin;$env:PATH"
+# PowerShell
+$env:PATH = "C:/Program Files/PostgreSQL/18/bin;$env:PATH"
 psql --version
 ```
 
@@ -154,7 +156,11 @@ sudo apt-get install postgresql-client
 psql --version
 ```
 
-다른 Linux 배포판에서는 해당 패키지 관리자로 PostgreSQL 클라이언트를 설치합니다. Windows PowerShell과 WSL의 설치 환경은 별개입니다. 새 터미널을 열면 `psql --version`으로 다시 확인하고, Windows와 macOS에서 찾을 수 없으면 위 실행 경로 설정을 다시 적용하세요.
+> [!NOTE]
+>
+> - 다른 Linux 배포판에서는 해당 패키지 관리자로 PostgreSQL 클라이언트를 설치합니다.
+> - Windows PowerShell과 WSL의 설치 환경은 별개입니다.
+> - 새 터미널을 열면 `psql --version`으로 다시 확인하고, Windows와 macOS에서 찾을 수 없으면 위 실행 경로 설정을 다시 적용하세요.
 
 ### 인증과 권한 확인
 

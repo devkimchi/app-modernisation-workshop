@@ -211,6 +211,7 @@ $env:PGSSLROOTCERT = $caFile.FullName
 `bootstrap-identities.sql`을 실행하기 전에 앱 루트에서 아래 네 값을 조회해 준비합니다. web과 worker는 각 Container App에 연결된 사용자 할당 관리 ID를 조회합니다. 이 예시는 앱마다 관리 ID가 하나인 경우에 사용합니다. 여러 ID가 조회되면 임의로 하나를 선택하지 말고 앱 설정과 초기화 안내에서 사용할 ID를 확인하세요.
 
 ```bash
+# zsh/bash
 subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)

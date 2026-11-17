@@ -109,8 +109,6 @@ VM은 Entra ID 로그인과 Managed Identity를 사용하지 않습니다. 배�
 
 도우미는 설치 후 또는 재실행 시 정상 작동하는 PostgreSQL 18 클라이언트의 경로를 사용자 PATH에 중복 없이 추가합니다. 기존 항목과 순서를 유지하며 시스템 PATH는 바꾸지 않습니다. Windows Terminal을 완전히 종료하고 다시 열어 `psql --version`으로 확인하세요. 다른 `psql`이 먼저 실행되면 경고를 표시합니다. PostgreSQL 18을 직접 확인하려면 `& "$env:ProgramFiles/PostgreSQL/18/bin/psql.exe" --version`을 실행하세요.
 
-`psql.exe`가 출력 없이 종료되면 Visual C++ 런타임이 누락되었을 수 있습니다. 도우미를 다시 실행하면 런타임을 먼저 확인하고, 정상 작동하는 PostgreSQL은 재설치하지 않습니다.
-
 ### 설치 후 수동 작업
 
 VM 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.

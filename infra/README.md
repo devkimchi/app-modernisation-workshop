@@ -111,13 +111,15 @@ PostgreSQL 18 클라이언트 설치 후 PATH 변경을 반영하려면 Windows 
 
 ### 설치 후 수동 작업
 
-VM 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.
+1. VM 터미널에서 Ubuntu를 실행하고 Linux 사용자 계정을 만드세요.
 
-```powershell
-wsl -d Ubuntu
-```
+   ```powershell
+   wsl -d Ubuntu
+   ```
 
-Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요. GitHub Copilot app에 로그인하고, `copilot`을 실행해 CLI 인증을 진행하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계부터 gh 인증과 Modernize CLI를 확인합니다.
+2. Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요.
+
+3. GitHub Copilot app에 로그인하고, `copilot`을 실행해 CLI 인증을 진행하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계부터 gh 인증과 Modernize CLI를 확인하세요.
 
 도우미는 Azure/GitHub 로그인, 구독 변경, Resource Provider 등록과 실습 DB 생성을 하지 않습니다. WSL2 중첩 가상화, Docker 실행과 앱 빌드는 VM에서 직접 확인하세요. Trusted Launch는 자동으로 끄지 않습니다.
 

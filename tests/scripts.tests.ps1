@@ -491,6 +491,8 @@ ${function:Resolve-ContainerEngine}
             Assert-True ($target -ne $document.FullName) "no self navigation: $track/$($document.Name)"
         }
     }
+    & (Join-Path $PSHOME 'pwsh') -NoProfile -File (Join-Path $PSScriptRoot 'java-deployment.tests.ps1')
+    Assert-True ($LASTEXITCODE -eq 0) 'Java deployment helper suite'
     Write-Host "PASS: $script:Passed PowerShell assertions"
 }
 finally {

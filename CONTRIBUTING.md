@@ -26,6 +26,8 @@ pwsh -NoProfile -File ./tests/powershell-bootstrap.tests.ps1
 pwsh -NoProfile -File ./tests/java-tools.tests.ps1
 ```
 
+The `scripts.tests.ps1` suite also runs `java-deployment.tests.ps1` with mocked Azure, HTTP and PostgreSQL commands. Run the latter directly when changing Java deployment helpers. It does not initialize a real database or deploy an application.
+
 On Windows, repeat these commands with `powershell.exe -NoProfile -File` to check the Windows PowerShell 5.1 entry path and delegation to PowerShell 7. The bootstrap tests use real 5.1 subprocesses with isolated script copies and mocked prerequisites; they do not replace interactive-terminal checks.
 
 Keep `.ps1` files UTF-8 **with BOM** and LF. Entrypoint files must parse in Windows PowerShell 5.1 before delegating to PowerShell 7. Dot-source helpers in PowerShell 7; 5.1 must report an error without exiting the caller. Common helpers must only define functions and variables; `use-java.ps1` may also select the current session's JDK.
@@ -42,11 +44,13 @@ bash tests/use-java.tests.sh
 bash tests/shell-portability.tests.sh
 ```
 
+The `scripts.tests.sh` suite also runs `java-deployment.tests.sh`; it can be run directly for focused, offline checks.
+
 Run these suites on macOS and Linux. On macOS, use `/bin/bash tests/<suite>.tests.sh` to test the built-in Bash 3.2 rather than Homebrew Bash. Installer tests use the system `script` utility for pseudo-terminal fixtures. The `use-java.sh` tests also require Zsh; install it separately on Ubuntu if absent. See the [CI workflow](.github/workflows/ci.yml) for the platform matrix.
 
 Keep `.sh` files compatible with Bash 3.2 and Bash 5, with LF line endings and BSD/GNU-compatible commands. Guard OS-specific commands. `use-java.sh` must also source correctly in Zsh without leaking helper functions or changing caller options.
 
-Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only `use-java.sh` and `terminal-output.sh` use `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
+Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only helpers such as `use-java.sh`, `terminal-output.sh` and `java-deployment.sh` use `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
 
 ### Results and limits
 

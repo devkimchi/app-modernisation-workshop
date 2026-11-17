@@ -464,4 +464,5 @@ assert 'failed download not published' test ! -e "$TEMPORARY/failed"
 for staging in "$TEMPORARY"/.workshop-download.*; do
     assert 'temporary paths cleaned' test ! -e "$staging"
 done
+bash "$ROOT/tests/java-deployment.tests.sh"
 printf 'PASS: %s Bash assertions\n' "$PASSED"

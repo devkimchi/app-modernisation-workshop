@@ -19,6 +19,8 @@
 
 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 산출물을 검토하고 승인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 사용합니다.
 
+이 문서의 `../scripts/` 도우미는 앱 루트에서 직접 실행합니다. Windows PowerShell 5.1에서는 PowerShell 7로 실행을 위임합니다. 방화벽과 DB를 변경하는 도우미는 대상을 표시하고 `APPLY` 입력을 요구하며 CI나 비대화형 환경에서는 실행하지 않습니다. 오류가 나면 다음 단계로 넘어가지 마세요.
+
 로컬 이미지 빌드를 위해 Docker Engine을 실행하고 `docker info`로 연결을 확인합니다.
 
 > [!NOTE]
@@ -35,7 +37,6 @@ psql --version
 현재 셸에서 Docker Engine을 사용하도록 설정합니다. 설치된 azd가 지원하면 자동 비대화형 모드 감지도 해제합니다.
 
 ```bash
-# zsh/bash
 export AZD_CONTAINER_RUNTIME=docker
 export AZD_NON_INTERACTIVE=false
 ```
@@ -91,7 +92,6 @@ azd provision
 리소스 프로비저닝에 성공했다면 앱 루트에서 리소스 그룹 이름을 읽어 리소스 목록을 확인합니다.
 
 ```bash
-# zsh/bash
 rg=$(azd env get-value AZURE_RESOURCE_GROUP)
 az resource list --resource-group "$rg" --query "[].{name:name,type:type}" --output table
 ```
@@ -114,7 +114,6 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 > 터미널에서 [ipify](https://www.ipify.org)의 API로 공인 IPv4 주소를 확인할 수도 있습니다. **Microsoft나 Azure가 운영하지 않는 외부 서비스**이며, 조회 시 공인 IP와 요청 정보가 해당 서비스에 전달됩니다. 조직의 외부 서비스 사용 정책을 확인한 뒤 필요한 경우에만 사용하세요.
 >
 > ```bash
-> # zsh/bash
 > clientIp=$(curl -4 --fail --silent --show-error --max-time 10 https://api.ipify.org)
 > ```
 >
@@ -125,28 +124,17 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 >
 > 조회 결과가 실제 DB 접속의 송신 IP와 같은지 확인한 뒤 아래 `<확인한-공인-IPv4>`에 입력합니다. VPN이나 프록시 환경에서는 다를 수 있으므로 결과를 확인 없이 자동 등록하지 마세요.
 
-서버와 IP 주소를 확인하고 변경을 승인한 뒤 Portal에서 저장하거나 앱 루트에서 아래 명령을 실행합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. `<확인한-공인-IPv4>`를 확인한 주소로 바꾸고, 조회에 실패하거나 값이 비어 있으면 중단하세요. **Azure 서비스 전체 허용**을 켜거나 모든 IP를 허용하지 마세요.
+`<확인한-공인-IPv4>`를 확인한 주소로 바꾸고 도우미가 표시한 서버와 IP 주소를 확인한 뒤 승인합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. 도우미는 단일 IP만 등록하며 기존 규칙을 삭제하거나 범위를 덮어쓰지 않습니다. Azure 서비스 전체나 모든 IP를 허용하는 규칙을 만들지 않습니다.
 
 ```bash
-# zsh/bash
-subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
-rg=$(azd env get-value AZURE_RESOURCE_GROUP)
-server=$(azd env get-value POSTGRESQL_SERVER)
 clientIp="<확인한-공인-IPv4>"
-ruleName="allow-local-$(date +%Y%m%d%H%M%S)"
-az postgres flexible-server firewall-rule create --subscription "$subscription" --resource-group "$rg" --server-name "$server" --name "$ruleName" --start-ip-address "$clientIp" --end-ip-address "$clientIp"
-az postgres flexible-server firewall-rule list --subscription "$subscription" --resource-group "$rg" --server-name "$server" --output table
+../scripts/register-java-db-client-ip.sh --client-ip "$clientIp"
 ```
 
 ```powershell
 # PowerShell
-$subscription = azd env get-value AZURE_SUBSCRIPTION_ID
-$rg = azd env get-value AZURE_RESOURCE_GROUP
-$server = azd env get-value POSTGRESQL_SERVER
 $clientIp = "<확인한-공인-IPv4>"
-$ruleName = "allow-local-$(Get-Date -Format yyyyMMddHHmmss)"
-az postgres flexible-server firewall-rule create --subscription $subscription --resource-group $rg --server-name $server --name $ruleName --start-ip-address $clientIp --end-ip-address $clientIp
-az postgres flexible-server firewall-rule list --subscription $subscription --resource-group $rg --server-name $server --output table
+../scripts/register-java-db-client-ip.ps1 -ClientIp $clientIp
 ```
 
 규칙의 시작과 끝 IP가 같고 승인한 주소만 허용했는지 확인합니다. 적용까지 몇 분 걸릴 수 있습니다. 계속 연결 시간이 초과되면 PC가 연결된 네트워크에서 외부로 나가는 TCP 5432 포트를 차단하는지도 확인합니다. 방화벽을 허용해도 DB 인증과 권한 설정은 별도로 필요합니다.
@@ -155,50 +143,19 @@ az postgres flexible-server firewall-rule list --subscription $subscription --re
 
 ### DB 연결용 루트 인증서 준비
 
-`psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받아 PEM 파일로 준비하고, `PGSSLROOTCERT`에 파일 경로를 지정합니다.
+`psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 도우미를 실행해 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받고, 반환된 PEM 파일 경로를 `PGSSLROOTCERT`에 지정합니다. Bash 도우미에는 `curl`과 `openssl`이 필요합니다. 시스템 인증서 저장소는 변경하지 않습니다.
 
 ```bash
-# zsh/bash
-pgCaDir=$(mktemp -d) &&
-curl --fail --silent --show-error --location --max-time 30 --output "$pgCaDir/digicert.der" "https://cacerts.digicert.com/DigiCertGlobalRootG2.crt" &&
-curl --fail --silent --show-error --location --max-time 30 --output "$pgCaDir/microsoft.der" "https://www.microsoft.com/pkiops/certs/Microsoft%20RSA%20Root%20Certificate%20Authority%202017.crt" &&
-openssl x509 -inform DER -in "$pgCaDir/digicert.der" -out "$pgCaDir/digicert.pem" &&
-openssl x509 -inform DER -in "$pgCaDir/microsoft.der" -out "$pgCaDir/microsoft.pem" &&
-cat "$pgCaDir/digicert.pem" "$pgCaDir/microsoft.pem" > "$pgCaDir/azure-postgresql-roots.pem" &&
-export PGSSLROOTCERT="$pgCaDir/azure-postgresql-roots.pem"
+PGSSLROOTCERT=$(../scripts/prepare-java-db-root-cert.sh) && export PGSSLROOTCERT
 ```
 
 ```powershell
 # PowerShell
-$caUrls = @(
-    "https://cacerts.digicert.com/DigiCertGlobalRootG2.crt"
-    "https://www.microsoft.com/pkiops/certs/Microsoft%20RSA%20Root%20Certificate%20Authority%202017.crt"
-)
-
-$pemCertificates = foreach ($url in $caUrls) {
-    $response = Invoke-WebRequest -Uri $url -TimeoutSec 30 -ErrorAction Stop
-    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
-        [byte[]]$response.Content
-    )
-    try {
-        $base64 = [Convert]::ToBase64String(
-            $certificate.RawData,
-            [Base64FormattingOptions]::InsertLineBreaks
-        )
-        "-----BEGIN CERTIFICATE-----`n$base64`n-----END CERTIFICATE-----"
-    }
-    finally {
-        $certificate.Dispose()
-    }
-}
-
-$caFile = New-TemporaryFile -ErrorAction Stop
-Set-Content -LiteralPath $caFile.FullName -Value $pemCertificates -Encoding ascii -ErrorAction Stop
-$env:PGSSLROOTCERT = $caFile.FullName
+$env:PGSSLROOTCERT = & ../scripts/prepare-java-db-root-cert.ps1
+if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 ```
 
-> [!CAUTION]
-> 만약 다른 터미널에서 `psql` 명령어를 실행시키려면 이 스크립트를 다시 실행시켜야 합니다.
+다른 터미널에서 DB에 연결하거나 임시 파일이 삭제됐다면 다시 실행합니다.
 
 ### DB 초기화
 
@@ -206,218 +163,55 @@ $env:PGSSLROOTCERT = $caFile.FullName
 
 워크숍에서는 **로컬 PC에서 Entra 관리자 계정으로 DB 사용자 생성, 테이블 생성과 권한 부여를 모두 수행**합니다. 별도 실행 호스트나 마이그레이션 관리 ID로 로그인할 필요는 없습니다. 앱은 관리자 계정이 아닌 web/worker 관리 ID로 연결합니다. 운영 환경에서는 별도 마이그레이션 주체와 실행 환경으로 분리합니다.
 
-서버의 Entra 인증과 관리자, DB 이름, web/worker 관리 ID를 확인합니다. 현재 PC에서 DB에 접근할 수 있는지, TLS 인증서를 신뢰할 수 있는지도 확인합니다. 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다. 각 연결에 사용할 PostgreSQL용 Entra 토큰은 [Entra 인증 안내](https://learn.microsoft.com/en-us/azure/postgresql/security/security-entra-configure)를 참고해 발급합니다. 토큰을 명령 인자, 셸 기록, 저장소나 로그에 남기지 말고 재연결 시 만료되었다면 다시 발급합니다.
+현재 PC에서 DB에 접근할 수 있고 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다. 도우미는 Azure CLI 로그인 사용자가 azd의 `POSTGRESQL_ADMIN_OBJECT_ID`와 일치하는지 확인하고, 승인 후 PostgreSQL용 Entra 토큰을 발급합니다. 토큰은 자식 `psql`의 환경 변수로만 전달하고 실행 후 정리합니다. 로그인이나 구독 변경은 자동으로 하지 않습니다.
 
-다음은 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 검토한 경우의 예시입니다. 산출물이 다르면 승인한 초기화 절차를 따릅니다. Azure RBAC와 DB 내부 권한은 별개입니다. 조회 명령은 순서대로 실행하고, 오류나 빈 값이 나오면 다음 명령을 실행하지 마세요.
+아래 도우미는 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 실행합니다. SQL 경로가 다르면 Bash의 `--sql-path`, PowerShell의 `-SqlPath`로 지정합니다. SQL은 직접 검토해야 하며 도우미가 내용을 자동으로 바꾸지 않습니다. Azure RBAC와 DB 내부 권한은 별개입니다.
 
-초기화 SQL과 README가 로컬 관리자 방식으로 준비되어 있는지 확인합니다. 마이그레이션 관리 ID 입력이나 별도 호스트를 요구한다면 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 해당 SQL, 안내와 관련 검사를 먼저 수정합니다.
+초기화 SQL과 README가 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)의 로컬 관리자 방식과 SQL 변수 계약에 맞아야 합니다. 도우미는 `web_identity_name`, `worker_identity_name`, `database_name`을 전달합니다. SQL에 `\prompt`나 마이그레이션 관리 ID 입력이 남아 있으면 실행하지 않으므로 해당 실습에서 SQL, 안내와 관련 검사를 먼저 수정합니다.
 
 > [!NOTE]
 > 기존 절차에서 Entra 관리자의 사용자 생성과 권한 설정을 이미 완료했다면 1단계를 반복하지 말고, DB 상태를 확인한 뒤 2단계부터 진행합니다. 이미 생성된 마이그레이션 관리 ID와 DB 역할은 이 절차에서 사용하지 않으며, 전환을 위해 삭제하거나 다시 프로비저닝할 필요는 없습니다.
 
-`bootstrap-identities.sql`을 실행하기 전에 앱 루트에서 아래 세 값을 조회해 준비합니다. web과 worker는 각 Container App에 연결된 사용자 할당 관리 ID를 조회합니다. 이 예시는 앱마다 관리 ID가 하나인 경우에 사용합니다. 여러 ID가 조회되면 임의로 하나를 선택하지 말고 앱 설정과 초기화 안내에서 사용할 ID를 확인하세요.
+초기화 전에 서버, 관리자, web/worker 관리 ID 이름과 DB 이름을 조회해 승인한 대상과 대조합니다. 앱마다 사용자 할당 관리 ID가 정확히 하나여야 하며 조회에 실패하거나 값이 비어 있으면 중단합니다.
 
 ```bash
-# zsh/bash
-(
-set -e
-subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
-rg=$(azd env get-value AZURE_RESOURCE_GROUP)
-webApp=$(azd env get-value WEB_CONTAINER_APP_NAME)
-workerApp=$(azd env get-value WORKER_CONTAINER_APP_NAME)
-pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
-if [ -z "$subscription" ] || [ -z "$rg" ] || [ -z "$webApp" ] ||
-   [ -z "$workerApp" ] || [ -z "$pgDatabase" ]; then
-    printf '%s\n' "Required azd environment value is empty." >&2
-    exit 1
-fi
-
-read_identity_name() {
-    identityId=$(az containerapp show --subscription "$subscription" --resource-group "$rg" --name "$1" --query "identity.userAssignedIdentities | keys(@)" --output tsv) || return
-    case "$identityId" in
-        ''|*[[:space:]]*)
-            printf '%s\n' "$1 must have exactly one user-assigned identity. Review the app configuration." >&2
-            return 1
-            ;;
-    esac
-    identityName=$(az identity show --ids "$identityId" --query name --output tsv) || return
-    if [ -z "$identityName" ]; then
-        printf '%s\n' "$1 identity name lookup returned an empty value." >&2
-        return 1
-    fi
-    printf '%s\n' "$identityName"
-}
-
-webIdentity=$(read_identity_name "$webApp")
-workerIdentity=$(read_identity_name "$workerApp")
-printf 'Web: %s\nWorker: %s\nDatabase: %s\n' "$webIdentity" "$workerIdentity" "$pgDatabase"
-)
+../scripts/get-java-db-info.sh
 ```
 
 ```powershell
 # PowerShell
-$subscription = azd env get-value AZURE_SUBSCRIPTION_ID
-if ($LASTEXITCODE -ne 0 -or -not $subscription) { throw "Subscription lookup failed." }
-$rg = azd env get-value AZURE_RESOURCE_GROUP
-if ($LASTEXITCODE -ne 0 -or -not $rg) { throw "Resource group lookup failed." }
-$webApp = azd env get-value WEB_CONTAINER_APP_NAME
-if ($LASTEXITCODE -ne 0 -or -not $webApp) { throw "Web app lookup failed." }
-$workerApp = azd env get-value WORKER_CONTAINER_APP_NAME
-if ($LASTEXITCODE -ne 0 -or -not $workerApp) { throw "Worker app lookup failed." }
-$pgDatabase = azd env get-value POSTGRESQL_DATABASE
-if ($LASTEXITCODE -ne 0 -or -not $pgDatabase) { throw "Database lookup failed." }
-
-$identityNames = @{}
-foreach ($app in ([ordered]@{ Web = $webApp; Worker = $workerApp }).GetEnumerator()) {
-    $identityJson = az containerapp show --subscription $subscription --resource-group $rg --name $app.Value --query identity.userAssignedIdentities --output json
-    if ($LASTEXITCODE -ne 0 -or -not $identityJson) { throw "$($app.Key) identity lookup failed." }
-    $identities = $identityJson | ConvertFrom-Json -AsHashtable -ErrorAction Stop
-    if (-not $identities -or $identities.Count -ne 1) {
-        throw "$($app.Key) must have exactly one user-assigned identity. Review the app configuration."
-    }
-    $identityId = @($identities.Keys)[0]
-    $identityName = az identity show --ids $identityId --query name --output tsv
-    if ($LASTEXITCODE -ne 0 -or -not $identityName) { throw "$($app.Key) identity name lookup failed." }
-    $identityNames[$app.Key] = $identityName
-}
-
-[pscustomobject]@{
-    Web = $identityNames.Web
-    Worker = $identityNames.Worker
-    Database = $pgDatabase
-} | Format-List
+../scripts/get-java-db-info.ps1
 ```
 
-출력값이 승인한 대상과 일치하는지 확인하고, 프롬프트에 따라 다음 순서로 입력합니다.
+#### 1. DB 사용자와 기본 권한 설정
 
-| 프롬프트 | 입력할 출력값 |
-| --- | --- |
-| `Web managed identity name:` | `Web` |
-| `Worker managed identity name:` | `Worker` |
-| `Application database name:` | `Database` |
+`postgres` DB에 Entra 관리자로 연결해 검토한 SQL을 실행합니다. SQL은 web/worker 보안 주체를 생성하고 DB 연결 권한을 부여한 뒤 앱 DB에 연결해 스키마 사용 권한을 설정해야 합니다. 도우미는 실행 후 두 역할의 유효 `CONNECT`, `USAGE`와 스키마 `CREATE` 금지를 확인합니다.
 
-관리 ID는 Client ID나 Object ID가 아닌 **리소스 이름**을 입력합니다. 세 값을 모두 입력하면 DB 사용자 생성과 권한 부여가 시작됩니다. 2단계의 초기화 스크립트에서도 같은 web과 worker 이름이 필요합니다.
+```bash
+../scripts/initialize-java-db-users.sh
+```
 
-1. **DB 사용자와 기본 권한 설정:** `postgres` DB에 Entra 관리자로 연결해 web/worker 보안 주체와 DB 연결 및 스키마 사용 권한을 설정합니다. 승인된 로컬 개발자 계정이 서버의 Entra 관리자일 때만 이 계정을 사용할 수 있습니다. 앱 루트에서 azd 환경과 Azure CLI의 구독이 같은지 확인한 뒤 실행합니다. 조회한 관리자 이름과 서버 FQDN이 승인한 대상인지 확인하고, SQL 프롬프트에는 web, worker 관리 ID와 앱 DB 이름을 입력합니다.
+```powershell
+../scripts/initialize-java-db-users.ps1
+```
 
-   ```bash
-   # zsh/bash
-   subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
-   rg=$(azd env get-value AZURE_RESOURCE_GROUP)
-   server=$(azd env get-value POSTGRESQL_SERVER)
-   pgHost=$(az postgres flexible-server show --subscription "$subscription" --resource-group "$rg" --name "$server" --query fullyQualifiedDomainName --output tsv)
-   pgAdmin=$(azd env get-value POSTGRESQL_ADMIN_NAME)
-   PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
-   export PGPASSWORD &&
-   psql "host=$pgHost dbname=postgres sslmode=verify-full" --username "$pgAdmin" --file "infra/db/bootstrap-identities.sql"
-   unset PGPASSWORD
-   ```
+#### 2. 테이블 생성과 앱 권한 설정
 
-   ```powershell
-   # PowerShell
-   $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
-   $rg = azd env get-value AZURE_RESOURCE_GROUP
-   $server = azd env get-value POSTGRESQL_SERVER
-   $pgHost = az postgres flexible-server show --subscription $subscription --resource-group $rg --name $server --query fullyQualifiedDomainName --output tsv
-   $pgAdmin = azd env get-value POSTGRESQL_ADMIN_NAME
-   $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
-   if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
-   psql "host=$pgHost dbname=postgres sslmode=verify-full" --username $pgAdmin --file "infra/db/bootstrap-identities.sql"
-   Remove-Item Env:\PGPASSWORD
-   ```
+같은 Entra 관리자 계정으로 앱 DB에 연결해 테이블과 앱 권한을 설정합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 실행 후 도우미가 테이블 소유자와 web/worker의 유효 권한을 확인합니다.
 
-2. **테이블 생성과 앱 권한 설정:** 같은 로컬 PC와 Entra 관리자 계정으로 앱 DB에 연결해 테이블을 만들고 web/worker에 필요한 테이블 권한을 부여합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 앱 루트에서 아래 값을 조회하고 SQL 프롬프트에는 앞서 확인한 web과 worker 관리 ID 이름을 입력합니다.
+```bash
+../scripts/initialize-java-db-schema.sh
+```
 
-   ```bash
-   # zsh/bash
-   subscription=$(azd env get-value AZURE_SUBSCRIPTION_ID)
-   rg=$(azd env get-value AZURE_RESOURCE_GROUP)
-   server=$(azd env get-value POSTGRESQL_SERVER)
-   pgDatabase=$(azd env get-value POSTGRESQL_DATABASE)
-   pgAdmin=$(azd env get-value POSTGRESQL_ADMIN_NAME)
-   pgHost=$(az postgres flexible-server show --subscription "$subscription" --resource-group "$rg" --name "$server" --query fullyQualifiedDomainName --output tsv)
-   PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
-   export PGPASSWORD &&
-   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgAdmin" --file "infra/db/initialize-image-metadata.sql"
-   unset PGPASSWORD
-   ```
-
-   ```powershell
-   # PowerShell
-   $subscription = azd env get-value AZURE_SUBSCRIPTION_ID
-   $rg = azd env get-value AZURE_RESOURCE_GROUP
-   $server = azd env get-value POSTGRESQL_SERVER
-   $pgDatabase = azd env get-value POSTGRESQL_DATABASE
-   $pgAdmin = azd env get-value POSTGRESQL_ADMIN_NAME
-   $pgHost = az postgres flexible-server show --subscription $subscription --resource-group $rg --name $server --query fullyQualifiedDomainName --output tsv
-   $env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
-   if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
-   psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgAdmin --file "infra/db/initialize-image-metadata.sql"
-   Remove-Item Env:\PGPASSWORD
-   ```
+```powershell
+../scripts/initialize-java-db-schema.ps1
+```
 
 테이블은 초기화를 수행한 관리자 DB 역할이 소유합니다. web과 worker에는 스키마 생성이나 테이블 변경 권한을 부여하지 않습니다. 이 예시는 기존 데이터 이전이나 스키마 업그레이드를 수행하지 않습니다.
 
-실패하면 일부 변경이 적용됐을 수 있으므로 DB 상태를 확인하고 원인을 해결해 해당 작업을 완료한 뒤 다음 단계로 진행합니다.
+출력된 DB, 로그인 주체, 역할과 권한을 검토합니다. web은 조회, 추가, 수정, 삭제가 모두 허용되고 worker는 조회와 수정만 허용되어야 합니다. 두 역할의 스키마 `CREATE`는 금지되며 테이블 소유자는 초기화를 수행한 관리자 DB 역할이어야 합니다. 유효 권한 검사에는 상속과 `PUBLIC`이 포함됩니다. 역할 목록과 권한 출력에서도 예상하지 않은 상속이나 권한이 없는지 확인합니다.
 
-초기화 후에는 같은 로컬 PC의 셸에서 2단계의 변수와 Entra 관리자 인증을 사용해 앱 DB에 연결합니다. 토큰은 다시 발급하고, 조회 실패나 빈 값이 있으면 진행하지 마세요.
-
-```bash
-# zsh/bash
-PGPASSWORD=$(az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv) &&
-export PGPASSWORD &&
-psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username "$pgAdmin"
-```
-
-```powershell
-# PowerShell
-$env:PGPASSWORD = az account get-access-token --resource-type oss-rdbms --query accessToken --output tsv
-if ($LASTEXITCODE -ne 0) { throw "PostgreSQL token acquisition failed." }
-psql "host=$pgHost dbname=$pgDatabase sslmode=verify-full" --username $pgAdmin
-```
-
-연결된 `psql`에서 DB, 로그인 주체(`session_user`), 현재 역할(`current_user`), 역할과 권한을 확인합니다.
-
-```sql
-SELECT current_database(), session_user, current_user;
-\du
-\dt
-\dp
-```
-
-위 예시를 사용했다면 같은 `psql` 세션에서 web과 worker의 DB 역할 이름을 입력해 유효 권한과 테이블 소유자를 확인합니다. 유효 권한에는 역할 상속과 `PUBLIC`이 포함됩니다.
-
-```sql
-\prompt 'Web DB role: ' web_role
-\prompt 'Worker DB role: ' worker_role
-SELECT role_name,
-       has_table_privilege(role_name, 'public.image_metadata', 'SELECT') AS can_select,
-       has_table_privilege(role_name, 'public.image_metadata', 'INSERT') AS can_insert,
-       has_table_privilege(role_name, 'public.image_metadata', 'UPDATE') AS can_update,
-       has_table_privilege(role_name, 'public.image_metadata', 'DELETE') AS can_delete,
-       has_schema_privilege(role_name, 'public', 'CREATE') AS can_create
-FROM (VALUES (:'web_role'), (:'worker_role')) AS apps(role_name);
-
-SELECT pg_get_userbyid(relowner) AS table_owner
-FROM pg_class
-WHERE oid = to_regclass('public.image_metadata');
-```
-
-web은 네 테이블 권한이 모두 `true`, worker는 조회와 수정만 `true`여야 합니다. 두 역할의 `can_create`는 `false`, 테이블 소유자는 초기화를 수행한 관리자 DB 역할이어야 합니다. `\du`와 `\dp`에서도 예상하지 않은 역할 상속이나 권한이 없는지 확인합니다.
-
-결과를 앞서 검토한 초기화 절차의 대상과 권한에 대조해 기록합니다. 확인할 수 없거나 승인한 범위와 다르면 해결하기 전까지 배포하지 않습니다. 앱 관리 ID 인증과 앱 연결은 배포 후 별도로 확인합니다.
-
-확인을 마치면 `\q`로 `psql`을 종료합니다. 연결에 실패했거나 확인을 마쳤다면 토큰을 삭제합니다.
-
-```bash
-# zsh/bash
-unset PGPASSWORD
-```
-
-```powershell
-# PowerShell
-Remove-Item Env:\PGPASSWORD
-```
+SQL 실행이나 권한 검증에 실패하면 일부 변경이 적용됐을 수 있습니다. 자동으로 되돌리거나 재시도하지 않으므로 DB 상태와 원인을 확인하고 해당 단계를 완료한 뒤 진행합니다. 확인할 수 없거나 승인한 범위와 다르면 배포하지 않습니다. 앱 관리 ID 인증과 실제 앱 연결은 배포 후 별도로 확인합니다.
 
 ### 이미지 패키징
 
@@ -451,29 +245,18 @@ Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Con
 2. **설정 → 수신(Ingress)** 에서 web과 worker의 수신 설정이 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 구성과 일치하는지 확인합니다.
 3. worker의 **모니터링 → 로그 스트림(Log stream) → 콘솔(Console)** 에서 처리 로그와 오류를 확인합니다. 수정 버전, 복제본 또는 컨테이너가 여러 개라면 해당 대상을 선택합니다.
 
-터미널에서 확인하려면 다음 명령을 사용할 수도 있습니다. [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 정의한 출력 이름을 사용합니다. 값이 비어 있으면 추측하지 말고 `azd` 출력 계약과 Bicep 연결부터 수정합니다. 로그 명령은 worker의 최근 50줄을 조회합니다.
+터미널에서는 아래 도우미로 두 앱의 최신 수정 버전과 준비된 수정 버전이 같은지, 최신 버전이 활성화되어 정상인지, web의 외부 ingress와 8080 포트 및 worker의 ingress 비활성화를 확인합니다. 최근 시스템 로그 각 20줄과 web HTTP 응답도 확인합니다. 필요한 azd 출력이 없거나 확인에 실패하면 오류로 종료합니다.
 
 ```bash
-# zsh/bash
-rg=$(azd env get-value AZURE_RESOURCE_GROUP)
-web=$(azd env get-value AZURE_WEB_APP_NAME)
-worker=$(azd env get-value AZURE_WORKER_APP_NAME)
-az containerapp show --resource-group "$rg" --name "$web" \
-  --query "{state:properties.provisioningState,ready:properties.latestReadyRevisionName,fqdn:properties.configuration.ingress.fqdn}" --output json
-az containerapp show --resource-group "$rg" --name "$worker" \
-  --query "{state:properties.provisioningState,ready:properties.latestReadyRevisionName,ingress:properties.configuration.ingress}" --output json
-az containerapp logs show --resource-group "$rg" --name "$worker" --type console --tail 50
+../scripts/check-java-deployment.sh
 ```
 
 ```powershell
 # PowerShell
-$rg = azd env get-value AZURE_RESOURCE_GROUP
-$web = azd env get-value AZURE_WEB_APP_NAME
-$worker = azd env get-value AZURE_WORKER_APP_NAME
-az containerapp show --resource-group $rg --name $web --query "{state:properties.provisioningState,ready:properties.latestReadyRevisionName,fqdn:properties.configuration.ingress.fqdn}" --output json
-az containerapp show --resource-group $rg --name $worker --query "{state:properties.provisioningState,ready:properties.latestReadyRevisionName,ingress:properties.configuration.ingress}" --output json
-az containerapp logs show --resource-group $rg --name $worker --type console --tail 50
+../scripts/check-java-deployment.ps1
 ```
+
+이 확인은 DB 연결이나 업로드부터 worker 처리까지의 성공을 보장하지 않습니다. 앱의 실제 이미지 식별자와 아래 통합 및 end-to-end 테스트를 별도로 확인합니다.
 
 ### Azure 통합 테스트 실행
 
@@ -486,7 +269,6 @@ az containerapp logs show --resource-group $rg --name $worker --type console --t
 3. 앱 루트에서 현재 셸에 맞는 스크립트를 직접 실행합니다. 스크립트가 JDK 25를 선택하고 Azure CLI와 azd에서 대상을 조회합니다. 표시된 구독, 리소스, 사용자와 데이터 읽기 및 쓰기 범위를 앞서 검토한 비용과 함께 확인한 뒤 실행에 명시적으로 동의합니다. CI나 비대화형 환경에서는 실행할 수 없습니다.
 
    ```bash
-   # zsh/bash
    ./scripts/run-azure-it.sh
    ```
 

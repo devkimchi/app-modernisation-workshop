@@ -87,7 +87,7 @@ for script in "$ROOT"/scripts/*.sh "$ROOT"/tests/*.sh; do
             ;;
     esac
     expected=100755
-    case "$relative" in scripts/use-java.sh|scripts/terminal-output.sh) expected=100644 ;; esac
+    case "$relative" in scripts/use-java.sh|scripts/terminal-output.sh|scripts/java-deployment.sh) expected=100644 ;; esac
     if git -C "$ROOT" ls-files --error-unmatch -- "$relative" >/dev/null 2>&1; then
         mode=$(git -C "$ROOT" ls-files -s -- "$relative")
         mode="${mode%% *}"

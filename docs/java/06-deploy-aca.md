@@ -199,18 +199,11 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 
 ### DB 초기화
 
-[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 앱 루트에서 확인합니다. 승인한 새 데모 DB만 대상으로 합니다. 안내, 대상 또는 권한이 불분명하면 중단합니다. 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자에게 확인합니다.
+[실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내와 SQL을 사용합니다. 승인한 새 데모 DB만 대상으로 하며, 대상이나 권한이 불분명하면 중단합니다.
 
-워크숍에서는 **로컬 PC에서 Entra 관리자 계정으로 DB 사용자 생성, 테이블 생성과 권한 부여를 모두 수행**합니다. 별도 실행 호스트나 마이그레이션 관리 ID로 로그인할 필요는 없습니다. 앱은 관리자 계정이 아닌 web/worker 관리 ID로 연결합니다. 운영 환경에서는 마이그레이션 전용 계정과 별도 실행 환경을 사용합니다.
+**로컬 PC의 Azure CLI에 로그인한 Entra 관리자로 DB 사용자와 테이블을 생성하고 권한을 부여**합니다. 앱은 web/worker 관리 ID로 연결합니다. 현재 PC에서 DB에 접근할 수 있고 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다.
 
-현재 PC에서 DB에 접근할 수 있고 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다. 도우미는 Azure CLI 로그인 사용자의 Object ID가 azd의 `POSTGRESQL_ADMIN_OBJECT_ID`와 일치하는지 확인합니다. 승인 후 PostgreSQL용 Entra 토큰을 발급해 `psql` 프로세스의 환경 변수로만 전달하고, 실행이 끝나면 정리합니다. 로그인이나 구독 변경은 자동으로 하지 않습니다.
-
-아래 도우미는 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`을 실행합니다. SQL 경로가 다르면 Bash의 `--sql-path`, PowerShell의 `-SqlPath`로 지정합니다. SQL은 직접 검토해야 하며 도우미가 내용을 자동으로 바꾸지 않습니다. Azure RBAC와 DB 내부 권한은 별개입니다.
-
-초기화 SQL과 README는 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)의 로컬 관리자 방식과 SQL 변수 규약에 맞아야 합니다. 도우미는 `web_identity_name`, `worker_identity_name`, `database_name`을 전달합니다. SQL에 `\prompt`나 마이그레이션 관리 ID 입력이 남아 있으면 실행하지 않습니다. 해당 실습에서 SQL, 안내와 관련 검사를 먼저 수정합니다.
-
-> [!NOTE]
-> 기존 절차에서 Entra 관리자의 사용자 생성과 권한 설정을 이미 완료했다면 1단계를 반복하지 말고, DB 상태를 확인한 뒤 2단계부터 진행합니다. 이미 생성된 마이그레이션 관리 ID와 DB 역할은 이 절차에서 사용하지 않으며, 전환을 위해 삭제하거나 다시 프로비저닝할 필요는 없습니다.
+앱 루트에서 아래 도우미를 실행합니다. 기본 SQL 경로는 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`입니다. 경로가 다르면 Bash의 `--sql-path`, PowerShell의 `-SqlPath`로 지정합니다.
 
 초기화 전에 서버, 관리자, web/worker 관리 ID 이름과 DB 이름을 조회해 승인한 대상과 대조합니다. 앱마다 사용자 할당 관리 ID가 정확히 하나여야 하며 조회에 실패하거나 값이 비어 있으면 중단합니다.
 

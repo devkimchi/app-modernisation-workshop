@@ -119,6 +119,6 @@ PostgreSQL 18 클라이언트 설치 후 PATH 변경을 반영하려면 Windows 
 
 사용이 끝나면 추가 비용을 막기 위해 배포한 PC의 저장소 루트에서 해당 환경의 리소스를 삭제하세요. 확인 없이 삭제하고 soft-delete 대상도 영구 삭제하므로 필요한 데이터는 먼저 백업하세요.
 
-```powershell
+```bash
 azd down --force --purge --environment appmod-dev
 ```

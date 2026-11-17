@@ -122,20 +122,6 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 
 #### 스크립트로 등록
 
-> [!NOTE]
-> 터미널에서 [ipify](https://www.ipify.org)의 API로 공인 IPv4 주소를 확인할 수도 있습니다. **Microsoft나 Azure가 운영하지 않는 외부 서비스**이며, 조회 시 공인 IP와 요청 정보가 해당 서비스에 전달됩니다. 조직의 외부 서비스 사용 정책을 확인한 뒤 필요한 경우에만 사용하세요.
->
-> ```bash
-> clientIp=$(curl -4 --fail --silent --show-error --max-time 10 https://api.ipify.org)
-> ```
->
-> ```powershell
-> # PowerShell
-> $clientIp = (Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec 10).Trim()
-> ```
->
-> 조회 결과가 실제 DB 접속의 송신 IP와 같은지 확인한 뒤 아래 `<확인한-공인-IPv4>`에 입력합니다. VPN이나 프록시 환경에서는 다를 수 있으므로 결과를 확인 없이 자동 등록하지 마세요.
-
 `<확인한-공인-IPv4>`를 실제 주소로 바꾸고 도우미를 실행합니다. 표시된 서버와 IP 주소를 확인한 뒤 승인합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. 도우미는 IP 하나만 등록하며 기존 규칙을 삭제하거나 허용 범위를 덮어쓰지 않습니다. Azure 서비스 전체나 모든 IP를 허용하는 규칙도 만들지 않습니다.
 
 ```bash
@@ -150,23 +136,49 @@ $clientIp = "<확인한-공인-IPv4>"
 ../scripts/register-java-db-client-ip.ps1 -ClientIp $clientIp
 ```
 
+> [!NOTE]
+> 터미널에서 [ipify](https://www.ipify.org)의 API로 공인 IPv4 주소를 확인할 수도 있습니다. **Microsoft나 Azure가 운영하지 않는 외부 서비스**이며, 조회 시 공인 IP와 요청 정보가 해당 서비스에 전달됩니다. 조직의 외부 서비스 사용 정책을 확인한 뒤 필요한 경우에만 사용하세요.
+>
+> ```bash
+> clientIp=$(curl -4 --fail --silent --show-error --max-time 10 https://api.ipify.org)
+> ```
+>
+> ```powershell
+> # PowerShell
+> $clientIp = (Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec 10).Trim()
+> ```
+>
+> 조회 결과가 실제 DB 접속의 송신 IP와 같은지 확인한 뒤 위 `$clientIp` 값에 입력합니다. VPN이나 프록시 환경에서는 다를 수 있으므로 결과를 확인 없이 자동 등록하지 마세요.
+
+> [!NOTE]
+>
+> 공개 네트워크 접근이 활성화된 서버에서는 [Azure CLI로도 Azure 서비스 접근을 허용](https://learn.microsoft.com/en-us/cli/azure/postgres/flexible-server/firewall-rule#az-postgres-flexible-server-firewall-rule-create)할 수 있습니다.
+>
+> **다른 구독의 Azure 서비스에도 네트워크 접근을 허용하는 범위**를 확인하고 승인한 경우에만 실행합니다.
+>
+> ```bash
+> # zsh/bash
+> rg=$(azd env get-value AZURE_RESOURCE_GROUP)
+> pgServer=$(azd env get-value POSTGRESQL_SERVER)
+> address="0.0.0.0"
+> az postgres flexible-server firewall-rule create --resource-group $rg --server-name $pgServer --name AllowAzureServices --start-ip-address $address --end-ip-address $address
+> ```
+>
+> ```powershell
+> # PowerShell
+> $rg = azd env get-value AZURE_RESOURCE_GROUP
+> $pgServer= azd env get-value POSTGRESQL_SERVER
+> $address = "0.0.0.0"
+> az postgres flexible-server firewall-rule create --resource-group $rg --server-name $pgServer --name AllowAzureServices --start-ip-address $address --end-ip-address $address
+> ```
+>
+> 시작과 끝 IP가 모두 `0.0.0.0`인 규칙은 Azure 내부 연결을 허용하는 특수 규칙입니다. 모든 인터넷 IP를 허용하는 규칙은 아니며, DB 인증과 권한 설정은 여전히 필요합니다.
+
 #### 등록 결과 확인
 
 규칙의 시작과 끝 IP가 같고 승인한 주소만 허용했는지 확인합니다. 적용까지 몇 분 걸릴 수 있습니다. 계속 연결 시간이 초과되면 PC가 연결된 네트워크에서 외부로 나가는 TCP 5432 포트를 차단하는지도 확인합니다. 방화벽에서 연결을 허용해도 DB 인증과 권한 설정은 별도로 필요합니다.
 
 공인 IP가 바뀌면 새 주소를 확인해 등록하고, 기존 규칙은 별도 승인 후 삭제합니다. 위 규칙은 해당 PC에만 적용되므로 ACA의 DB 연결도 별도로 허용해야 합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
-
-#### Azure CLI로 Azure 서비스 접근 허용
-
-공개 네트워크 접근이 활성화된 서버에서는 [Azure CLI로도 Azure 서비스 접근을 허용](https://learn.microsoft.com/en-us/cli/azure/postgres/flexible-server/firewall-rule#az-postgres-flexible-server-firewall-rule-create)할 수 있습니다. Azure Portal에서 위 옵션을 이미 켰다면 이 명령은 생략합니다.
-
-**다른 구독의 Azure 서비스에도 네트워크 접근을 허용하는 범위**를 확인하고 승인한 경우에만 실행합니다. 아래 예시의 구독 ID, 리소스 그룹과 서버 이름을 실제 대상으로 바꿉니다. PowerShell과 Bash/Zsh에서 같은 한 줄 명령을 사용합니다.
-
-```bash
-az postgres flexible-server firewall-rule create --subscription "<구독-ID>" --resource-group "<리소스-그룹>" --server-name "<서버-이름>" --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
-```
-
-시작과 끝 IP가 모두 `0.0.0.0`인 규칙은 Azure 내부 연결을 허용하는 특수 규칙입니다. 모든 인터넷 IP를 허용하는 규칙은 아니며, DB 인증과 권한 설정은 여전히 필요합니다.
 
 ### DB 연결용 루트 인증서 준비
 

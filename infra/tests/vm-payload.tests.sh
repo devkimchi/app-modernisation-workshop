@@ -10,7 +10,7 @@ mkdir -p "$fixture/repo with spaces/infra/scripts" "$fixture/repo with spaces/sc
 cp "$ROOT/infra/scripts/"* "$fixture/repo with spaces/infra/scripts/"
 cp "$ROOT/scripts/"*.ps1 "$fixture/repo with spaces/scripts/"
 repo="$fixture/repo with spaces"
-builder="$repo/infra/scripts/build-payload.sh"
+builder="$repo/infra/scripts/preprovision.sh"
 
 # Run outside the repository to verify script-relative source and output paths.
 (cd "$fixture" && bash "$builder")

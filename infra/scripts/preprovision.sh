@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -gt 1 ]]; then
-    printf '%s\n' '[FAIL] Usage: build-payload.sh [output-path]' >&2
+    printf '%s\n' '[FAIL] Usage: preprovision.sh [output-path]' >&2
     exit 2
 fi
 

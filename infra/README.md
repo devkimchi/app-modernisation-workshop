@@ -127,7 +127,7 @@ Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테�
 
 `preprovision` 훅은 로컬 공통 도우미 6개, VM 설치 스크립트와 `.vsconfig` 2개를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
 
-azd는 Windows에서 `build-payload.ps1`, macOS/Linux에서 `build-payload.sh`를 실행합니다. Bash 구현도 파일의 원본 바이트, JSON 형식과 크기 제한을 유지합니다. `postprovision`은 각 환경의 셸로 Bastion 접속과 VM 내부 설치 명령을 안내합니다.
+azd는 Windows에서 `preprovision.ps1`, macOS/Linux에서 `preprovision.sh`를 실행합니다. Bash 구현도 파일의 원본 바이트, JSON 형식과 크기 제한을 유지합니다. `postprovision.ps1`과 `postprovision.sh`는 각 환경의 셸로 Bastion 접속과 VM 내부 설치 명령을 안내합니다.
 
 VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고, 없으면 Windows `CreateProfile` API로 준비합니다. SYSTEM의 `$HOME`이나 추측한 사용자 경로를 쓰지 않습니다. 실제 프로필의 `scripts` 아래에 UTF-8 BOM과 LF를 보존해 파일을 배치합니다. 이 배치 스크립트만 PowerShell 7 검사 없이 Windows PowerShell 5.1에서 실행됩니다.
 
@@ -138,7 +138,7 @@ VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고,
 저장소 루트에서 실행하세요. 첫 명령은 로컬 파일 패키징만 수행합니다. Bicep 명령에는 Azure CLI의 Bicep 도구가 필요합니다.
 
 ```powershell
-pwsh -NoProfile -File ./infra/scripts/build-payload.ps1
+pwsh -NoProfile -File ./infra/scripts/preprovision.ps1
 az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
 pwsh -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
 powershell.exe -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
@@ -149,7 +149,7 @@ Bicep을 수동 컴파일할 때도 먼저 payload를 생성해야 합니다. `.
 macOS/Linux에서는 다음 명령으로 패키징과 Bash 회귀 테스트를 실행합니다. 테스트에만 Python 3가 추가로 필요하며, macOS에서는 기본 Bash 3.2로 실행하세요.
 
 ```bash
-bash ./infra/scripts/build-payload.sh
+bash ./infra/scripts/preprovision.sh
 az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
 bash ./infra/tests/vm-payload.tests.sh
 ```

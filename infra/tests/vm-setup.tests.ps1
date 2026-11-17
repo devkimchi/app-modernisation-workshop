@@ -8,7 +8,7 @@ $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParamete
     -RemainingArguments @() -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
-. (Join-Path $root 'infra\scripts\build-payload.ps1')
+. (Join-Path $root 'infra\scripts\preprovision.ps1')
 . (Join-Path $root 'infra\scripts\stage-user-scripts.ps1')
 . (Join-Path $root 'infra\scripts\install-vm-tools.ps1')
 $script:Passed = 0

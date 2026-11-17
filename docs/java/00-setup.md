@@ -126,14 +126,12 @@ psql --version
 **Windows**
 
 ```powershell
-# PowerShell
 winget install --id PostgreSQL.PostgreSQL.18 --exact --source winget --interactive
 ```
 
 설치 화면에서 **Command Line Tools만 선택**하고 PostgreSQL Server, pgAdmin과 Stack Builder는 해제합니다. 기본 경로에 설치했다면 현재 PowerShell 창에 실행 경로를 추가합니다. 다른 경로에 설치했다면 실제 `bin` 경로로 바꾸세요.
 
 ```powershell
-# PowerShell
 $env:PATH = "C:/Program Files/PostgreSQL/18/bin;$env:PATH"
 psql --version
 ```

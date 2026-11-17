@@ -288,18 +288,51 @@ function Test-VmVisualCppRuntime {
     return $true
 }
 
-function Test-VmPostgresClient {
+function Get-VmPostgresClient {
     $paths = @((Join-Path $env:ProgramFiles 'PostgreSQL\18\bin\psql.exe'))
     $command = Get-Command psql -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($command) { $paths += $command.Source }
     foreach ($path in $paths) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
         $probe = Invoke-ToolProbe $path @('--version')
-        if ($probe.Code -eq 0 -and $probe.Text -match '^psql \(PostgreSQL\) 18\.\d+(?:\s|$)') { return $true }
+        if ($probe.Code -eq 0 -and $probe.Text -match '^psql \(PostgreSQL\) 18\.\d+(?:\s|$)') { return $path }
         Write-WorkshopMessage "[WARN] Could not verify PostgreSQL 18 at '$path' (exit code $($probe.Code)). Output: $($probe.Text)"
     }
     Write-WorkshopMessage "[INFO] No working PostgreSQL 18 client was found. Checked: $($paths -join ', ')"
-    return $false
+}
+
+function Test-VmPostgresClient {
+    return [bool](Get-VmPostgresClient)
+}
+
+function Set-VmPostgresPath {
+    $client = Get-VmPostgresClient
+    if (-not $client) { throw 'Cannot configure PATH without a working PostgreSQL 18 client.' }
+    $directory = Split-Path -Parent $client
+    $environment = Get-Item -LiteralPath 'HKCU:\Environment' -ErrorAction Stop
+    $userPath = [string]$environment.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+    $entries = @($userPath -split ';' | ForEach-Object {
+        [Environment]::ExpandEnvironmentVariables($_.Trim().Trim('"')).TrimEnd('\', '/')
+    })
+    if ($directory.TrimEnd('\', '/') -notin $entries) {
+        if (-not (Confirm-VmAction "Append '$directory' to appmoduser's user PATH. Existing entries and their order will be preserved.")) {
+            Write-WorkshopMessage '[MANUAL] PostgreSQL 18 user PATH configuration was skipped.'
+            return $false
+        }
+        $separator = if ($userPath -and -not $userPath.EndsWith(';')) { ';' } else { '' }
+        $kind = if ($environment.GetValueNames() -contains 'Path') {
+            $environment.GetValueKind('Path')
+        } else { [Microsoft.Win32.RegistryValueKind]::ExpandString }
+        $environment.SetValue('Path', "$userPath$separator$directory", $kind)
+    }
+    Update-ProcessPath
+    if (-not (Test-VmCommand psql)) { throw 'User PATH was configured, but psql could not run in the installer process.' }
+    $command = Get-Command psql -CommandType Application -ErrorAction Stop | Select-Object -First 1
+    if ($command.Source -ine $client) {
+        Write-WorkshopMessage "[WARN] Another psql takes precedence in PATH: '$($command.Source)'. Existing order was preserved. Use '$client' explicitly for PostgreSQL 18."
+    }
+    Write-WorkshopMessage '[PASS] PostgreSQL 18 directory is in the user PATH and the installer PATH. Restart Windows Terminal to refresh its environment; the calling shell is unchanged.'
+    return $true
 }
 
 function Install-VmPostgresClient {
@@ -308,9 +341,10 @@ function Install-VmPostgresClient {
         Write-WorkshopMessage '[MANUAL] PostgreSQL 18 client requires the x64 Visual C++ runtime. Complete that installation and any requested restart first.'
         return $false
     }
-    return (Install-VmPackage -Id PostgreSQL.PostgreSQL.18 -Name 'PostgreSQL 18 command-line tools (client only)' `
+    if (-not (Install-VmPackage -Id PostgreSQL.PostgreSQL.18 -Name 'PostgreSQL 18 command-line tools (client only)' `
         -ExtraArguments @('--override', '--mode unattended --unattendedmodeui minimal --enable-components commandlinetools --disable-components server,pgAdmin,stackbuilder') `
-        -TestInstalled { Test-VmPostgresClient })
+        -TestInstalled { Test-VmPostgresClient })) { return $false }
+    return (Set-VmPostgresPath)
 }
 
 function Install-VmNvm {

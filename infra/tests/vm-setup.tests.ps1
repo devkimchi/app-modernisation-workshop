@@ -267,6 +267,8 @@ namespace Appmod {
     & {
         $script:PsqlVersion='psql (PostgreSQL) 17.9'; $script:PsqlCode=0
         $script:PsqlInstalls=0; $script:Approved=$false; $script:VmRestartRequired=$false
+        $script:PsqlPathCalls=0
+        function Set-VmPostgresPath { $script:PsqlPathCalls++; return $true }
         $messages = [Collections.Generic.List[string]]::new()
         function Write-WorkshopMessage { param($Message); $messages.Add($Message) }
         function Get-Command { [pscustomobject]@{Source='C:\fixture-postgres\psql.exe'} }
@@ -292,6 +294,7 @@ namespace Appmod {
         Assert-True (Install-VmPostgresClient) 'psql 18 is verified even when its directory is not in PATH'
         Assert-True (Install-VmPostgresClient) 'existing psql 18 does not reinstall'
         Assert-True ($script:PsqlInstalls -eq 1) 'PostgreSQL client installs once'
+        Assert-True ($script:PsqlPathCalls -eq 2) 'new and existing PostgreSQL installations both configure PATH'
         $script:PsqlCode=-1073741515; $script:PsqlVersion=''
         Assert-True (-not (Test-VmPostgresClient)) 'nonzero psql exit cannot satisfy verification'
         Assert-True (@($messages | Where-Object {
@@ -301,6 +304,7 @@ namespace Appmod {
 
     & {
         $script:RuntimeReady=$false; $script:ClientPresent=$true
+        function Set-VmPostgresPath { return $true }
         $script:RuntimeApproved=$false; $script:ClientApproved=$false
         $script:RuntimeRestart=$false; $script:VmRestartRequired=$false
         $script:ClientInstalls=[Collections.Generic.List[string]]::new()
@@ -355,6 +359,58 @@ namespace Appmod {
         $script:VmRestartRequired=$false; $script:RuntimeReady=$false
         function Invoke-VmInstaller { throw 'fixture runtime installation failure' }
         Assert-Throws { Install-VmPostgresClient } 'runtime installation failure' 'runtime installation errors are not hidden'
+    }
+
+    & {
+        $client = 'C:\fixture-postgres\18\bin\psql.exe'
+        $directory = Split-Path -Parent $client
+        $script:StoredUserPath = '%SystemRoot%\System32;C:\keep'
+        $script:PathWrites=0; $script:PathApproved=$false; $script:PathUpdates=0
+        $script:ResolvedClient=$client; $script:ClientRuns=$true
+        $messages=[Collections.Generic.List[string]]::new()
+        $registry = [pscustomobject]@{}
+        $registry | Add-Member ScriptMethod GetValue { param($Name,$Default,$Options); return $script:StoredUserPath }
+        $registry | Add-Member ScriptMethod GetValueNames { return @('Path') }
+        $registry | Add-Member ScriptMethod GetValueKind { param($Name); return [Microsoft.Win32.RegistryValueKind]::ExpandString }
+        $registry | Add-Member ScriptMethod SetValue {
+            param($Name,$Value,$Kind)
+            if ($Name -ne 'Path' -or $Kind -ne [Microsoft.Win32.RegistryValueKind]::ExpandString) { throw 'Unexpected registry value or type' }
+            $script:StoredUserPath=$Value; $script:PathWrites++
+        }
+        function Get-VmPostgresClient { return $client }
+        function Get-Item {
+            param($LiteralPath,$ErrorAction)
+            Assert-True ($LiteralPath -eq 'HKCU:\Environment') 'PostgreSQL PATH changes target only the current user'
+            return $registry
+        }
+        function Confirm-VmAction { return $script:PathApproved }
+        function Update-ProcessPath { $script:PathUpdates++ }
+        function Test-VmCommand { param($Name); return $Name -eq 'psql' -and $script:ClientRuns }
+        function Get-Command { [pscustomobject]@{Source=$script:ResolvedClient} }
+        function Write-WorkshopMessage { param($Message); $messages.Add($Message) }
+        Assert-True (-not (Set-VmPostgresPath) -and $script:PathWrites -eq 0 -and
+            $script:PathUpdates -eq 0) 'declining PATH changes preserves both user and process environments'
+        $script:PathApproved=$true
+        Assert-True (Set-VmPostgresPath) 'consented PostgreSQL PATH configuration completes'
+        Assert-True ($script:StoredUserPath -ceq "%SystemRoot%\System32;C:\keep;$directory" -and
+            $script:PathWrites -eq 1 -and $script:PathUpdates -eq 1) 'PATH append preserves raw variables and existing order and refreshes the installer'
+        Assert-True ((Set-VmPostgresPath) -and $script:PathWrites -eq 1) 'repeated configuration does not duplicate PATH'
+        $script:StoredUserPath = '"' + $directory.ToUpperInvariant() + '\";C:\keep'
+        $script:PathApproved=$false
+        Assert-True ((Set-VmPostgresPath) -and $script:PathWrites -eq 1) 'quoted case-insensitive paths with trailing separators are not duplicated'
+        $script:StoredUserPath = ''; $script:PathApproved=$true
+        Assert-True ((Set-VmPostgresPath) -and $script:StoredUserPath -ceq $directory) 'empty user PATH is initialized without an empty entry'
+        $script:ResolvedClient='C:\older-postgres\psql.exe'
+        Assert-True (Set-VmPostgresPath) 'existing command precedence is preserved'
+        Assert-True (@($messages | Where-Object { $_ -match '^\[WARN\].*Another psql.*older-postgres' }).Count -eq 1) 'another psql taking precedence is reported explicitly'
+        $script:ClientRuns=$false
+        Assert-Throws { Set-VmPostgresPath } 'could not run' 'failed process PATH verification is not reported as success'
+        function Get-VmPostgresClient { return $null }
+        Assert-Throws { Set-VmPostgresPath } 'without a working' 'missing client cannot be added to PATH'
+        function Get-VmPostgresClient { return $client }
+        $script:StoredUserPath=''
+        $registry | Add-Member ScriptMethod SetValue { throw 'fixture registry access denied' } -Force
+        Assert-Throws { Set-VmPostgresPath } 'registry access denied' 'persistent PATH write failures propagate'
     }
 
     & {

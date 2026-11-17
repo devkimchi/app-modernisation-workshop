@@ -9,7 +9,7 @@
 | 항목 | 값 |
 | --- | --- |
 | 이미지 | `MicrosoftWindowsDesktop:windows-11:win11-26h2-ent:latest`, x64 Gen2 |
-| 리전 | `koreacentral` |
+| 리전 | 배포 시 선택, 권장 `koreacentral` |
 | VM | `Standard_D8s_v5`, 8 vCPU, 32 GiB |
 | OS 디스크 | Premium SSD 256 GiB |
 | 부팅 보안 | Trusted Launch, Secure Boot, vTPM |
@@ -51,13 +51,11 @@ export AZD_NON_INTERACTIVE=false
 
 현재 셸 세션과 자식 프로세스에만 적용됩니다. 일반 터미널에서는 보통 필요하지 않으며, CI나 무인 실행에서는 설정하지 마세요. 이 설정은 질문을 허용할 뿐 필수 환경 값의 누락이나 Bicep 기본값에 따른 질문 생략을 해결하지는 않습니다.
 
-아래 명령은 Windows PowerShell 7과 macOS/Linux Bash에서 동일합니다. `<subscription-id>`를 사용할 구독 ID로 바꾸세요.
+아래 명령은 Windows PowerShell 7과 macOS/Linux Bash에서 동일합니다. 구독과 리전이 설정되어 있지 않으면 azd가 선택을 요청합니다. 리전은 `koreacentral`을 권장합니다.
 
 ```powershell
 azd auth login
 azd env new appmod-dev
-azd env set AZURE_SUBSCRIPTION_ID "<subscription-id>"
-azd env set AZURE_LOCATION koreacentral
 azd provision
 ```
 

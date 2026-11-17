@@ -405,6 +405,7 @@ try {
 
     if ($CompiledTemplate) {
         $template = Get-Content -LiteralPath $CompiledTemplate -Raw | ConvertFrom-Json
+        Assert-True (-not ($template.parameters.location.PSObject.Properties.Name -contains 'defaultValue')) 'location has no default that would suppress the azd selection prompt'
         Assert-True ($template.parameters.adminPassword.type -eq 'secureString' -and
             -not ($template.parameters.adminPassword.PSObject.Properties.Name -contains 'defaultValue')) 'password is prompted and secure'
         Assert-True ($template.parameters.confirmWindowsClientLicense.allowedValues.Count -eq 1 -and

@@ -4,7 +4,7 @@ targetScope = 'subscription'
 @maxLength(32)
 param environmentName string
 
-param location string = 'koreacentral'
+param location string
 
 @secure()
 @minLength(12)

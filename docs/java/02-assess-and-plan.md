@@ -6,152 +6,149 @@
 
 앱 소스를 변경하지 않고 현재 구조와 업그레이드 위험을 평가한 뒤, 변경 범위와 제약 조건을 반영한 실행 계획을 작성합니다.
 
-## 시작 조건
+## 실습 전 확인 사항
 
-로컬에서 원본 앱의 동작을 확인했고, 비교 기준이 될 커밋이 준비되어 있어야 합니다.
+로컬에서 원본 앱의 동작을 확인하고, 업그레이드 전 앱 상태를 커밋해 둡니다. [실습 1: 원본 앱을 로컬에서 실행하기](01-run-locally.md)에서 사용한 터미널을 계속 사용합니다.
 
-## 앱 평가 요청하기
+## 앱 평가하기(Assessment)
 
-Agent picker에서 **`modernize`** 를 선택합니다.
+앱을 평가해 현대화에 필요한 작업과 위험을 파악합니다. [공식 문서](https://learn.microsoft.com/azure/developer/github-copilot-app-modernization/modernization-agent/cli-commands)에 따르면 Modernize CLI는 코드, 설정과 의존성을 분석해 평가 보고서를 만듭니다. 이 실습에서는 보고서를 바탕으로 업그레이드와 클라우드 전환 계획을 세웁니다.
 
-운영체제에 맞는 프롬프트를 선택하고 경로를 실제 값으로 바꿉니다. 샘플을 다른 위치에 다운로드했다면 평가 대상 경로도 바꿉니다.
+앱 루트에서 Modernize CLI를 실행해 앱 평가를 시작합니다.
 
-### Windows용
-
-```text
-평가 대상은 워크숍 루트 아래의 `java` 폴더야.
-이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있어.
-
-GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가만 수행해 줘.
-
-원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했어.
-지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 말아 줘.
-평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은
-필요한 대상과 목적을 먼저 설명하고 승인을 받아 줘.
-
-Copilot app은 Windows 환경에서 사용하고 있어.
-Java 명령은 WSL2의 <앱의-WSL-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
-Windows JDK나 다른 WSL 배포판을 쓰지 말아 줘.
-
-web과 worker의 역할, DB, 큐와 파일에 대한 의존성, 화면과 API,
-환경 설정과 비밀정보 관리 방식, 테스트 현황, 업그레이드 위험 요소와
-예상 작업을 설명하고 근거가 되는 파일도 제시해 줘.
-
-평가하지 못한 항목은 성공으로 표시하지 말고 그 이유를 남겨 줘.
-평가 결과를 제시한 뒤 멈춰 줘.
+```bash
+modernize
 ```
-
-### macOS용
-
-```text
-평가 대상은 워크숍 루트 아래의 `java` 폴더야.
-이 폴더는 Asset Manager 앱 루트이며, pom.xml과 web, worker 모듈이 있어.
-
-GitHub Copilot app의 Modernization 플러그인으로 단일 저장소 평가만 수행해 줘.
-
-원본은 Java 8과 Spring Boot 2.7.18을 사용하며, 로컬에서 원본 동작을 확인했어.
-지금은 앱 소스 수정, 패키지 업데이트, 리소스 생성, 배포를 하지 말아 줘.
-평가 산출물 작성은 허용하지만 추가 도구 설치나 외부 서비스 사용은
-필요한 대상과 목적을 먼저 설명하고 승인을 받아 줘.
-
-Copilot app은 macOS 환경에서 사용하고 있어.
-Java 명령은 평가 대상 앱 루트인 <앱의-macOS-경로>에서 Bash와 SDKMAN을 사용해 실행해 줘.
-
-web과 worker의 역할, DB, 큐와 파일에 대한 의존성, 화면과 API,
-환경 설정과 비밀정보 관리 방식, 테스트 현황, 업그레이드 위험 요소와
-예상 작업을 설명하고 근거가 되는 파일도 제시해 줘.
-
-평가하지 못한 항목은 성공으로 표시하지 말고 그 이유를 남겨 줘.
-평가 결과를 제시한 뒤 멈춰 줘.
-```
-
-> [!CAUTION]
->
-> Copilot app에서 `modernize` 에이전트로 평가하다가 오류가 발생하면
-> 터미널에서 워크숍 루트로 이동한 뒤 Copilot CLI를 실행하고 같은 평가 프롬프트를 입력하세요.
->
-> ```bash
-> copilot --yolo --agent github-copilot-modernization:modernize
-> ```
->
-> Copilot CLI에서 같은 프롬프트를 입력했을 때 오류가 발생하면 `/agent` 명령으로
-> 기본 에이전트로 전환한 후 에이전트 실행 오류를 수정해 달라고 요청합니다.
-> 에이전트와 플러그인을 수정한 뒤 Copilot CLI를 다시 시작하고 같은 프롬프트를 입력합니다.
->
-> 이 과정을 몇 번 반복할 수도 있습니다.
-
-### 평가 결과 확인
-
-플러그인은 버전에 따라 `.github/modernize/reports/`, `.github/modernize/assessment/reports/` 등에 결과를 저장합니다. 실제 저장 경로를 확인하고 보고서를 읽습니다. 보고서 생성 여부뿐 아니라 평가 범위와 실패하거나 완료하지 못한 항목도 확인합니다.
-
-## 제약 조건 기록과 계획 요청
 
 > [!NOTE]
 >
-> 앞서 Copilot app에서 `modernize` 에이전트 실행에 실패했다면 Copilot CLI에서 이어서 진행합니다.
+> Modernize CLI가 작업에 사용할 모델을 자동으로 선택하게 하려면 실행 후 화면에서 `M` 키를 눌러 `Auto`를 선택합니다.
 
-평가 결과를 검토한 뒤 같은 에이전트에 다음과 같이 요청합니다.
+다음과 같이 `auto` 모델을 지정해 실행할 수도 있습니다.
 
-```text
-평가 결과를 바탕으로 다음 제약 조건을 `.github/modernize/rulebook/workshop.md`에
-기록하고 실행 계획을 만들어 줘. 지금은 계획까지만 작성하고 멈춰 줘.
-
-- Java 8에서 정식 JDK 25로 업그레이드한다.
-- Spring Boot는 JDK 25를 지원하는 안정 버전을 사용한다.
-  후보는 4.1.2이며, 지원 상태와 라이브러리 호환성을 확인한다.
-- 운영 환경에 배포할 버전의 지원 조건을 확인한다.
-  지원 구매나 유료 저장소 사용을 전제로 하지 않는다.
-- 기존 화면, 업로드, 파일 저장과 비동기 처리 동작을 보존한다.
-- 원본의 dev 프로필에서는 파일을 업로드해도 DB에 메타데이터를 기록하지 않는다.
-  dev 이외의 프로필에서 S3 업로드 시 사용하는 메타데이터 기록과 조회 로직도
-  이전 범위에 포함하되, dev 프로필에서 확인한 기준 동작과 구분한다.
-- web과 worker 모듈을 유지한다. 불필요한 프런트엔드 재작성은 하지 않는다.
-- PostgreSQL은 Azure Database for PostgreSQL Flexible Server로,
-  RabbitMQ는 Service Bus로 이전한다. dev 프로필의 로컬 파일 저장소와
-  dev 이외의 프로필에서 사용하는 AWS S3는 비공개 Blob Storage로 이전한다.
-- 관리 ID, 최소 권한, TLS를 기본으로 사용하고 비밀정보를 코드나 Git에 저장하지 않는다.
-- 최종 실행 환경은 Linux 기반 Azure Container Apps이다. AKS나 App Service는 사용하지 않는다.
-- 배포에는 azd와 Bicep을, 이미지 빌드에는 로컬 Docker 엔진을 사용한다.
-  ACR Tasks나 az acr build를 사용하지 않는다.
-- 작업은 기준 동작 테스트, JDK 25 업그레이드,
-  Azure 서비스 연동 코드 수정, azd 배포 산출물 준비, 리소스 생성과 배포,
-  기능 검증, 정리 단계로 나눈다.
-- 각 단계에서 변경할 파일, 버전 선택 근거, 검증 명령, 중지와 복구 기준을 명시한다.
-- 실제 리소스 생성과 비용이 발생하는 작업은 별도 승인을 받기 전에는 실행하지 않는다.
+```bash
+modernize --model auto
 ```
 
-## 계획 검토와 승인
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
 
-- 최종 목표가 JDK 25와 Azure Container Apps(ACA)인지 확인합니다.
-- DB 인증과 내부 권한, 중복 메시지 처리와 재시도, Blob 공개 여부를 검토합니다.
-- `plan.md`와 `tasks.json`의 저장 경로를 기록하고 작업 순서와 제약 조건을 검토합니다.
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to modernize your app? | Assess |
+| Choose source type | Current folder |
+| Select assessment domains | Upgrade, Cloud Readiness, Security |
+| Analysis Coverage | Full analysis |
+| Minimum CVE Severity | High |
+| Target Runtime | OpenJDK 25 |
+| Target Compute Services | Azure Container Apps (ACA) |
+| Target Operating System | Linux |
+| Containerization | Enabled |
+| Continue? | Continue |
+| How would you like to assess? | Assess locally |
+| Additional assessment context |  |
+| Enter output path | 기본값 |
 
-계획에 동의한다면 에이전트에게 다음과 같이 요청합니다.
+평가가 끝나면 다음 화면에서 계획을 바로 생성하지 않고 메인 메뉴로 돌아갑니다.
+
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to continue? | Return to main menu |
+
+`java/.github/modernize/assessment` 아래에 생성된 평가 보고서를 열어 검토합니다.
 
 ```text
-계획 전체를 승인할게. 지금은 실행하지 말고 멈춰 줘.
-리소스 생성이나 비용이 발생하는 작업은 실행 전에 별도 승인을 받아 줘.
+방금 `java/.github/modernize/assessment` 디렉터리에 생성된 평가 보고서를 열어줘
 ```
 
-계획의 특정 부분에 추가 설명이 필요하거나 수정하고 싶다면 해당 단계와 원하는 내용을 같은 에이전트에게 요청합니다. 예를 들어 다음과 같이 요청할 수 있습니다.
+![평가 보고서의 Overview 화면](images/assessment-report-overview.png)
+
+## 지침 만들기(Rulebook)
+
+Rulebook은 현대화 과정에서 지킬 기준을 담은 지침입니다. [공식 문서](https://learn.microsoft.com/azure/developer/github-copilot-app-modernization/modernization-agent/overview)에서 설명하듯, 조직의 현대화 표준을 지침으로 만들어 여러 앱과 저장소에 재사용할 수 있습니다. 이 실습에서는 워크숍 기준 문서를 바탕으로 계획과 실행에 적용할 지침을 만듭니다.
+
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+
+| 항목 | 선택값 또는 입력값 |
+| --- | --- |
+| How would you like to modernize your app? | Rulebook |
+| Create a rulebook | 선택 |
+| Source | `../docs/java/modernize-rulebook-source.md` |
+| Use default templates | 선택 안 함 |
+| Push to Git URL | 입력하지 않음 |
+| 실행 | Generate modernization rulebook from source document |
+
+`java/.github/modernize/rulebook` 아래에 생성된 현대화 지침을 열어 검토합니다.
+
+> [!CAUTION]
+>
+> 현대화 지침은 작업 기준일 뿐, 운영체제 권한을 제한하거나 비용 발생을 막는 보안 장치는 아닙니다.
+
+## 계획 문서 만들기(Plan)
+
+평가 결과와 현대화 목표를 바탕으로 작업 순서와 성공 기준을 정합니다. [공식 문서](https://learn.microsoft.com/azure/developer/github-copilot-app-modernization/modernization-agent/overview)에 따르면 계획은 실행 전에 검토하고 다듬을 수 있습니다. [CLI 명령 참조](https://learn.microsoft.com/azure/developer/github-copilot-app-modernization/modernization-agent/cli-commands)는 자연어로 입력한 목표와 평가 보고서를 바탕으로 `plan.md`와 `tasks.json`을 만든다고 안내합니다. 이 실습에서는 앞서 만든 지침도 함께 반영해 계획을 작성하고 검토합니다.
+
+화면에 표시되는 항목과 선택값은 다음과 같습니다. UI 표기는 설치된 버전에 따라 다를 수 있습니다.
+
+| 항목 | 선택값 |
+| --- | --- |
+| How would you like to modernize your app? | Plan |
+| Choose source type | Current folder |
+| How would you like to deliver the plan? | Keep the plan local |
+| Select an assessment report to include (optional) | 생성된 평가 보고서 |
+| Create modernization plan / Plan name | modernization-plan (기본값) |
+| Create modernization plan / Prompt | 아래 프롬프트 참조 |
+
+`Create modernization plan`의 프롬프트 입력 화면에 다음 내용을 입력합니다.
 
 ```text
-plan.md의 DB 이전 단계에서 인증 방식을 관리 ID로 수정하고,
-관련 tasks.json도 계획에 맞게 수정하고 변경 내용을 설명해 줘.
-작업은 실행하지 말고 멈춰 줘.
+`.github/modernize/rulebook/`에 생성된 현대화 지침과 평가 보고서를 읽고
+Java 앱을 Linux Azure Container Apps로 현대화하는 하나의 계획을 작성해 줘.
+지금은 계획만 작성하고 실행하지 마.
+
+Java 8 기준 테스트 보강과 검증, JDK 25 업그레이드와 로컬 회귀 테스트,
+Azure 서비스 연동 코드와 단위 테스트, azd 배포 산출물 준비를 순서대로 포함해 줘.
+각 단계의 검증이 실패하면 다음 단계로 진행하지 않도록 해 줘.
+기존 web/worker 동작과 dev/S3 차이를 보존하고 Spring Boot와 라이브러리의
+호환성, 버전 근거, 변경 파일과 중단/복구 기준을 명시해 줘.
+
+PostgreSQL은 Flexible Server, RabbitMQ는 Service Bus,
+로컬 파일과 S3는 비공개 Blob으로 이전하도록 계획해 줘.
+관리 ID, 최소 권한, 메시지 처리와 파일 조회 동작을 유지해 줘.
+Dockerfile, azure.yaml, Bicep과 별도 DB 초기화 절차를 준비하고
+이미지는 로컬 엔진으로 빌드하도록 해 줘.
+실제 Azure 리소스 생성, DB 변경/데이터 이전, 이미지 게시와 배포는
+실행 작업에서 제외하고 참가자가 azd로 진행할 별도 절차로 정리해 줘.
 ```
 
-수정된 계획과 작업 목록을 다시 검토하고, 동의하면 계획 전체를 승인합니다. 이미 승인한 계획을 수정한 경우에도 다시 검토하고 승인합니다.
+이후 에이전트가 질문하면 내용을 읽고 권장 옵션을 선택하거나 직접 답변합니다.
+
+`.github/modernize/modernization-plan` 아래에 생성된 `plan.md`와 `tasks.json`을 열어 검토합니다.
+
+## 생성 문서 커밋하기
+
+앱 루트에서 평가 보고서, 현대화 지침, `plan.md`, `tasks.json`만 스테이징합니다. 커밋할 변경을 검토하고 앱 외부 파일이나 비밀정보가 있으면 제외합니다.
+
+```bash
+git add .github/modernize/assessment .github/modernize/rulebook .github/modernize/modernization-plan/plan.md .github/modernize/modernization-plan/tasks.json
+git status --short
+git diff --cached --stat
+git diff --cached
+```
+
+검토를 마친 뒤 문제가 없을 때만 커밋합니다.
+
+```bash
+git commit -m "Modernize: add assessment and plan"
+```
 
 ## 완료 및 다음 단계
 
-다음 항목을 모두 확인하면 이 실습이 완료됩니다.
+- [ ] 지침 파일의 실제 생성 경로를 기록하고 검토했습니다.
+- [ ] `plan.md`와 `tasks.json`의 실제 생성 경로를 기록하고 함께 검토했습니다.
+- [ ] 기준 테스트, 업그레이드, Azure 코드와 azd 산출물이 하나의 계획에 순서대로 포함되어 있습니다.
+- [ ] 외부 도구 설치나 비용 발생 작업, Azure/DB 변경이 계획 실행에 포함되지 않았습니다.
+- [ ] 테스트 조건, 파일 범위와 중단/복구 기준이 명확합니다.
+- [ ] 계획 범위를 바꿨다면 `plan.md`와 `tasks.json`을 함께 수정하고 다시 검토했습니다.
+- [ ] 평가 보고서, 현대화 지침, `plan.md`, `tasks.json`을 커밋하고 앱 외부 파일과 비밀정보는 제외했습니다.
 
-- 평가 범위와 결과 검토 완료
-- JDK 25, ACA, azd, 로컬 빌드 조건이 계획과 제약 조건 문서(`rulebook`)에 반영됨
-- `plan.md`와 `tasks.json`의 저장 경로와 작업 내용 확인
-- 계획 전체 승인
-
-평가 중 앱 소스가 변경되었다면 변경 내역을 먼저 검토합니다. 인증이나 도구 문제로 평가가 중단되면 [문제 해결](08-troubleshooting.md)을 확인합니다. 완료하지 못한 평가를 완료로 표시하거나, 문제를 우회하려고 모든 작업의 실행을 일괄 승인하지 않습니다.
-
-확인을 마쳤다면 [실습 3: JDK 25로 업그레이드하기](03-upgrade.md)로 이동합니다.
+위 항목을 모두 마쳤다면 다음 단계인 [3. JDK 25로 업그레이드하기](03-upgrade.md)로 이동해 Modernize CLI의 `Execute` 메뉴로 계획을 실행합니다.

@@ -1,5 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
@@ -39,8 +38,7 @@ try {
         $script:NvmAutoInstall = $false; $script:NvmEnabled = $true; $script:NvmDefault = $true
         $script:NvmList = $null
         $script:NodeProbeCode = 0
-        $script:WslVersion = [version]'2.6.1'; $script:WslAfter = [version]'2.6.2'
-        $script:WslCode = 0; $script:WslGood = $true
+        $script:JavaSuccess = $true
         $script:Managed = [pscustomobject]@{ Path = 'C:\PowerShell\7\pwsh.exe'; Version = [version]'7.5.0' }
         $script:Show = "버전`n----`n7.5.1`n7.5.0`n7.6.0-preview.1"; $script:ShowCode = 0; $script:WorkerFail = $false
     }
@@ -103,14 +101,15 @@ try {
             $code = $script:UseCode
             if ($script:Activate -and $code -eq 0) { $script:HasNode = $true; $script:Current = $script:InstalledVersion; $script:NodeProbeCode = 0 }
         }
-        elseif ($Name -eq 'fixture-wsl') { $code = $script:WslCode; $script:WslVersion = $script:WslAfter }
         elseif ($Name -eq 'winget' -and $Arguments -contains 'Microsoft.DotNet.SDK.10') { $text = '10.0.100' }
         elseif ($Name -eq 'winget') { $text = $script:Show; $code = $script:ShowCode }
         return [pscustomobject]@{ Code=$code; Text=$text }
     }
-    function Get-WorkshopWslVersion { return $script:WslVersion }
-    function Get-WorkshopWslExecutable { return 'fixture-wsl' }
-    function Test-WorkshopWsl2 { return $script:WslGood }
+    function Install-WorkshopJava {
+        param([int]$Major, [switch]$Update)
+        $script:Calls.Add("java $Major update=$([bool]$Update)")
+        return $script:JavaSuccess
+    }
     function Get-WorkshopManagedPowerShell { return $script:Managed }
     function Start-WorkshopPowerShellUpdate {
         param($Executable, $Version)
@@ -123,7 +122,8 @@ try {
     Assert-True ($script:Calls.Count -eq 2 -and $script:Prompts.Count -eq 0) 'default only verifies nvm and current Node'
     Reset-Fixture; $script:Approvals.Enqueue($false)
     Assert-True (Install-WorkshopNode -Update) 'decline update preserves supported Node'
-    Assert-True ($script:Calls.Count -eq 2) 'decline never contacts release service'
+    Assert-True ($script:Calls -contains 'release 22' -and
+        $script:Calls -notcontains 'nvm install 22.9.0' -and $script:Calls -notcontains 'nvm use 22.9.0') 'decline follows read-only lookup without installing or activating'
     Reset-Fixture
     Assert-True (Install-WorkshopNode -Update) 'installs and activates latest same major'
     Assert-True ($script:Calls -contains 'release 22' -and $script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') 'exact nvm commands'
@@ -131,12 +131,14 @@ try {
     Assert-True (@($script:Calls | Where-Object { $_ -match 'uninstall|delete|OpenJS|azd|AzureCLI' }).Count -eq 0) 'no removals or unrelated tools'
     Assert-True (Install-WorkshopNode -Update) 'repeat latest succeeds'
     Assert-True (@($script:Calls | Where-Object { $_ -eq 'nvm install 22.9.0' }).Count -eq 1) 'repeat no reinstall'
+    Assert-True ($script:Prompts.Count -eq 2) 'repeat current Node never prompts again'
     Reset-Fixture; $script:Current = '24.1.0'; $script:Latest = [version]'24.9.0'; $script:InstalledVersion = '24.9.0'
     Assert-True (Install-WorkshopNode -Update) 'newer major updated in place'
     Assert-True ($script:Calls -contains 'release 24' -and $script:Calls -notcontains 'release 22') 'never select 22 for active 24'
     Reset-Fixture; $script:Current = '22.10.0'
     Assert-True (Install-WorkshopNode -Update) 'ahead of catalog retained'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') 'no downgrade'
+    Assert-True ($script:Prompts.Count -eq 0) 'newer local Node never prompts'
     Reset-Fixture; $script:Current = '20.19.0'
     Assert-True (Install-WorkshopNode -Update) 'unsupported major moves to 22'
     Reset-Fixture; $script:Current = '20.19.0'
@@ -146,6 +148,7 @@ try {
     Reset-Fixture; $script:ExistingRelease = $true
     Assert-True (Install-WorkshopNode -Update) 'existing inactive release reused'
     Assert-True ($script:Calls -notcontains 'nvm install 22.9.0') 'no reinstall installed release'
+    Assert-True ($script:Prompts.Count -eq 1 -and $script:Prompts[0] -like 'Run nvm use *') 'installed inactive release only asks for activation'
     Reset-Fixture; $script:Approvals.Enqueue($true); $script:Approvals.Enqueue($false)
     Assert-True (Install-WorkshopNode -Update) 'declined activation preserves old supported active version'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0' -and $script:Current -eq '22.1.0') 'activation separately optional'
@@ -165,6 +168,7 @@ try {
     Assert-True (-not (Install-WorkshopNode -Update)) 'invalid active version fails'
     Reset-Fixture; $script:FailLookup = $true
     Assert-True (-not (Install-WorkshopNode -Update)) 'release lookup failure'
+    Assert-True ($script:Prompts.Count -eq 0) 'failed release lookup never asks to install'
     Reset-Fixture; $script:Owned = $false
     Assert-True (-not (Install-WorkshopNode -Update)) 'unknown ownership manual'
     Assert-True ($script:Prompts.Count -eq 0) 'unknown ownership never prompts takeover'
@@ -189,32 +193,18 @@ try {
 
     Reset-Fixture
     Assert-True ((Update-WorkshopWindowsHost) -eq 3010) 'PS update requires exit and restart, not success'
-    Assert-True ($script:Calls -contains 'fixture-wsl --update' -and $script:Calls -contains 'worker C:\PowerShell\7\pwsh.exe 7.5.1') 'host worker and WSL selected'
-    Assert-True ($script:Prompts.Count -eq 2) 'host updates separately consented'
-    Reset-Fixture; $script:Approvals.Enqueue($false); $script:Approvals.Enqueue($false)
-    Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'declined host updates continue'
-    Assert-True (@($script:Calls | Where-Object { $_ -match 'worker|--update' }).Count -eq 0) 'declined host unchanged'
-    Reset-Fixture; $script:Managed = $null; $script:Approvals.Enqueue($false)
-    Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'declined WSL and unmanaged PowerShell skip optional updates without failure'
+    Assert-True ($script:Calls -contains 'worker C:\PowerShell\7\pwsh.exe 7.5.1') 'PowerShell update uses independent worker'
+    Assert-True ($script:Prompts.Count -eq 1) 'PowerShell update requires its own consent'
+    Reset-Fixture; $script:Approvals.Enqueue($false)
+    Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'declined PowerShell update continues'
+    Assert-True (@($script:Calls | Where-Object { $_ -like 'worker *' }).Count -eq 0) 'declined host unchanged'
+    Reset-Fixture; $script:Managed = $null
+    Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'unmanaged PowerShell skips optional update without failure'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'worker *' }).Count -eq 0) 'unknown provenance never schedules replacement'
-    Assert-True ($script:Calls -notcontains 'fixture-wsl --update') 'manual PowerShell and declined WSL never mutate host'
-    Reset-Fixture; $script:Managed = $null; $script:WslCode = 1
-    Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'manual PowerShell does not mask failed approved WSL update'
-    Reset-Fixture; $script:WslVersion = $null; $script:Show = '7.5.0'
-    Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'inbox WSL manual'
-    Assert-True ($script:Calls -notcontains 'fixture-wsl --update') 'no unversioned WSL mutation'
-    foreach ($case in @('exit', 'version', 'platform', 'downgrade')) {
-        Reset-Fixture; $script:Show = '7.5.0'
-        switch ($case) {
-            exit { $script:WslCode = 1 }
-            version { $script:WslAfter = $null }
-            platform { $script:WslGood = $false }
-            downgrade { $script:WslAfter = [version]'2.5.0' }
-        }
-        Assert-True ((Update-WorkshopWindowsHost) -eq 1) "WSL $case fails verification"
-    }
-    Reset-Fixture; $script:WslAfter = $script:WslVersion; $script:Show = '7.5.0'
+    Assert-True ($script:Calls.Count -eq 0 -and $script:Prompts.Count -eq 0) 'manual PowerShell update performs no catalog lookup or consent prompt'
+    Reset-Fixture; $script:Show = '7.5.0'
     Assert-True ((Update-WorkshopWindowsHost) -eq 0) 'already latest host no worker'
+    Assert-True ($script:Prompts.Count -eq 0 -and @($script:Calls | Where-Object { $_ -like 'worker *' }).Count -eq 0) 'current PowerShell never schedules reinstall'
     Reset-Fixture; $script:Show = '8.0.0'
     Assert-True ((Update-WorkshopWindowsHost) -eq 1) 'PS never upgrades to new major'
     Reset-Fixture; $script:ShowCode = 1
@@ -226,11 +216,29 @@ try {
     Assert-True ($script:Calls.Count -eq 0 -and $script:Prompts.Count -eq 0) 'noninteractive no host prompts'
 
     $env:NVM_HOME = 'C:\fixture-nvm'; $env:NVM_SYMLINK = 'C:\fixture-node'
-    Reset-Fixture; $Update = $true
-    Assert-True (Install-WindowsTools dotnet) '.NET installs same-major Node through shared nvm implementation'
-    Assert-True ($script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') '.NET installs and activates with nvm'
-    Assert-True ($script:Calls -contains 'winget install --id Microsoft.AzureCLI --exact --source winget' -and
-        $script:Calls -contains 'winget install --id Microsoft.Azd --exact --source winget') '.NET retains missing Azure CLI installers'
+    $Update = $true
+    foreach ($selectedTrack in @('java', 'dotnet')) {
+        Reset-Fixture
+        Assert-True (Install-WindowsTools $selectedTrack) "$selectedTrack installs same-major Node through shared nvm implementation"
+        Assert-True ($script:Calls -contains 'nvm install 22.9.0' -and $script:Calls -contains 'nvm use 22.9.0') "$selectedTrack installs and activates with nvm"
+        foreach ($package in @('Microsoft.AzureCLI', 'Microsoft.Azd', 'GitHub.cli', 'GitHub.Copilot.modernization.agent')) {
+            Assert-True ($script:Calls -contains "winget install --id $package --exact --source winget") "$selectedTrack installs missing $package on Windows"
+        }
+        if ($selectedTrack -eq 'java') {
+            Assert-True ($script:Calls -contains 'java 8 update=True' -and $script:Calls -contains 'java 25 update=True') 'Java installs both JDKs with Update forwarded'
+            Assert-True ($script:Calls -notcontains 'dotnet --list-sdks') 'Java never probes the .NET SDK'
+        }
+        else {
+            Assert-True ($script:Calls -contains 'dotnet --list-sdks' -and
+                @($script:Calls | Where-Object { $_ -like 'java *' }).Count -eq 0) '.NET checks its SDK without installing JDKs'
+        }
+    }
+    Reset-Fixture; $Update = $false
+    Assert-True (Install-WindowsTools java) 'Java default prepares native tools without updates'
+    Assert-True ($script:Calls -contains 'java 8 update=False' -and $script:Calls -contains 'java 25 update=False') 'Java default does not request JDK updates'
+    Reset-Fixture; $script:JavaSuccess = $false
+    Assert-True (-not (Install-WindowsTools java)) 'Java preparation failure is not masked by successful common tools'
+    $Update = $true
     Reset-Fixture; $script:Approvals.Enqueue($true); $script:Approvals.Enqueue($false)
     Assert-True (Install-WindowsTools dotnet) '.NET declined activation keeps supported current Node'
     Assert-True ($script:Calls -notcontains 'nvm use 22.9.0') '.NET activation decline never switches common link'
@@ -256,26 +264,37 @@ try {
         Assert-True (-not (Install-WorkshopNode -Update)) 'v2 malformed installed list rejected'
     }
     function Update-WorkshopWindowsHost { $script:HostRuns++; return $script:HostCode }
-    function Install-WindowsTools { param($SelectedTrack); $script:ToolRuns++; return $script:ToolSuccess }
-    function Initialize-AzureEnvironment { return $true }
-    function Invoke-PrerequisiteMain { $script:PrerequisiteRuns++; return 0 }
+    function Install-WindowsTools { param($SelectedTrack); $script:ToolRuns++; $script:Calls.Add("tools $SelectedTrack"); return $script:ToolSuccess }
+    function Initialize-AzureEnvironment {
+        param($SelectedTrack = 'dotnet')
+        $script:AzureRuns++
+        $script:Calls.Add("azure $SelectedTrack")
+        return $script:AzureSuccess
+    }
+    function Invoke-PrerequisiteMain { $script:PrerequisiteRuns++; $script:Calls.Add('check'); return $script:PrerequisiteCode }
     Reset-Fixture; $script:HostRuns = 0; $script:ToolRuns = 0; $script:HostCode = 0
-    $script:ToolSuccess = $true; $script:PrerequisiteRuns = 0
+    $script:ToolSuccess = $true; $script:PrerequisiteRuns = 0; $script:PrerequisiteCode = 0
+    $script:AzureRuns = 0; $script:AzureSuccess = $true
     $Update = $true; $Track = 'java'
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) 'main update then Java verification'
     Assert-True ($script:HostRuns -eq 1 -and $script:ToolRuns -eq 1) 'host update runs once only'
+    Assert-True (($script:Calls -join ',') -eq 'tools java,azure java,check') 'Java prepares native tools and track-specific Azure before full prerequisite checks'
     $script:HostCode = 3010
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:ToolRuns -eq 1) 'restart pending stops before tool actions'
     $script:HostCode = 1
-    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:ToolRuns -eq 2) 'manual host failure does not block independent Node work or mask failure'
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:ToolRuns -eq 2) 'host failure does not block independent tool work or mask failure'
     $Track = 'dotnet'; $script:HostCode = 0
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0) '.NET host updates keep existing CLI path'
     $Update = $false; $runs = $script:HostRuns
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 0 -and $script:HostRuns -eq $runs) 'default never calls host updater'
     $script:ToolSuccess = $false; $Track = 'java'; $script:Calls.Clear()
-    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:Calls.Count -eq 0) 'Java preparation failure never invokes a potentially auto-installing Node shim'
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and ($script:Calls -join ',') -eq 'tools java') 'Java preparation failure skips Azure actions and prerequisite probes'
     $Track = 'dotnet'; $prerequisiteRuns = $script:PrerequisiteRuns
     Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1 -and $script:PrerequisiteRuns -eq $prerequisiteRuns) '.NET preparation failure never reenters potentially auto-installing prerequisite probes'
+    $script:ToolSuccess = $true; $Track = 'java'; $script:AzureSuccess = $false
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'Java Azure preparation failure propagates'
+    $script:AzureSuccess = $true; $script:PrerequisiteCode = 1
+    Assert-True ((Invoke-InstallPrerequisiteMain) -eq 1) 'Java full prerequisite failure propagates'
     $env:PATH = 'C:\fixture-first'
     & $realUpdatePath
     Assert-True (($env:PATH -split ';')[0] -eq 'C:\fixture-first') 'real PATH refresh preserves existing priority'
@@ -289,7 +308,6 @@ try {
 
     # Exercise the real read-only ownership and parsing helpers with fake paths.
     . (Join-Path $root 'scripts\windows-prerequisite-updates.ps1')
-    function Get-WorkshopWslExecutable { return 'fixture-wsl' }
     $env:NVM_HOME = 'C:\fixture-nvm'; $env:NVM_SYMLINK = 'C:\fixture-node'
     Reset-Fixture
     $script:LinkType = 'SymbolicLink'; $script:Target = 'C:\fixture-nvm\v22.1.0'
@@ -306,7 +324,6 @@ try {
                 } else { $script:NvmVersion }
             }
             node { 'v22.1.0' }
-            fixture-wsl { $script:WslText }
             winget { $script:WingetText }
             default { '7.5.0' }
         }
@@ -344,12 +361,6 @@ try {
     Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 foreign linked version rejected'
     $script:Target = 'C:\fixture-data\installs\v22.1.0'; $script:NvmAutoInstall = $true
     Assert-True (-not (Test-WorkshopNvmOwnership 'C:\fixture-data\.nodejs\node.exe')) 'v2 ownership gate refuses automatic installation'
-    $script:ProbeCode = 0; $script:WslText = "WSL 버전: 2.6.1.0`n커널 버전: 6.6.0"
-    Assert-True ((Get-WorkshopWslVersion) -eq [version]'2.6.1.0') 'localized WSL first line version'
-    $script:WslText = ($script:WslText.ToCharArray() -join "`0")
-    Assert-True ((Get-WorkshopWslVersion) -eq [version]'2.6.1.0') 'UTF16 NUL WSL output'
-    $script:WslText = 'invalid'
-    Assert-True (-not (Get-WorkshopWslVersion)) 'unrecognized WSL output manual'
     function Invoke-RestMethod { param($Uri); return @(@{ version='v24.9.0' }, @{ version='v22.8.0' }, @{ version='v22.9.0' }, @{ version='v22.10.0-rc.1' }) }
     Assert-True ((Get-WorkshopNodeRelease 22) -eq [version]'22.9.0') 'release index excludes prereleases and other majors'
     Assert-True (-not (Get-WorkshopNodeRelease 26)) 'missing release never fabricated'
@@ -394,12 +405,16 @@ function fixture-pwsh { `$global:LASTEXITCODE=0; '$actual' }
                 Replace("& 'C:\PowerShell\7\pwsh.exe'", 'fixture-pwsh')
             $file = Join-Path $fixture "$case.ps1"
             [IO.File]::WriteAllText($file, $preamble + "`n" + $mocked, [Text.UTF8Encoding]::new($true))
-            $output = & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -NonInteractive -File $file 2>&1 | Out-String
-            if ($case -eq 'success') {
-                Assert-True ($LASTEXITCODE -eq 0 -and $output.Contains('[PASS] PowerShell 7.5.1')) 'mocked worker verifies successful update'
-            }
-            else {
-                Assert-True ($LASTEXITCODE -eq 1 -and -not $output.Contains('[PASS]')) "mocked worker $case never reports success"
+            foreach ($shell in @((Join-Path $PSHOME 'pwsh.exe'), $script:WorkerPath)) {
+                $output = & $shell -NoProfile -NonInteractive -File $file 2>&1 | Out-String
+                if ($case -eq 'success') {
+                    Assert-True ($LASTEXITCODE -eq 0 -and $output.Contains('[PASS] PowerShell 7.5.1')) "mocked worker verifies successful update: $shell"
+                }
+                else {
+                    $status = if ($case -eq 'restart') { '[WARN]' } else { '[FAIL]' }
+                    Assert-True ($LASTEXITCODE -eq 1 -and $output.Contains($status) -and -not $output.Contains('[PASS]')) "mocked worker $case reports its status without success: $shell"
+                }
+                Assert-True (-not $output.Contains([string][char]27)) "redirected worker $case output stays plain: $shell"
             }
         }
     }

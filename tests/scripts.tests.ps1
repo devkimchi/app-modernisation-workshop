@@ -1,6 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
@@ -30,8 +28,15 @@ $savedProgramFilesX86 = ${env:ProgramFiles(x86)}
 try {
     foreach ($file in Get-ChildItem (Join-Path $root 'scripts') -Filter '*.ps1') {
         $tokens = $null; $errors = $null
-        $null = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
+        $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
         Assert-True ($errors.Count -eq 0) "syntax $($file.Name)"
+        $koreanStrings = @($ast.FindAll({
+            param($node)
+            ($node -is [Management.Automation.Language.StringConstantExpressionAst] -or
+                $node -is [Management.Automation.Language.ExpandableStringExpressionAst]) -and
+                $node.Extent.Text -match '[\uac00-\ud7a3]'
+        }, $true))
+        Assert-True ($koreanStrings.Count -eq 0) "English script messages: $($file.Name)"
     }
     $env:AZD_CONTAINER_RUNTIME = ''
     Assert-True ((Resolve-ContainerEngine '') -eq 'docker') 'default engine'
@@ -43,28 +48,6 @@ try {
     Assert-True (Test-MinimumVersion 'azd version 1.37.3 (commit abc)' '1.37.3') 'azd minimum'
     Assert-True (-not (Test-MinimumVersion '1.37.2' '1.37.3')) 'old azd'
     Assert-True (-not (Test-MinimumVersion '22.0.0-rc.1' '22.0.0')) 'preview rejected'
-
-    if ($IsWindows) {
-        & {
-            $script:FixtureDistributions = "Ubuntu`nUbuntu-24.04"
-            $script:FixtureWslVersion = 2
-            function Invoke-ToolProbe {
-                param([string]$Name, [string[]]$Arguments)
-                $text = if ($Arguments -contains '--quiet') { $script:FixtureDistributions }
-                    else { "  Ubuntu Running $script:FixtureWslVersion`n  Ubuntu-24.04 Stopped 2" }
-                return [pscustomobject]@{ Code = 0; Text = $text }
-            }
-            Assert-True ((Get-JavaBashTarget '').Distribution -eq 'Ubuntu') 'Ubuntu default with multiple distributions'
-            Assert-True ((Get-JavaBashTarget 'Ubuntu-24.04').Distribution -eq 'Ubuntu-24.04') 'explicit distribution overrides Ubuntu'
-            $script:FixtureDistributions = 'Ubuntu-24.04'
-            Assert-Throws { Get-JavaBashTarget '' } 'missing Ubuntu does not fall back to sole distribution'
-            $script:FixtureDistributions = ''
-            Assert-Throws { Get-JavaBashTarget '' } 'no distribution fails'
-            $script:FixtureDistributions = 'Ubuntu'
-            $script:FixtureWslVersion = 1
-            Assert-Throws { Get-JavaBashTarget '' } 'WSL1 Ubuntu rejected'
-        }
-    }
 
     $script:Calls = [Collections.Generic.List[string]]::new()
     $script:Stopped = $false
@@ -88,8 +71,8 @@ try {
     Test-ContainerRuntime podman
     Assert-True (-not (Has-Failure 'container-cli')) 'podman CLI'
     Assert-True (-not (Has-Failure 'builder')) 'podman native builder'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-engine' -and $_.Message -like '*설치 위치는 이 검사로 확인하지 않습니다*' }).Count -eq 1) 'engine location is not inferred'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-workload' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*실제 워크로드 성공을 보장하지 않습니다*' }).Count -eq 1) 'actual container workload remains manual'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-engine' -and $_.Message -like '*does not verify where the engine is installed*' }).Count -eq 1) 'engine location is not inferred'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'container-workload' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*do not guarantee that the actual workload will succeed*' }).Count -eq 1) 'actual container workload remains manual'
     Assert-True (@($script:Calls | Where-Object { $_ -like 'docker *' }).Count -eq 0) 'podman never probes docker'
     if ($IsWindows -or $IsMacOS) {
         Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'podman-machine' -and $_.Status -eq 'PASS' -and $_.Message -like '*fixture-machine*' }).Count -eq 1) 'podman machine list shown'
@@ -117,6 +100,11 @@ try {
         switch ($Name) {
             git { $text = 'git version 2.50.0' }
             node { $text = 'v22.1.0'; if ($script:MissingNode) { $code=127; $text='' } }
+            modernize { $text = '1.0.95'; if ($script:ModernizeFailure) { $code=1 } }
+            gh {
+                if ($Arguments[0] -eq '--version') { $text = 'gh version 2.45.0'; if ($script:OldGh) { $text='gh version 2.44.0' } }
+                elseif ($script:GhAuthFailure) { $code=1 }
+            }
             az {
                 switch ($Arguments[0]) {
                     version { $text='{}' }
@@ -154,10 +142,24 @@ try {
     New-Results
     Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object Status -EQ FAIL).Count -eq 0) 'complete common tool fixture'
+    & {
+        $script:ModernizeFailure=$true; $script:OldGh=$true
+        New-Results
+        Test-CommonTools docker dotnet
+        Assert-True (Has-Failure modernize) 'unusable Modernize fails'
+        Assert-True (Has-Failure gh) 'old gh fails'
+        $script:ModernizeFailure=$false; $script:OldGh=$false; $script:GhAuthFailure=$true
+        New-Results
+        Test-CommonTools docker dotnet
+        Assert-True (Has-Failure gh-login) 'gh auth failure'
+        $script:GhAuthFailure=$false
+    }
+    New-Results
+    Test-CommonTools docker dotnet
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Status -eq 'MANUAL' -and $_.Message -like '*subscription-id*' }).Count -eq 1) 'subscription identity requires confirmation'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq '구독 이름: Subscription name / 구독 ID: subscription-id' }).Count -eq 1) 'subscription format'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -ceq 'Subscription name (subscription-id)' }).Count -eq 1) 'subscription format'
     Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-subscription' -and $_.Message -notlike '*11111111-2222-3333-4444-555555555555*' -and $_.Message -like '*Subscription name*' }).Count -eq 1) 'subscription excludes tenant ID'
-    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq '테넌트 이름: Example tenant / 테넌트 ID: 11111111-2222-3333-4444-555555555555' }).Count -eq 1) 'tenant name and ID require confirmation'
+    Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'azure-tenant' -and $_.Status -eq 'MANUAL' -and $_.Message -ceq 'Example tenant (11111111-2222-3333-4444-555555555555)' }).Count -eq 1) 'tenant name and ID require confirmation'
     $script:TenantFails=$true
     New-Results
     Test-CommonTools docker dotnet
@@ -188,28 +190,51 @@ try {
     . (Join-Path $root 'scripts\check-prerequisites.ps1')
 
     if ($IsWindows) {
-        $Track='java'; $ContainerEngine='docker'; $Help=$false
-        $env:AZD_CONTAINER_RUNTIME='docker'
-        $script:HostNodeMissing=$false
-        $script:BashResult=0
-        function Invoke-ToolProbe {
-            param([string]$Name, [string[]]$Arguments)
-            if ($Name -eq 'node' -and $script:HostNodeMissing) { return [pscustomobject]@{ Code=127; Text='' } }
-            return [pscustomobject]@{ Code=0; Text=$(switch ($Name) { node { 'v22.1.0' } azd { 'azd version 1.37.3' } default { 'git version 2.50.0' } }) }
+        & {
+            $Track='java'; $ContainerEngine='docker'; $Help=$false
+            $env:AZD_CONTAINER_RUNTIME='docker'
+            $script:NativeMissing=$false
+            function Test-CommonTools {
+                param($Engine, $SelectedTrack)
+                Assert-True ($Engine -eq 'docker' -and $SelectedTrack -eq 'java') 'native Java runs common tools'
+                Assert-True ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -eq 'no') 'native Java disables dynamic installs'
+                if ($script:NativeMissing) { Add-Check FAIL node 'fixture missing Node' }
+            }
+            function Test-JavaTools { Add-Check PASS jdk-8 'fixture'; Add-Check PASS jdk-25 'fixture' }
+            function Test-DotnetTools { throw 'Java must not probe .NET tools' }
+            $previous = $env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL
+            Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'native Windows Java passes'
+            Assert-True ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -ceq $previous) 'dynamic-install state restored'
+            Assert-True (@($script:CheckResults | Where-Object Id -eq 'jdk-25').Count -eq 1) 'native JDK check reached'
+            $script:NativeMissing=$true
+            Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'native Java common failure propagated'
         }
-        function Invoke-JavaBashScript {
-            param($Script, $Arguments, $Distribution)
-            $script:JavaArguments = $Arguments
-            return $script:BashResult
+        & {
+            $Track='java'; $Help=$false
+            $originalRuntime = $env:AZD_CONTAINER_RUNTIME
+            $messages = [Collections.Generic.List[string]]::new()
+            function Write-Host { param([string]$Object); $messages.Add($Object) }
+            function Test-CommonTools {}
+            function Test-JavaTools {}
+            foreach ($case in @(
+                @{ Engine=''; Configured=''; Remind=$false },
+                @{ Engine='docker'; Configured='docker'; Remind=$false },
+                @{ Engine='podman'; Configured=''; Remind=$true },
+                @{ Engine=''; Configured='podman'; Remind=$false }
+            )) {
+                $ContainerEngine = $case.Engine
+                $env:AZD_CONTAINER_RUNTIME = $case.Configured
+                $messages.Clear()
+                Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'runtime reminder preserves successful checks'
+                $reminders = @($messages | Where-Object { $_ -like '*AZD_CONTAINER_RUNTIME*' })
+                Assert-True ($reminders.Count -eq [int]$case.Remind) "runtime reminder: engine=$ContainerEngine configured=$($case.Configured)"
+                if ($case.Remind) {
+                    Assert-True ($reminders[0] -ceq 'Before running azd in this shell, set $env:AZD_CONTAINER_RUNTIME = ''podman''.') 'Podman reminder uses PowerShell syntax'
+                }
+                Assert-True ($env:AZD_CONTAINER_RUNTIME -ceq $case.Configured) 'runtime reminder does not change the caller environment'
+            }
+            $env:AZD_CONTAINER_RUNTIME = $originalRuntime
         }
-        Assert-True ((Invoke-PrerequisiteMain) -eq 0) 'Windows Java host passes'
-        Assert-True ($script:JavaArguments -contains '--windows-host-checked') 'Windows host check communicated to WSL'
-        Assert-True (@($script:CheckResults | Where-Object { $_.Id -eq 'windows-host-azd' -and $_.Status -eq 'INFO' -and $_.Message -like '*1.37.3*' }).Count -eq 1) 'host azd shown as informational'
-        $script:HostNodeMissing=$true
-        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'Windows Java host missing Node fails'
-        $script:HostNodeMissing=$false; $script:BashResult=1
-        Assert-True ((Invoke-PrerequisiteMain) -eq 1) 'WSL failure propagates'
-        Remove-Item Function:\Invoke-ToolProbe, Function:\Invoke-JavaBashScript
         . (Join-Path $root 'scripts\check-prerequisites.ps1')
         $env:ProgramFiles = Join-Path $temporary 'program-files'
         ${env:ProgramFiles(x86)} = Join-Path $temporary 'program-files-x86'
@@ -389,24 +414,54 @@ try {
         Assert-True ($bash.Contains($sample.Commit)) "same commit in both shells: $trackName"
         Assert-True ($bash.Contains($sample.Repository)) "same source in both shells: $trackName"
     }
-    $devContainer = Get-Content -LiteralPath (Join-Path $root '.devcontainer\devcontainer.json') -Raw | ConvertFrom-Json
-    Assert-True (@($devContainer.features.PSObject.Properties.Name | Where-Object { $_ -notmatch ':latest$' }).Count -eq 0) 'Dev Container features use latest tags'
-    $javaFeature = $devContainer.features.'ghcr.io/devcontainers/features/java:latest'
-    Assert-True ($javaFeature.version -eq '8' -and @($javaFeature.additionalVersions -split ',') -contains '21' -and @($javaFeature.additionalVersions -split ',') -contains '25') 'Dev Container includes JDK 8, 21 and 25'
-    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/dotnet:latest'.version -eq '10.0') 'Dev Container includes .NET 10 SDK'
-    Assert-True ($devContainer.features.'ghcr.io/devcontainers/features/node:latest'.version -eq '22') 'Dev Container includes Node 22'
-    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/azure-cli:latest' -and $null -ne $devContainer.features.'ghcr.io/azure/azure-dev/azd:latest') 'Dev Container includes Azure CLI and azd'
-    Assert-True ($null -ne $devContainer.features.'ghcr.io/devcontainers/features/docker-in-docker:latest') 'Dev Container includes isolated Docker engine'
-    Assert-True ($devContainer.containerEnv.WORKSHOP_DEVCONTAINER -eq '1' -and $devContainer.containerEnv.AZD_CONTAINER_RUNTIME -eq 'docker') 'Dev Container selects the documented Java and Docker environment'
-    Assert-True (@($devContainer.forwardPorts) -contains 8080 -and @($devContainer.forwardPorts) -contains 15672) 'Dev Container forwards app and management ports'
-    $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
-    $env:AZD_CONTAINER_RUNTIME='docker'
-    function pwsh { $global:LASTEXITCODE=1 }
-    Assert-True ((Invoke-DownloadMain) -eq 1) 'download propagates prerequisite failure'
-    Assert-True (-not (Test-Path $Destination)) 'prerequisite failure prevents download'
-    Remove-Item Function:\pwsh
+    if ($IsWindows) {
+        & {
+            $savedDownloadScripts = $script:DownloadScripts
+            $preflightScripts = Join-Path $temporary 'preflight scripts'
+            [IO.Directory]::CreateDirectory($preflightScripts) | Out-Null
+            $preflightPath = Join-Path $preflightScripts 'check-prerequisites.ps1'
+            [IO.File]::WriteAllText($preflightPath, @"
+param([string]`$Track, [string]`$ContainerEngine, [switch]`$Help)
+function Resolve-ContainerEngine {
+${function:Resolve-ContainerEngine}
+}
+"@, [Text.UTF8Encoding]::new($true))
+            $preflightCode = 1
+            $preflightCalls = [Collections.Generic.List[string]]::new()
+            $downloadCalls = [Collections.Generic.List[string]]::new()
+            $Track='dotnet'; $Destination=Join-Path $temporary 'blocked-by-preflight'; $ContainerEngine='docker'; $Help=$false
+            $env:AZD_CONTAINER_RUNTIME='docker'
+            function Invoke-WorkshopPowerShell {
+                param($ScriptPath, $BoundParameters, $RemainingArguments)
+                $preflightCalls.Add($ScriptPath)
+                Assert-True ($ScriptPath -eq $preflightPath) 'download preflight uses the shared console-preserving launcher'
+                Assert-True ($BoundParameters.Track -eq $Track) 'preflight receives the selected track'
+                Assert-True ($BoundParameters.ContainerEngine -eq $ContainerEngine) 'preflight receives the selected engine'
+                Assert-True ($RemainingArguments.Count -eq 0) 'preflight has no additional arguments'
+                $global:LASTEXITCODE = if ($preflightCode -eq 0) { 1 } else { 0 }
+                return $preflightCode
+            }
+            function Invoke-SampleDownload {
+                param($Target,$Definition,$WorkshopRoot)
+                $downloadCalls.Add($Target)
+                Assert-True ($Definition.Subdirectory -eq 'asset-manager') 'Java download uses pinned Java definition'
+                Assert-True ($Definition.Required -contains 'mvnw.cmd') 'Windows wrapper required'
+                Assert-True ($Target -eq $Destination) 'Java native destination unchanged'
+            }
+            try {
+                $script:DownloadScripts = $preflightScripts
+                Assert-True ((Invoke-DownloadMain) -eq 1) 'download propagates prerequisite failure rather than stale LASTEXITCODE'
+                Assert-True ($downloadCalls.Count -eq 0 -and -not (Test-Path $Destination)) 'prerequisite failure prevents download'
+                $Track='java'; $Destination=Join-Path $temporary 'native-java'; $preflightCode=0
+                Assert-True ((Invoke-DownloadMain) -eq 0) 'Java reaches native download after preflight rather than stale LASTEXITCODE'
+                Assert-True ($preflightCalls.Count -eq 2 -and $downloadCalls.Count -eq 1) 'each download runs preflight once'
+            }
+            finally { $script:DownloadScripts = $savedDownloadScripts }
+        }
+    }
     $documents = @((Get-Item (Join-Path $root 'README.md'))) + @(Get-ChildItem (Join-Path $root 'docs') -Recurse -Filter '*.md')
-    Assert-True ($documents.Count -eq 21) '21 workshop documents (root and 20 track documents)'
+    $workshopPages = @($documents | Where-Object { $_.DirectoryName -eq $root -or ($_.Directory.Name -in @('java', 'dotnet') -and ($_.Name -eq 'README.md' -or $_.Name -match '^0[0-8]-.*\.md$')) })
+    Assert-True ($workshopPages.Count -eq 21) '21 workshop pages (root and 20 track pages)'
     foreach ($document in $documents) {
         $text = Get-Content $document.FullName -Raw
         Assert-True ($text -match '[가-힣]') "Korean text: $($document.Name)"
@@ -417,7 +472,7 @@ try {
             $target = [IO.Path]::GetFullPath((Join-Path $document.DirectoryName ($link.Split('#')[0] -replace '/', [IO.Path]::DirectorySeparatorChar)))
             Assert-True (Test-Path -LiteralPath $target -PathType Leaf) "local link: $link in $($document.Name)"
         }
-        if ($document.DirectoryName -eq $root) { continue }
+        if ($document.DirectoryName -eq $root -or $document.FullName -notin $workshopPages.FullName) { continue }
         $track = $document.Directory.Name
         $trackLabel = if ($track -eq 'java') { 'Java' } else { '.NET' }
         $navigation = ($text -split '\r?\n' | Where-Object { $_ -match '^\[전체 목차\]' } | Select-Object -First 1)
@@ -436,6 +491,8 @@ try {
             Assert-True ($target -ne $document.FullName) "no self navigation: $track/$($document.Name)"
         }
     }
+    & (Join-Path $PSHOME 'pwsh') -NoProfile -File (Join-Path $PSScriptRoot 'java-deployment.tests.ps1')
+    Assert-True ($LASTEXITCODE -eq 0) 'Java deployment helper suite'
     Write-Host "PASS: $script:Passed PowerShell assertions"
 }
 finally {

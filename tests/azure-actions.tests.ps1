@@ -1,6 +1,4 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
@@ -120,6 +118,9 @@ try {
     Assert-Action ($env:AZURE_EXTENSION_USE_DYNAMIC_INSTALL -eq 'yes_prompt')
     Assert-Action (($script:Calls -join ';') -eq 'account;extension;identity;Microsoft.App;Microsoft.OperationalInsights;Microsoft.Storage;Microsoft.ContainerRegistry;Microsoft.ServiceBus;Microsoft.Sql;azd')
     $script:Calls.Clear()
+    Assert-Action (Initialize-AzureEnvironment -SelectedTrack java)
+    Assert-Action ($script:Calls -contains 'Microsoft.DBforPostgreSQL' -and $script:Calls -notcontains 'Microsoft.Sql')
+    $script:Calls.Clear()
     function Invoke-ToolProbe { return [pscustomobject]@{ Code = 1; Text = 'auth error' } }
     Assert-Action (Initialize-AzureEnvironment)
     Assert-Action ($script:Calls.Count -eq 0)
@@ -141,6 +142,9 @@ function Invoke-ToolProbe {
     switch -Wildcard ("$Name $($Arguments -join ' ')") {
         'git --version' { $text = 'git version 2.0.0' }
         'node --version' { $text = 'v22.0.0' }
+        'modernize --version' { $text = '1.0.95' }
+        'gh --version' { $text = 'gh version 2.45.0' }
+        'gh auth status' { $text = 'fixture signed in' }
         'az version --output json' { $text = '{}' }
         'az extension show *' { $code = 1 }
         'az account show --query state --output tsv' { $text = 'Enabled' }

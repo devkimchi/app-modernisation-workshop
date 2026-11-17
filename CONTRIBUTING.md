@@ -1,58 +1,76 @@
 # Contributing
 
-Thank you for helping improve this workshop. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Follow the [Code of Conduct](CODE_OF_CONDUCT.md) when contributing.
 
 ## Scope and changes
 
-Keep changes focused on the workshop instructions, preparation scripts, and regression tests. Explain learner-facing changes in the relevant documentation and preserve upstream source licenses and notices when working with downloaded samples. Do not commit credentials, local configuration, downloaded applications, or generated test output.
+Keep changes focused on workshop documentation, preparation scripts, and regression tests. Update the relevant documentation when instructions or script behavior change. Do not commit credentials, local configuration, downloaded applications, or generated test output.
 
-The sample download scripts record the source and pinned commit SHA in `upstream-source.json` and preserve upstream licenses and notices as `UPSTREAM-*` files. They do not modify the original code or target framework, create a separate `.git` inside the sample, or commit or push the download. Preserve this behavior when maintaining the scripts.
+Write user-facing script messages in English; keep participant documentation in Korean.
+
+Preserve the download scripts' pinned source commits, `upstream-source.json` records, and `UPSTREAM-*` licenses and notices. Downloads must not modify sample code or target frameworks, create a nested `.git`, or commit or push files.
 
 ## Local checks
 
-Run the relevant regression tests before opening a pull request. These developer checks require no additional test packages and use fixtures and mocked command responses without changing real accounts or OS features. Workshop participants do not need to run them; use the prerequisite checks in the [Java setup](docs/java/00-setup.md) or [.NET setup](docs/dotnet/00-setup.md) instead.
+Run relevant tests from the repository root before opening a pull request. They use isolated fixtures and mocked commands, require no additional test packages, and do not install real tools or change accounts or OS features. Participants should use the [Java](docs/java/00-setup.md) or [.NET](docs/dotnet/00-setup.md) prerequisite checks instead.
 
-PowerShell:
+### PowerShell
 
 ```powershell
-pwsh -File ./tests/scripts.tests.ps1
-pwsh -File ./tests/dotnet-original.tests.ps1
-pwsh -File ./tests/install-prerequisites.tests.ps1
-pwsh -File ./tests/windows-prerequisite-updates.tests.ps1
-pwsh -File ./tests/azure-actions.tests.ps1
-pwsh -File ./tests/powershell-bootstrap.tests.ps1
+pwsh -NoProfile -File ./tests/scripts.tests.ps1
+pwsh -NoProfile -File ./tests/dotnet-original.tests.ps1
+pwsh -NoProfile -File ./tests/install-prerequisites.tests.ps1
+pwsh -NoProfile -File ./tests/windows-prerequisite-updates.tests.ps1
+pwsh -NoProfile -File ./tests/azure-actions.tests.ps1
+pwsh -NoProfile -File ./tests/powershell-bootstrap.tests.ps1
+pwsh -NoProfile -File ./tests/java-tools.tests.ps1
 ```
 
-On Windows, all `.ps1` entrypoints also accept `powershell.exe -NoProfile -File .\path\to\script.ps1` from Windows PowerShell 5.1 and delegate to PowerShell 7. Both PowerShell 7 and the WSL2 platform are required before production script work on Windows, including the .NET track. A Linux distribution is a separate Java prerequisite. The installer alone may offer to install missing prerequisites, with separate consent for PowerShell 7 and WSL2; CI, redirected input/output and `-NonInteractive` sessions cannot install. WSL2 installation changes Windows features and may require administrator approval and a manual restart; it never installs a distro or restarts Windows automatically.
+The `scripts.tests.ps1` suite also runs `java-deployment.tests.ps1` with mocked Azure, HTTP and PostgreSQL commands. Run the latter directly when changing Java deployment helpers. It does not initialize a real database or deploy an application.
 
-Regression entrypoints mock the WSL2 host preflight so tests do not depend on host OS features or an installed distribution. The bootstrap suite additionally uses real Windows PowerShell 5.1 subprocesses against isolated script copies with mocked prerequisite discovery to verify parsing, early failure and delegation. No real installation, login or OS modification is performed. Repeat the commands above with `powershell.exe` to verify the 5.1 entry path on Windows.
+On Windows, repeat these commands with `powershell.exe -NoProfile -File` to check the Windows PowerShell 5.1 entry path and delegation to PowerShell 7. The bootstrap tests use real 5.1 subprocesses with isolated script copies and mocked prerequisites; they do not replace interactive-terminal checks.
 
-Interactive delegation inherits console handles without an output pipeline; noninteractive delegation still passes `-NonInteractive`. Bootstrap fixtures verify launch options, argument preservation and exit codes, but do not replace a real-terminal check of interactive prompts.
+Keep `.ps1` files UTF-8 **with BOM** and LF. Entrypoint files must parse in Windows PowerShell 5.1 before delegating to PowerShell 7. Dot-source helpers in PowerShell 7; 5.1 must report an error without exiting the caller. Common helpers must only define functions and variables; `use-java.ps1` may also select the current session's JDK.
 
-The Windows update suite mocks nvm-windows/winget, release discovery, process launching and WSL. It covers shared Java/.NET Node installs and same-major updates (22 fallback only for missing/unsupported Node), separate activation consent, provenance/link collisions, failures and noninteractive denial. Both v1 settings/symlinks and v2 configured roots/shim/link modes are covered. V2 auto-install is refused before Node probes; activation uses `--no-install`, and failed tool preparation skips further probes. Activation changes the common Windows selection for subsequent invocations, not running Node processes; existing versions are retained. `-Update` also supports version-verified WSL platform updates and winget/MSI-managed stable PowerShell 7. A Windows PowerShell worker waits for the current pwsh to exit before upgrading, verifies the result and never reenters the installer; scheduling returns exit code 1, not success. Store/ZIP/unrecognized installs and inbox WSL without version output remain manual. Tests do not execute the real worker or update the OS. .NET Azure CLI/azd installation behavior is unchanged.
+Participant instructions use direct script invocation. If needed, allow only `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`; do not change User/Machine policy or bypass organizational policy.
 
-Keep `.ps1` files UTF-8 **with BOM** and LF (see `.editorconfig`): Windows PowerShell 5.1 otherwise decodes Korean text using the system ANSI code page before delegation. Do not add PowerShell 7-only syntax to these entrypoint files; the entire file must parse in 5.1. Dot-source helpers only inside PowerShell 7 when caller-scope functions/variables are needed; 5.1 dot-sourcing fails explicitly without exiting the caller because a child process cannot populate that scope. PowerShell 7 dot-sourcing retains definition-only behavior.
-
-The .NET original-app tests use isolated fixtures and mocked native invocations; they never start IIS Express or access LocalDB/MSMQ. A real Windows sample restore/build and browser workflow remain separate rehearsal checks.
-
-The PowerShell installer suite mocks .NET SDK discovery and winget installation. It covers consent, missing winget, installation and verification failures, runtime-only and preview-only installations, and coexistence with older SDKs. By default the .NET track installs a stable 10.x SDK only when missing. With `-Update`, it compares installed SDKs with winget's latest stable 10.x, requires separate consent, pins and verifies the requested version, and never downgrades or selects another major or preview. Other major SDKs and `global.json` are unchanged; the installer may replace older patches in the same feature band. No real SDK is installed by these tests.
-
-Bash:
+### Bash
 
 ```bash
 bash tests/scripts.tests.sh
 bash tests/install-prerequisites.tests.sh
+bash tests/azure-actions.tests.sh
+bash tests/use-java.tests.sh
+bash tests/shell-portability.tests.sh
 ```
 
-Run the installer suite in WSL2/macOS Bash; its SDKMAN fixtures require real symbolic links rather than Git Bash's link emulation. It covers opt-in Bash `--update`, per-tool consent, provenance checks, version selection and failures with isolated SDKMAN/nvm/Homebrew/APT fixtures. Node uses the latest stable version of the active major (22 fallback only for missing/unsupported Node), with separate installation and activation consent. Installation uses `--no-use`; existing versions and default aliases are retained, and activation only changes the script environment, never the caller's shell. It never installs or updates real tools. Bash `--update` and Windows `-Update` are independent; Windows Node for both tracks uses nvm-windows, not the Bash nvm installation.
+The `scripts.tests.sh` suite also runs `java-deployment.tests.sh`; it can be run directly for focused, offline checks.
 
-Scenarios that simulate missing tools or invalid commits may print `FAIL` or `fatal`. Judge the test run by its final `PASS` summary and exit code `0`.
+Run these suites on macOS and Linux. On macOS, use `/bin/bash tests/<suite>.tests.sh` to test the built-in Bash 3.2 rather than Homebrew Bash. Installer tests use the system `script` utility for pseudo-terminal fixtures. The `use-java.sh` tests also require Zsh; install it separately on Ubuntu if absent. See the [CI workflow](.github/workflows/ci.yml) for the platform matrix.
 
-Linux azd script-install fixtures cover fresh installs, explicit adoption of existing default-layout installs, separate update consent, package-ownership refusal, local path/version/SHA-256 records, changed files, and installer/runtime failures. Official-script installs and updates use the same installer; APT-owned installs retain the verified Microsoft APT route. Fixtures never run the real installer or change system paths.
+Keep `.sh` files compatible with Bash 3.2 and Bash 5, with LF line endings and BSD/GNU-compatible commands. Guard OS-specific commands. `use-java.sh` must also source correctly in Zsh without leaking helper functions or changing caller options.
 
-The `azure-actions` suites verify that login, subscription selection, extension installation and provider registration require installer consent, and that prerequisite checks only query state even in interactive sessions. Run `bash tests/azure-actions.tests.sh` alongside the Bash suites; the PowerShell command is listed above. Download prechecks use the same query-only checks.
+Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only helpers such as `use-java.sh`, `terminal-output.sh` and `java-deployment.sh` use `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
 
-These tests do not replace checks on real macOS/WSL2 environments or alternative container engines, nor do they verify the full application modernization and Azure deployment workflow. See the [Java](docs/java/08-troubleshooting.md#대체-엔진-설정) and [.NET](docs/dotnet/08-troubleshooting.md#대체-엔진-설정) troubleshooting guides for alternative-engine procedures and rehearsal limitations.
+### Results and limits
+
+Tests for missing tools or invalid commits may print `FAIL` or `fatal`. Check the final `PASS` summary and exit code `0`.
+
+Mock tests do not verify real installations, sample runtime, interactive prompts, or Azure deployment. Report those results separately. For alternative-engine procedures, see [Java troubleshooting](docs/java/08-troubleshooting.md#대체-엔진-설정) or [.NET troubleshooting](docs/dotnet/08-troubleshooting.md#대체-엔진-설정).
+
+For documentation-only changes, check relative links, navigation/step order, and `git diff --check`; no application build is required.
+
+## Instructor rehearsal checklist
+
+Record tool versions, model, OS/shell, commands, exit codes, and passed/failed/not-run outcomes. Keep private logs out of the repository. Obtain separate consent for installations, model use, authentication, and cloud/data changes. Never auto-approve these actions in CI or noninteractive sessions.
+
+- [ ] **Windows:** check 5.1 entry and PowerShell 7 delegation, Process-only execution policy, session PATH refresh, and JDK selection. Build and run the Java and .NET originals with the existing helpers; verify browser actions, LocalDB/MSMQ, and cleanup.
+- [ ] **macOS:** check the consent-based Homebrew setup, SDKMAN, Modernize cask, Bash 3.2, and Zsh. Source `use-java.sh`, directly run scripts and `startapp.sh`, and execute the modernization plans.
+- [ ] **Linux desktop:** check Ubuntu setup, gh repository/keyring, Azure CLI/azd/SDKMAN, Modernize, glibc, and PATH. Run the engine without `sudo`. Check manual guidance on a non-apt distribution where available.
+- [ ] **Copilot app terminal:** check keyboard input, Korean/space-containing paths, interruption/reentry, and checkout consistency. Verify status colors, including download preflight, Node/tool-server discovery, and first downloads. Limit missing-tool probes to the test session's PATH.
+- [ ] **Modernize, both tracks:** run Full analysis and inspect report/plan/task paths and skill discovery. Review and execute `ws03-baseline`, `ws03-upgrade`, `ws04-azure-code`, and `ws05-azd-assets` separately. Verify tests, commit scope, and effects on global configuration and other sessions; do not delete global directories as a workaround.
+- [ ] **Containers:** check Docker/Podman, `linux/amd64` builds, Apple Silicon where used, and `mvnw` line endings. Record image tags/digests.
+- [ ] **Azure:** review hooks and azd preview, then check `azd provision`, separately approved DB permissions/migrations, `azd package`, `azd deploy`, features, and `azd down`. Verify Java metadata/worker flows or .NET Data Protection across revisions. Record remaining resources and costs after success or failure.
 
 ## Branches and commits
 
@@ -60,10 +78,6 @@ Use `feat/`, `fix/`, or `docs/` prefixes for branches. Use [Conventional Commits
 
 ## Pull requests
 
-- Describe the learner or maintainer problem and the change.
-- Include or update tests for script behavior changes.
-- Confirm that the relevant checks pass; mention any checks that could not run.
-- Update workshop documentation when instructions or prerequisites change.
-- Link the related issue when applicable.
+Use the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Describe the problem and change, link related issues, and report checks that passed, failed, or could not run. Include tests for script behavior changes and update affected workshop documentation.
 
 Use the [bug report](.github/ISSUE_TEMPLATE/bug_report.yml) or [feature request](.github/ISSUE_TEMPLATE/feature_request.yml) form for those requests.

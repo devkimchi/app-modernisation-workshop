@@ -1,10 +1,6 @@
 ﻿. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
-# Regression entrypoints mock the host platform; they never enable OS features.
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters @{} -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
-# Restore the real probe for the targeted mocks below.
-. (Join-Path $PSScriptRoot '..\scripts\powershell-bootstrap.ps1')
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -17,6 +13,8 @@ $fixture = Join-Path $root ('.test-output\bootstrap-' + [guid]::NewGuid().ToStri
 $encoding = [Text.UTF8Encoding]::new($true)
 $savedCI = $env:CI
 $savedEngine = $env:AZD_CONTAINER_RUNTIME
+$savedNoColor = $env:NO_COLOR
+$savedTerm = $env:TERM
 try {
     $env:AZD_CONTAINER_RUNTIME = ''
     $null = [IO.Directory]::CreateDirectory($fixture)
@@ -25,6 +23,43 @@ try {
         Assert-Bootstrap ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) "UTF-8 BOM: $($file.Name)"
         Assert-Bootstrap (-not [IO.File]::ReadAllText($file.FullName).Contains("`r")) "LF: $($file.Name)"
     }
+
+    & {
+        $env:CI = ''; $env:NO_COLOR = ''; $env:TERM = 'xterm'
+        $rendered = [Collections.Generic.List[object]]::new()
+        $terminal = $true
+        function Test-WorkshopOutputTerminal { return $terminal }
+        function Write-Host {
+            param($Object, $ForegroundColor)
+            $rendered.Add([pscustomobject]@{ Text=$Object; Color=$ForegroundColor })
+        }
+        foreach ($case in @(
+            @{ Status='PASS'; Color='Green' },
+            @{ Status='FAIL'; Color='Red' },
+            @{ Status='WARN'; Color='Yellow' },
+            @{ Status='MANUAL'; Color='Cyan' },
+            @{ Status='INFO'; Color='Blue' }
+        )) {
+            $message = "[$($case.Status)] fixture message"
+            Write-WorkshopMessage $message
+            Assert-Bootstrap ($rendered[-1].Text -ceq $message -and $rendered[-1].Color -ceq $case.Color) "colored $($case.Status) preserves text"
+        }
+        foreach ($setting in @('NO_COLOR', 'CI', 'TERM', 'redirected')) {
+            $env:NO_COLOR = ''; $env:CI = ''; $env:TERM = 'xterm'; $terminal = $true
+            switch ($setting) {
+                'NO_COLOR' { $env:NO_COLOR = '1' }
+                'CI' { $env:CI = 'true' }
+                'TERM' { $env:TERM = 'dumb' }
+                'redirected' { $terminal = $false }
+            }
+            Write-WorkshopMessage '[FAIL] fixture message'
+            Assert-Bootstrap ($rendered[-1].Text -ceq '[FAIL] fixture message' -and -not $rendered[-1].Color) "$setting keeps plain output"
+        }
+        $env:NO_COLOR = ''; $env:CI = ''; $env:TERM = 'xterm'; $terminal = $true
+        Write-WorkshopMessage 'Untagged message'
+        Assert-Bootstrap ($rendered[-1].Text -ceq 'Untagged message' -and -not $rendered[-1].Color) 'untagged messages keep default color'
+    }
+    $env:CI = $savedCI; $env:NO_COLOR = $savedNoColor; $env:TERM = $savedTerm
 
     & {
         function Get-Command { [CmdletBinding()]param($Name, $CommandType, [switch]$All) }
@@ -36,77 +71,27 @@ try {
     }
 
     & {
-        $script:FeatureState = 1
-        $script:WslStatus = 0
-        $script:WslCalls = 0
-        function Get-WorkshopWslExecutable { return 'mock-wsl' }
-        function Get-CimInstance { [CmdletBinding()]param($ClassName, $Filter); return [pscustomobject]@{ InstallState = $script:FeatureState } }
-        function mock-wsl {
-            Assert-Bootstrap (($args -join ' ') -eq '--status') 'platform detection does not require or start a distro'
-            $script:WslCalls++
-            $global:LASTEXITCODE = $script:WslStatus
-        }
-        Assert-Bootstrap (Test-WorkshopWsl2) 'enabled platform and working WSL status accepted'
-        $script:FeatureState = 2
-        Assert-Bootstrap (-not (Test-WorkshopWsl2)) 'WSL1 executable without VirtualMachinePlatform rejected'
-        Assert-Bootstrap ($script:WslCalls -eq 1) 'disabled platform detected without launching WSL'
-        $script:FeatureState = 1
-        $script:WslStatus = 1
-        Assert-Bootstrap (-not (Test-WorkshopWsl2)) 'unusable kernel/status rejected'
-        function Get-WorkshopWslExecutable { }
-        Assert-Bootstrap (-not (Test-WorkshopWsl2)) 'missing wsl executable rejected'
-    }
-
-    & {
-        $script:InstallCount = 0
-        $script:Interactive = $false
-        $script:Approved = $false
-        $script:WslCode = 0
-        function Test-WorkshopBootstrapInteractive { return $script:Interactive }
-        function Confirm-WorkshopWsl2Install { return $script:Approved }
-        function Get-WorkshopWslExecutable { return 'mock-wsl' }
-        function mock-wsl {
-            Assert-Bootstrap (($args -join ' ') -eq '--install --no-distribution') 'WSL installation changes platform only, no distro or reboot'
-            $script:InstallCount++
-            $global:LASTEXITCODE = $script:WslCode
-        }
-        Assert-Bootstrap (-not (Install-WorkshopWsl2)) 'noninteractive WSL install denied'
-        $script:Interactive = $true
-        Assert-Bootstrap (-not (Install-WorkshopWsl2)) 'declined WSL install denied'
-        Assert-Bootstrap ($script:InstallCount -eq 0) 'declined/noninteractive WSL install has no side effects'
-        $script:Approved = $true
-        Assert-Bootstrap (Install-WorkshopWsl2) 'separately approved WSL install requested'
-        $script:WslCode = 3010
-        Assert-Bootstrap (Install-WorkshopWsl2) 'WSL reboot-required status handled'
-        $script:WslCode = 1
-        Assert-Bootstrap (-not (Install-WorkshopWsl2)) 'WSL installer failure propagated'
-    }
-
-    & {
         $script:PowerShellPresent = $false
-        $script:WslPresent = $false
+        $script:DiscoveryCount = 0
         $script:BootstrapInstalls = [Collections.Generic.List[string]]::new()
         function Get-WorkshopHostPrerequisites {
-            return [pscustomobject]@{ Windows = $true; PowerShell = $(if ($script:PowerShellPresent) { 'mock-pwsh' }); Wsl2 = $script:WslPresent }
+            $script:DiscoveryCount++
+            return [pscustomobject]@{ Windows = $true; PowerShell = $(if ($script:PowerShellPresent) { 'mock-pwsh' }) }
         }
         function Install-WorkshopPowerShell { $script:BootstrapInstalls.Add('PowerShell'); $script:PowerShellPresent = $true }
-        function Install-WorkshopWsl2 { $script:BootstrapInstalls.Add('WSL2'); $script:WslPresent = $true; return $true }
-        foreach ($state in @(@($false,$false), @($true,$false), @($false,$true))) {
-            $script:PowerShellPresent = $state[0]
-            $script:WslPresent = $state[1]
-            $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'dotnet' }
-            Assert-Bootstrap ($result.Handled -and $result.Code -eq 1) 'either missing prerequisite blocks .NET before main'
+        foreach ($track in @('java', 'dotnet')) {
+            $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = $track }
+            Assert-Bootstrap ($result.Handled -and $result.Code -eq 1) "missing PowerShell 7 blocks $track before main"
         }
         Assert-Bootstrap ($script:BootstrapInstalls.Count -eq 0) 'normal preflight never installs anything'
-        $script:PowerShellPresent = $false
-        $script:WslPresent = $false
         $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java'; Update = $true } -AllowInstall
-        Assert-Bootstrap (($script:BootstrapInstalls -join ',') -eq 'PowerShell,WSL2') 'installer checks both missing prerequisites independently'
-        Assert-Bootstrap ($result.Handled -and $result.Code -eq 1) 'WSL installation stops before main until manual restart/recheck'
-        $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'dotnet' }
-        Assert-Bootstrap (-not $result.Handled) 'ready PS7 host continues without delegation or recursion'
+        Assert-Bootstrap (($script:BootstrapInstalls -join ',') -eq 'PowerShell') 'installer installs missing PowerShell once and rediscovers it'
+        Assert-Bootstrap (-not $result.Handled) 'verified PowerShell installation allows main to continue'
+        foreach ($track in @('java', 'dotnet')) {
+            $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = $track } -AllowInstall
+            Assert-Bootstrap (-not $result.Handled -and $script:BootstrapInstalls.Count -eq 1) "ready PS7 host continues $track without delegation or reinstall"
+        }
         $script:PowerShellPresent = $false
-        $script:WslPresent = $false
         $script:BootstrapInstalls.Clear()
         $null = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java'; Help = $true } -AllowInstall
         $null = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'invalid' } -AllowInstall
@@ -115,9 +100,14 @@ try {
         $env:AZD_CONTAINER_RUNTIME = 'podman'
         $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'dotnet'; ContainerEngine = 'docker' } -AllowInstall
         Assert-Bootstrap ($result.Handled -and $result.Code -eq 1 -and $script:BootstrapInstalls.Count -eq 0) 'conflicting valid container engines never install prerequisites'
+        $discoveries = $script:DiscoveryCount
         $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java' } -DotSourced $true -AllowInstall
-        Assert-Bootstrap (-not $result.Handled -and $script:BootstrapInstalls.Count -eq 0) 'PS7 dot-sourcing never installs or runs host checks'
+        Assert-Bootstrap (-not $result.Handled -and $script:BootstrapInstalls.Count -eq 0 -and
+            $script:DiscoveryCount -eq $discoveries) 'PS7 dot-sourcing never installs or runs host checks'
         $env:AZD_CONTAINER_RUNTIME = ''
+        function Install-WorkshopPowerShell { $script:BootstrapInstalls.Add('PowerShell') }
+        $result = Initialize-WorkshopScript -ScriptPath 'not-run.ps1' -BoundParameters @{ Track = 'java' } -AllowInstall
+        Assert-Bootstrap ($result.Handled -and $result.Code -eq 1) 'failed or declined PowerShell installation blocks main'
     }
 
     & {
@@ -249,24 +239,24 @@ exit 23
         }
         $helper = Join-Path $fixture 'scripts\powershell-bootstrap.ps1'
         $content = [IO.File]::ReadAllText($helper).Replace('function Get-WorkshopHostPrerequisites {', 'function Get-OriginalWorkshopHostPrerequisites {')
-        $content = $content.Replace("if (`$MyInvocation.InvocationName -ne '.') {", "function Get-WorkshopHostPrerequisites { return [pscustomobject]@{ Windows=`$true; PowerShell=`$null; Wsl2=`$false } }`nif (`$MyInvocation.InvocationName -ne '.') {")
+        $content = $content.Replace("if (`$MyInvocation.InvocationName -ne '.') {", "function Get-WorkshopHostPrerequisites { return [pscustomobject]@{ Windows=`$true; PowerShell=`$null } }`nif (`$MyInvocation.InvocationName -ne '.') {")
         [IO.File]::WriteAllText($helper, $content, $encoding)
         $env:CI = '1'
         foreach ($shell in @($legacy, (Join-Path $PSHOME 'pwsh.exe'))) {
             foreach ($file in $files) {
+                if ($file.Name -eq 'use-java.ps1') { continue }
                 $directory = Split-Path (Split-Path $file.FullName -Parent) -Leaf
                 $copy = Join-Path $fixture "$directory\$($file.Name)"
                 $arguments = if ($file.Name -eq 'install-prerequisites.ps1') { @('-Track', 'dotnet') } else { @() }
                 $output = & $shell -NoLogo -NoProfile -NonInteractive -File $copy @arguments 2>&1 | Out-String
-                Assert-Bootstrap ($LASTEXITCODE -eq 1 -and $output.Contains('Microsoft.PowerShell') -and $output.Contains('[FAIL] WSL2') -and $output.Contains('No workshop actions')) "missing prerequisites stop before side effects: $shell $($file.Name); code=$LASTEXITCODE; output=$output"
+                Assert-Bootstrap ($LASTEXITCODE -eq 1 -and $output.Contains('Microsoft.PowerShell') -and $output.Contains('[FAIL] PowerShell 7') -and $output.Contains('No workshop actions')) "missing PowerShell stops before side effects: $shell $($file.Name); code=$LASTEXITCODE; output=$output"
             }
         }
-        $content = [IO.File]::ReadAllText((Join-Path $root 'scripts\powershell-bootstrap.ps1')).Replace('function Test-WorkshopWsl2 {', 'function Test-OriginalWorkshopWsl2 {')
-        $content = $content.Replace("if (`$MyInvocation.InvocationName -ne '.') {", "function Test-WorkshopWsl2 { return `$true }`nif (`$MyInvocation.InvocationName -ne '.') {")
+        $content = [IO.File]::ReadAllText((Join-Path $root 'scripts\powershell-bootstrap.ps1'))
         [IO.File]::WriteAllText($helper, $content, $encoding)
         foreach ($name in @('check-prerequisites', 'download-sample', 'run-dotnet-original', 'install-prerequisites')) {
             $output = & $legacy -NoLogo -NoProfile -NonInteractive -File (Join-Path $fixture "scripts\$name.ps1") -Help 2>&1 | Out-String
-            Assert-Bootstrap ($LASTEXITCODE -eq 0 -and $output.Contains("scripts\$name.ps1")) "PS5.1 delegates -Help without recursion: $name"
+            Assert-Bootstrap ($LASTEXITCODE -eq 0 -and $output.Replace('\', '/').Contains("scripts/$name.ps1")) "PS5.1 delegates -Help without recursion: $name"
         }
         $installerCopy = Join-Path $fixture 'scripts\install-prerequisites.ps1'
         $installerText = [IO.File]::ReadAllText($installerCopy).Replace(
@@ -288,5 +278,7 @@ if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-InstallPrerequisiteMain
 finally {
     $env:CI = $savedCI
     $env:AZD_CONTAINER_RUNTIME = $savedEngine
+    $env:NO_COLOR = $savedNoColor
+    $env:TERM = $savedTerm
     Remove-Item -LiteralPath $fixture -Recurse -Force
 }

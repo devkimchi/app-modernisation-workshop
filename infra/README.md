@@ -140,9 +140,7 @@ bash ./infra/tests/vm-payload.tests.sh
 
 ## 리소스 정리
 
-VM이 자동 종료돼도 디스크, NAT Gateway와 공용 IP 요금은 남을 수 있습니다. 삭제 전에 VM과 WSL의 필요한 데이터를 백업하세요.
-
-배포한 PC의 저장소 루트에서 대상 azd 환경을 확인한 뒤 실행하세요. **선택한 환경의 리소스 그룹과 VM 데이터가 삭제됩니다.**
+사용이 끝나면 추가 비용을 막기 위해 배포한 PC의 저장소 루트에서 해당 환경의 리소스를 삭제하세요. 필요한 데이터는 삭제 전에 백업하세요.
 
 ```powershell
 azd env select appmod-dev

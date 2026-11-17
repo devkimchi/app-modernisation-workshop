@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+unset CI
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 source "$ROOT/scripts/terminal-output.sh"
 source "$ROOT/scripts/java-deployment.sh"

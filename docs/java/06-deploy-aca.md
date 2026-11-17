@@ -153,6 +153,56 @@ az postgres flexible-server firewall-rule list --subscription $subscription --re
 
 공인 IP가 바뀌면 새 주소를 확인해 등록하고, 기존 규칙은 별도 승인 후 삭제합니다. 위 규칙은 해당 PC에만 적용됩니다. 마이그레이션 관리 ID를 사용하는 별도 호스트와 ACA의 DB 연결 경로도 각각 확인하고 승인한 주소만 허용해야 합니다. ACA 수신 IP를 송신 IP로 등록하지 마세요.
 
+### DB 연결용 루트 인증서 준비
+
+`psql`의 `sslmode=verify-full`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받아 PEM 파일로 준비하고, `PGSSLROOTCERT`에 파일 경로를 지정합니다. 아래 예시는 임시 파일을 사용하며 시스템 인증서 저장소나 기존 `root.crt`를 변경하지 않습니다.
+
+macOS와 Linux/WSL에서는 `curl`과 `openssl`이 필요합니다. 아래 명령은 다운로드한 DER 인증서 두 개를 PEM 형식으로 변환해 하나로 합칩니다.
+
+```bash
+pgCaDir=$(mktemp -d) &&
+curl --fail --silent --show-error --location --max-time 30 --output "$pgCaDir/digicert.der" "https://cacerts.digicert.com/DigiCertGlobalRootG2.crt" &&
+curl --fail --silent --show-error --location --max-time 30 --output "$pgCaDir/microsoft.der" "https://www.microsoft.com/pkiops/certs/Microsoft%20RSA%20Root%20Certificate%20Authority%202017.crt" &&
+openssl x509 -inform DER -in "$pgCaDir/digicert.der" -out "$pgCaDir/digicert.pem" &&
+openssl x509 -inform DER -in "$pgCaDir/microsoft.der" -out "$pgCaDir/microsoft.pem" &&
+cat "$pgCaDir/digicert.pem" "$pgCaDir/microsoft.pem" > "$pgCaDir/azure-postgresql-roots.pem" &&
+export PGSSLROOTCERT="$pgCaDir/azure-postgresql-roots.pem"
+```
+
+Windows에서는 PowerShell 7에서 실행합니다. 별도 OpenSSL 설치는 필요하지 않습니다.
+
+```powershell
+$caUrls = @(
+    "https://cacerts.digicert.com/DigiCertGlobalRootG2.crt"
+    "https://www.microsoft.com/pkiops/certs/Microsoft%20RSA%20Root%20Certificate%20Authority%202017.crt"
+)
+
+$pemCertificates = foreach ($url in $caUrls) {
+    $response = Invoke-WebRequest -Uri $url -TimeoutSec 30 -ErrorAction Stop
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+        [byte[]]$response.Content
+    )
+    try {
+        $base64 = [Convert]::ToBase64String(
+            $certificate.RawData,
+            [Base64FormattingOptions]::InsertLineBreaks
+        )
+        "-----BEGIN CERTIFICATE-----`n$base64`n-----END CERTIFICATE-----"
+    }
+    finally {
+        $certificate.Dispose()
+    }
+}
+
+$caFile = New-TemporaryFile -ErrorAction Stop
+Set-Content -LiteralPath $caFile.FullName -Value $pemCertificates -Encoding ascii -ErrorAction Stop
+$env:PGSSLROOTCERT = $caFile.FullName
+```
+
+오류가 나면 다음 단계로 진행하지 마세요. 설정한 경로는 현재 셸과 여기서 실행한 `psql`에 적용됩니다. DB 초기화와 확인도 같은 셸에서 진행하고, 마이그레이션 관리 ID를 사용하는 별도 호스트에서도 인증서를 준비합니다. 새 셸을 열거나 임시 파일이 삭제되면 다시 준비하세요.
+
+`root certificate file ... does not exist`는 루트 인증서 파일이 없다는 뜻입니다. `certificate verify failed`가 나타나면 지정한 PEM 파일과 서버 FQDN을 확인합니다. `sslrootcert=system`도 Windows의 `psql` 배포판에 따라 검증에 실패할 수 있으므로, 이 예시에서는 해당 옵션을 넣지 않고 `PGSSLROOTCERT`를 사용합니다. `sslmode=verify-full`은 유지하고 인증서 검증을 끄지 마세요.
+
 ### DB 초기화
 
 앱 루트에서 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 DB 초기화 안내(예: `infra/db/README.md`)와 스크립트를 확인합니다. 승인한 새 데모 DB만 대상으로 합니다. 안내, 대상 또는 권한이 불분명하면 중단하고, 기존 DB나 호환되지 않는 스키마가 있다면 DB 소유자와 확인합니다.

@@ -4,7 +4,6 @@ param([string]$CompiledTemplate)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 . (Join-Path $root 'scripts\powershell-bootstrap.ps1')
-function Test-WorkshopWsl2 { return $true }
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters `
     -RemainingArguments @() -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
@@ -177,7 +176,50 @@ try {
     }
 
     & {
+        function Get-VmWslExecutable { 'fixture-wsl.exe' }
+        $script:FeatureState='Enabled'; $script:StatusCode=0
+        function Get-WindowsOptionalFeature { [pscustomobject]@{ State=$script:FeatureState } }
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True ($Name -eq 'fixture-wsl.exe' -and ($Arguments -join ' ') -eq '--status') 'WSL2 platform probe is read-only'
+            [pscustomobject]@{ Code=$script:StatusCode; Text='' }
+        }
+        Assert-True (Test-VmWslPlatform) 'enabled platform with working wsl.exe is ready'
+        $script:StatusCode=1
+        Assert-True (-not (Test-VmWslPlatform)) 'failed wsl.exe status is not ready'
+        $script:FeatureState='Disabled'; $script:StatusCode=0
+        Assert-True (-not (Test-VmWslPlatform)) 'disabled VirtualMachinePlatform is not ready'
+    }
+
+    & {
+        $script:Platform=$false; $script:FeatureState='Disabled'; $script:PlatformInstalls=0
+        function Test-VmWslPlatform { $script:Platform }
+        function Get-WindowsOptionalFeature { [pscustomobject]@{ State=$script:FeatureState } }
+        function Get-VmWslExecutable { 'C:\Windows\System32\wsl.exe' }
+        function Confirm-VmAction { return $false }
+        function Invoke-VmInstaller { throw 'must not install without consent' }
+        Assert-True (-not (Install-VmWslPlatform)) 'WSL2 platform decline is preserved'
+        function Confirm-VmAction { return $true }
+        function Invoke-VmInstaller {
+            param($Command,$Arguments)
+            Assert-True ($Command -like '*wsl.exe' -and ($Arguments -join ' ') -eq '--install --no-distribution') 'WSL2 platform installs without a distribution'
+            $script:PlatformInstalls++; return $true
+        }
+        $script:VmRestartRequired=$false
+        Assert-True (-not (Install-VmWslPlatform)) 'WSL2 platform awaiting activation stays incomplete'
+        Assert-True $script:VmRestartRequired 'WSL2 platform installation requires a manual restart'
+        $script:FeatureState='EnablePending'; $script:VmRestartRequired=$false
+        Assert-True (-not (Install-VmWslPlatform) -and $script:VmRestartRequired -and $script:PlatformInstalls -eq 1) 'pending platform activation is not reinstalled'
+        $script:Platform=$true; $script:VmRestartRequired=$false
+        Assert-True ((Install-VmWslPlatform) -and $script:PlatformInstalls -eq 1) 'ready WSL2 platform is preserved'
+    }
+
+    & {
         $script:WslVersion=0; $script:WslCalls=0
+        function Test-VmWslPlatform { return $false }
+        function Get-VmUbuntuVersion { throw 'must not query distributions before the platform is ready' }
+        Assert-True (-not (Install-VmUbuntu)) 'Ubuntu waits for the WSL2 platform'
+        function Test-VmWslPlatform { return $true }
         function Get-VmUbuntuVersion { $script:WslVersion }
         function Confirm-VmAction { return $false }
         function Invoke-VmInstaller { throw 'must not install without consent' }
@@ -334,8 +376,8 @@ try {
         Assert-True ((Invoke-VmToolInstallation) -eq 3010) 'reboot-required entry exits before further work'
         function Test-VmRebootPending { return $false }
         function Get-PSDrive { [pscustomobject]@{Free=100GB} }
-        function Install-VmUbuntu { $script:VmRestartRequired=$true; return $false }
-        function Install-VmMsmq { throw 'must not run after reboot boundary' }
+        function Install-VmWslPlatform { $script:VmRestartRequired=$true; return $false }
+        function Install-VmUbuntu { throw 'must not run after reboot boundary' }
         Assert-True ((Invoke-VmToolInstallation) -eq 3010) 'new reboot requirement stops subsequent installation steps'
     }
 

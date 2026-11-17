@@ -73,7 +73,7 @@ azd env set VM_AUTO_SHUTDOWN_TIME 2100
 powershell.exe -NoProfile -File "$HOME/scripts/install-vm-tools.ps1"
 ```
 
-Windows PowerShell 5.1에서는 WinGet과 안정 PowerShell 7.x, WSL2 플랫폼을 준비한 뒤 공통 부트스트랩으로 PowerShell 7에 위임합니다. PowerShell 7이 준비된 후에는 아래 명령도 사용할 수 있습니다.
+Windows PowerShell 5.1에서는 WinGet과 안정 PowerShell 7.x를 준비한 뒤 공통 부트스트랩으로 PowerShell 7에 위임합니다. PowerShell 7이 준비된 후에는 아래 명령도 사용할 수 있습니다.
 
 ```powershell
 pwsh -NoProfile -File "$HOME/scripts/install-vm-tools.ps1"
@@ -81,20 +81,22 @@ pwsh -NoProfile -File "$HOME/scripts/install-vm-tools.ps1"
 
 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 자동 재부팅, 자동 로그인과 예약 작업에 의한 재개는 없습니다. 기존 설치본과 데이터를 유지하며, 아직 준비되지 않은 항목을 다시 확인합니다.
 
-CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 실행하면 설치하지 않습니다. 설치에 동의하지 않으면 해당 항목은 미완료로 남습니다. 모든 설치 후 상태 검사가 끝나야 종료 코드 `0`을 반환합니다. 미완료나 실패는 `1`, 재부팅 대기는 `3010`입니다. 공통 부트스트랩에서 WSL2를 처음 준비한 경우에는 재부팅 안내와 함께 `1`로 종료할 수도 있습니다.
+CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 실행하면 설치하지 않습니다. 설치에 동의하지 않으면 해당 항목은 미완료로 남습니다. 모든 설치 후 상태 검사가 끝나야 종료 코드 `0`을 반환합니다. 미완료나 실패는 `1`, 재부팅 대기는 `3010`입니다.
 
 ### 설치 대상
 
 | 도구 | 설치와 확인 방식 |
 | --- | --- |
-| WSL2, Ubuntu | 플랫폼과 배포판을 분리해 설치. Ubuntu는 `appmoduser`에 등록 |
+| WSL2 플랫폼 | 배포판 없이 `wsl.exe --install --no-distribution`으로 설치. 설치 후 직접 재부팅 |
+| Ubuntu | WSL2 플랫폼 준비 후 설치. `appmoduser`에 등록 |
 | PowerShell | 안정 7.x, 기존 버전은 자동 업데이트하지 않음 |
 | MSMQ | Server 기능과 서비스 시작. 큐와 데이터는 생성하지 않음 |
 | .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
 | Framework 빌드 도구 | 4.8 Targeting Pack과 SDK, MSBuild 웹 빌드 구성요소 |
 | nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지, 설치와 활성화에 별도 동의 |
-| Git, GitHub CLI | `Git.Git`, `GitHub.cli` |
+| Git, GitHub CLI | `Git.Git`, `GitHub.cli`. GitHub CLI는 2.45.0 이상 확인 |
 | Azure CLI, azd | `Microsoft.AzureCLI`, `Microsoft.Azd` |
+| Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
 | .NET SDK | 안정 10.x, 기존 다른 메이저 유지 |
 | Visual Studio 2026 Community | 안정 18.x, [visualstudio.vsconfig](scripts/visualstudio.vsconfig)의 웹 및 데스크톱 개발 구성 |
 | Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 빌드 구성 |
@@ -115,15 +117,15 @@ VM의 사용자 터미널에서 Ubuntu를 처음 실행하고 Linux 사용자 �
 wsl -d Ubuntu
 ```
 
-Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요. GitHub Copilot app을 실행해 로그인과 현대화 플러그인 설정을 완료하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 도구 확인과 실습 준비를 진행합니다.
+Docker Desktop을 시작해 약관과 WSL2 설정을 확인하고 Linux 컨테이너를 사용하세요. GitHub Copilot app을 실행해 로그인하세요. 이후 [.NET 준비 문서](../docs/dotnet/00-setup.md)의 3단계에서 gh 인증과 Modernize CLI를 확인하고 실습 준비를 진행합니다.
 
 이 도우미는 Azure/GitHub 로그인, 구독 변경, 공급자 등록과 실습 DB 생성을 실행하지 않습니다. WSL2 중첩 가상화, Docker 실행과 실제 앱 빌드는 VM에서 별도로 확인해야 합니다. 오류 해결을 위해 Trusted Launch를 자동으로 끄지 않습니다.
 
 ## 파일 배치와 재배포
 
-`preprovision` 훅은 로컬 공통 도우미 5개, VM 설치 스크립트와 `.vsconfig` 2개를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
+`preprovision` 훅은 로컬 공통 도우미 6개, VM 설치 스크립트와 `.vsconfig` 2개를 압축해 `infra/.generated/payload.json`에 만듭니다. Bicep은 이 내용을 내장합니다. 별도 스토리지, SAS나 공개 저장소 게시가 필요하지 않습니다.
 
-VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고, 없으면 Windows `CreateProfile` API로 준비합니다. SYSTEM의 `$HOME`이나 추측한 사용자 경로를 쓰지 않습니다. 실제 프로필의 `scripts` 아래에 UTF-8 BOM과 LF를 보존해 파일을 배치합니다. 이 배치 스크립트만 PowerShell 7 및 WSL2 검사 없이 Windows PowerShell 5.1에서 실행됩니다.
+VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고, 없으면 Windows `CreateProfile` API로 준비합니다. SYSTEM의 `$HOME`이나 추측한 사용자 경로를 쓰지 않습니다. 실제 프로필의 `scripts` 아래에 UTF-8 BOM과 LF를 보존해 파일을 배치합니다. 이 배치 스크립트만 PowerShell 7 검사 없이 Windows PowerShell 5.1에서 실행됩니다.
 
 동일한 파일은 그대로 두고 다른 내용의 기존 파일, 경로 이탈과 reparse point는 거부합니다. 배치 실패는 배포 실패로 처리합니다. 사용자 수정 파일과 충돌하면 VM에서 충돌 파일을 별도 위치에 백업하고 원래 경로에서 옮긴 뒤 `azd provision`을 다시 실행하세요. 변경된 설치 도우미를 전달할 때도 동일하게 처리합니다.
 

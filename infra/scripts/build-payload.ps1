@@ -7,7 +7,7 @@ function Get-VmPayloadSources {
     $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
     $sources = [ordered]@{}
     foreach ($name in @('powershell-bootstrap.ps1', 'install-prerequisites.ps1', 'windows-prerequisite-updates.ps1',
-            'check-prerequisites.ps1', 'dotnet-framework-tools.ps1')) {
+            'check-prerequisites.ps1', 'dotnet-framework-tools.ps1', 'java-tools.ps1')) {
         $sources[$name] = Join-Path $root "scripts\$name"
     }
     foreach ($name in @('install-vm-tools.ps1', 'visualstudio.vsconfig', 'buildtools.vsconfig')) {

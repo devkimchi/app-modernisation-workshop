@@ -121,6 +121,39 @@ function Test-VmPowerShell7 {
     return $true
 }
 
+function Get-VmWslExecutable {
+    $command = Get-Command wsl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($command) { return $command.Source }
+    $path = Join-Path $env:SystemRoot 'System32\wsl.exe'
+    if (Test-Path -LiteralPath $path -PathType Leaf) { return $path }
+}
+
+function Test-VmWslPlatform {
+    $wsl = Get-VmWslExecutable
+    if (-not $wsl) { return $false }
+    $feature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction Stop
+    if ("$($feature.State)" -ne 'Enabled') { return $false }
+    return (Invoke-ToolProbe $wsl @('--status')).Code -eq 0
+}
+
+function Install-VmWslPlatform {
+    if (Test-VmWslPlatform) { Write-Host '[PASS] WSL2 platform is ready.'; return $true }
+    $feature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction Stop
+    if ("$($feature.State)" -in @('EnablePending', 'DisablePending')) { $script:VmRestartRequired = $true; return $false }
+    $wsl = Get-VmWslExecutable
+    if (-not $wsl) { throw 'wsl.exe was not found. Check the Windows 11 image and the WSL documentation.' }
+    if (-not (Confirm-VmAction 'Install the WSL2 platform without a Linux distribution (wsl.exe --install --no-distribution). A manual restart is required. Ubuntu is installed in a later step after the restart.')) {
+        return $false
+    }
+    $null = Invoke-VmInstaller $wsl @('--install', '--no-distribution')
+    if ($script:VmRestartRequired) { return $false }
+    if (Test-VmWslPlatform) { Write-Host '[PASS] WSL2 platform is ready.'; return $true }
+    # wsl.exe can return 0 while VirtualMachinePlatform waits for a restart.
+    $script:VmRestartRequired = $true
+    Write-Host '[MANUAL] The WSL2 platform becomes available after a restart. Restart manually and rerun.'
+    return $false
+}
+
 function Get-VmUbuntuVersion {
     $list = Invoke-ToolProbe wsl.exe @('--list', '--verbose')
     if ($list.Code -ne 0) { throw "WSL 배포판 조회 실패: $($list.Text)" }
@@ -131,6 +164,10 @@ function Get-VmUbuntuVersion {
 }
 
 function Install-VmUbuntu {
+    if (-not (Test-VmWslPlatform)) {
+        Write-Host '[MANUAL] Ubuntu requires the WSL2 platform. Complete the WSL2 platform step and restart first.'
+        return $false
+    }
     $version = Get-VmUbuntuVersion
     if ($version -eq 1) { throw '기존 Ubuntu는 WSL1입니다. 데이터를 보존하고 직접 WSL2 전환을 준비하세요.' }
     if ($version -eq 2) { Write-Host '[PASS] appmoduser의 Ubuntu WSL2 등록을 확인했습니다.'; return $true }
@@ -262,7 +299,7 @@ function Get-VmCopilotVersion {
 
 function Install-VmCopilot {
     $existing = Get-VmCopilotVersion
-    if ($existing) { Write-Host "[PASS] GitHub Copilot app $existing 유지. 로그인과 플러그인 설정은 직접 진행하세요."; return $true }
+    if ($existing) { Write-Host "[PASS] GitHub Copilot app $existing 유지. 로그인은 직접 진행하세요."; return $true }
     if (-not (Confirm-VmAction '공식 github/app 정식 릴리스의 GitHub Copilot app을 설치합니다. Copilot CLI가 아닙니다.')) { return $false }
     $release = Invoke-RestMethod 'https://api.github.com/repos/github/app/releases/latest' -ErrorAction Stop
     if ($release.prerelease -or $release.draft -or $release.tag_name -notmatch '^v?(\d+\.\d+\.\d+)$') {
@@ -290,7 +327,7 @@ function Install-VmCopilot {
         if ($process.ExitCode -ne 0) { throw "Copilot app MSI 설치 실패 (종료 코드 $($process.ExitCode))." }
         $installed = Get-VmCopilotVersion
         if (-not $installed -or $installed -lt $expectedVersion) { throw 'Copilot app 설치 후 버전 확인에 실패했습니다.' }
-        Write-Host "[PASS] GitHub Copilot app $installed. 로그인과 플러그인 설치는 직접 진행하세요."
+        Write-Host "[PASS] GitHub Copilot app $installed. 로그인은 직접 진행하세요."
         return $true
     }
     finally {
@@ -338,6 +375,7 @@ function Invoke-VmToolInstallation {
     $drive = Get-PSDrive -Name $env:SystemDrive.TrimEnd(':') -ErrorAction Stop
     if ($drive.Free -lt 50GB) { throw '설치 전 시스템 드라이브의 여유 공간을 50 GiB 이상 확보하세요.' }
     $steps = @(
+        @{ Name='WSL2 platform'; Run={ Install-VmWslPlatform } },
         @{ Name='Ubuntu WSL2'; Run={ Install-VmUbuntu } },
         @{ Name='MSMQ'; Run={ Install-VmMsmq } },
         @{ Name='.NET Framework'; Run={
@@ -345,10 +383,18 @@ function Invoke-VmToolInstallation {
                 -VersionPattern '^4\.8\.1$' -TestInstalled { Test-VmFrameworkRuntime }
         } },
         @{ Name='Git'; Run={ Install-VmPackage Git.Git Git -TestInstalled { Test-VmCommand git } } },
-        @{ Name='GitHub CLI'; Run={ Install-VmPackage GitHub.cli 'GitHub CLI' -TestInstalled { Test-VmCommand gh } } },
+        @{ Name='GitHub CLI'; Run={
+            Install-VmPackage GitHub.cli 'GitHub CLI 2.45.0+' -TestInstalled {
+                $probe = Invoke-ToolProbe gh @('--version')
+                $probe.Code -eq 0 -and (Test-MinimumVersion $probe.Text '2.45.0')
+            }
+        } },
         @{ Name='nvm and Node.js'; Run={ Install-VmNvm } },
         @{ Name='Azure CLI'; Run={ Install-VmPackage Microsoft.AzureCLI 'Azure CLI' -TestInstalled { Test-VmCommand az } } },
         @{ Name='azd'; Run={ Install-VmPackage Microsoft.Azd azd -TestInstalled { Test-VmCommand azd @('version') } } },
+        @{ Name='Modernize CLI'; Run={
+            Install-VmPackage GitHub.Copilot.modernization.agent 'Modernize CLI' -TestInstalled { Test-VmCommand modernize }
+        } },
         @{ Name='.NET 10 SDK'; Run={
             if (-not (Install-WorkshopDotnetSdk)) { return $false }
             $probe = Invoke-ToolProbe dotnet @('--list-sdks')
@@ -384,7 +430,7 @@ function Invoke-VmToolInstallation {
             return 3010
         }
     }
-    Write-Host '[MANUAL] Ubuntu 최초 사용자 설정, Docker Desktop 시작과 Linux 컨테이너 확인, Copilot 로그인과 플러그인 설정을 직접 진행하세요.'
+    Write-Host '[MANUAL] Ubuntu 최초 사용자 설정, Docker Desktop 시작과 Linux 컨테이너 확인, Copilot 로그인, gh 인증과 Modernize CLI 확인을 직접 진행하세요.'
     Write-Host '[INFO] Azure/GitHub 로그인, 구독 변경, 공급자 등록, 실습 DB 생성은 실행하지 않았습니다.'
     if ($failed) { return 1 }
     Write-Host '[PASS] 도구 설치 상태를 확인했습니다. 실제 앱 빌드와 VM 런타임 검증은 별도로 진행하세요.'

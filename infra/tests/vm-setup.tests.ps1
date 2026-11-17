@@ -71,6 +71,31 @@ try {
         Remove-Item -LiteralPath $junction -Force
     }
 
+    Add-Type -TypeDefinition @'
+using System.Text;
+namespace Appmod {
+    public static class UserProfile {
+        public static int Result;
+        public static int CreateProfile(string sid, string name, StringBuilder path, uint length) {
+            if (path.Capacity < 1 || path.Capacity > 260 || length != path.Capacity) {
+                return unchecked((int)0x800706F7);
+            }
+            return Result;
+        }
+    }
+}
+'@
+    New-VmUserProfile -Sid 'S-1-5-21-123-456-789-1001' -Username 'appmoduser'
+    Assert-True $? 'profile creation respects the native MAX_PATH buffer limit'
+    [Appmod.UserProfile]::Result = -2147024713
+    New-VmUserProfile -Sid 'S-1-5-21-123-456-789-1001' -Username 'appmoduser'
+    Assert-True $? 'native already-existing profile result is accepted'
+    [Appmod.UserProfile]::Result = -2147024891
+    Assert-Throws {
+        New-VmUserProfile -Sid 'S-1-5-21-123-456-789-1001' -Username 'appmoduser'
+    } '.' 'other native profile creation errors still propagate'
+    [Appmod.UserProfile]::Result = 0
+
     & {
         $script:Created = 0
         $script:HasProfile = $false

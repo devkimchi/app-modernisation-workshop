@@ -68,8 +68,9 @@ namespace Appmod {
 }
 '@ -ErrorAction Stop
     }
-    $buffer = New-Object Text.StringBuilder 1024
-    $result = [Appmod.UserProfile]::CreateProfile($Sid, $Username, $buffer, 1024)
+    # CreateProfile rejects output buffers larger than MAX_PATH with 0x800706F7.
+    $buffer = New-Object Text.StringBuilder 260
+    $result = [Appmod.UserProfile]::CreateProfile($Sid, $Username, $buffer, [uint32]$buffer.Capacity)
     # Another provisioning operation may have created the same profile.
     if ($result -ne 0 -and $result -ne -2147024713) {
         [Runtime.InteropServices.Marshal]::ThrowExceptionForHR($result)

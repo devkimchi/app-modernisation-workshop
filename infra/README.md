@@ -145,6 +145,8 @@ azd는 Windows에서 `preprovision.ps1`, macOS/Linux에서 `preprovision.sh`를 
 
 VM 생성 후 Managed Run Command가 `appmoduser`의 SID로 프로필을 찾고, 없으면 Windows `CreateProfile` API로 준비합니다. SYSTEM의 `$HOME`이나 추측한 사용자 경로를 쓰지 않습니다. 실제 프로필의 `scripts` 아래에 UTF-8 BOM과 LF를 보존해 파일을 배치합니다. 이 배치 스크립트만 PowerShell 7 검사 없이 Windows PowerShell 5.1에서 실행됩니다.
 
+프로필 생성 단계에서 배포가 실패했다면 오류를 해결한 뒤 같은 azd 환경에서 `azd provision`을 다시 실행하세요. 이 단계의 실패만으로 VM이나 리소스 그룹을 삭제할 필요는 없습니다.
+
 동일한 파일은 그대로 두고 다른 내용의 기존 파일, 경로 이탈과 reparse point는 거부합니다. 배치 실패는 배포 실패로 처리합니다. 사용자 수정 파일과 충돌하면 VM에서 충돌 파일을 별도 위치에 백업하고 원래 경로에서 옮긴 뒤 `azd provision`을 다시 실행하세요. 변경된 설치 도우미를 전달할 때도 동일하게 처리합니다.
 
 ## 유지보수 검증

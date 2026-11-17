@@ -52,6 +52,36 @@ Keep `.sh` files compatible with Bash 3.2 and Bash 5, with LF line endings and B
 
 Directly executed scripts/tests use `#!/usr/bin/env bash` and Git mode `100755`; source-only helpers such as `use-java.sh`, `terminal-output.sh` and `java-deployment.sh` use `100644`. Check modes with `git ls-files -s scripts tests`, including on Windows where `core.fileMode=false` can hide mode changes.
 
+### Windows VM infrastructure
+
+When changing `infra/` Bicep or setup scripts, run these checks from the repository root before deployment. They package the VM scripts, compile Bicep, and test file delivery and installer behavior without provisioning Azure resources or installing tools. Azure CLI with Bicep is required.
+
+In PowerShell 7 on Windows:
+
+```powershell
+./infra/scripts/preprovision.ps1
+az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
+./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
+```
+
+Check the Windows PowerShell 5.1 entry path and delegation separately:
+
+```powershell
+powershell.exe -NoProfile -File ./infra/tests/vm-setup.tests.ps1 -CompiledTemplate ./infra/.generated/main.json
+```
+
+On macOS/Linux, with Python 3 available for the tests:
+
+```bash
+./infra/scripts/preprovision.sh
+az bicep build --file ./infra/main.bicep --outfile ./infra/.generated/main.json
+./infra/tests/vm-payload.tests.sh
+```
+
+Direct invocation uses the current PowerShell engine or the Bash shebang. Specify an engine only when testing a particular version: on macOS, also run `/bin/bash ./infra/scripts/preprovision.sh` and `/bin/bash ./infra/tests/vm-payload.tests.sh` to cover the built-in Bash 3.2.
+
+Windows tests use temporary registry keys, not the user's PATH. Generated files under `infra/.generated/` and `.azure/` are excluded from Git. Passing local tests does not verify real VM deployment, sign-in, WSL2, Docker, or application builds.
+
 ### Results and limits
 
 Tests for missing tools or invalid commits may print `FAIL` or `fatal`. Check the final `PASS` summary and exit code `0`.

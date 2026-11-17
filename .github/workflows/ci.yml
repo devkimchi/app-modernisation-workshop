@@ -52,6 +52,8 @@ jobs:
               bash "tests/$suite.tests.sh"
             fi
           done
+          for script in infra/scripts/*.sh infra/tests/*.tests.sh; do bash -n "$script"; done
+          bash infra/tests/vm-payload.tests.sh
 
   powershell-tests:
     name: PowerShell regression tests

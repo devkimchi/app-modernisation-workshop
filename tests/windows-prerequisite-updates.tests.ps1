@@ -36,7 +36,8 @@ try {
         $script:ConcurrentVersion = $null
         $script:NvmVersion = '1.2.2'; $script:NvmMode = 'shim'
         $script:NvmAutoInstall = $false; $script:NvmEnabled = $true; $script:NvmDefault = $true
-        $script:NvmList = $null
+        $script:NvmList = $null; $script:NvmListCode = 0
+        $script:FirstActivationVersion = $null
         $script:NodeProbeCode = 0
         $script:JavaSuccess = $true
         $script:Managed = [pscustomobject]@{ Path = 'C:\PowerShell\7\pwsh.exe'; Version = [version]'7.5.0' }
@@ -89,13 +90,18 @@ try {
             $text = @{ root='C:\fixture-data\installs'; mode=$script:NvmMode; auto_install=$script:NvmAutoInstall; enabled=$script:NvmEnabled } | ConvertTo-Json
         }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'list') {
+            $code = $script:NvmListCode
             $text = if ($null -ne $script:NvmList) { $script:NvmList } elseif ($script:NvmDefault) {
-                '[{"version":"22.1.0","installed":true,"default":true}]'
+                '[{"version":"' + $script:Current + '","installed":true,"default":true}]'
             } else { '[]' }
         }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'install') {
             $code = $script:InstallCode
             if ($script:ConcurrentVersion) { $script:Current = $script:ConcurrentVersion }
+            if ($code -eq 0 -and $script:FirstActivationVersion) {
+                $script:HasNode=$true; $script:Current=$script:FirstActivationVersion; $script:NodeProbeCode=0
+                $script:NvmDefault=$true; $script:NvmList=$null
+            }
         }
         elseif ($Name -eq 'nvm' -and $Arguments[0] -eq 'use') {
             $code = $script:UseCode
@@ -251,6 +257,23 @@ try {
     Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmDefault = $false; $script:NodeProbeCode = 1
     Assert-True (Install-WorkshopNode) 'v2 fresh shim without selected runtime can install'
     Assert-True ($script:Calls -contains 'nvm install 22.9.0') 'v2 empty installed list selects 22'
+    Reset-Fixture; $script:NvmVersion='2.0.1'; $script:NvmDefault=$false; $script:NodeProbeCode=1
+    $script:NvmList='No versions installed.'; $script:FirstActivationVersion='22.9.0'
+    Assert-True (Install-WorkshopNode) 'nvm 2.0.1 textual empty list and first-install automatic default selection succeed'
+    Assert-True ($script:Prompts.Count -eq 1 -and $script:Prompts[0] -match 'automatically selects.*default' -and
+        $script:Calls -notcontains 'nvm use 22.9.0 --no-install') 'first installation obtains activation consent before nvm auto-selects and avoids a redundant switch'
+    Reset-Fixture; $script:NvmVersion='2.0.1'; $script:NvmDefault=$false; $script:NodeProbeCode=1
+    $script:NvmList='No versions installed.'; $script:Approvals.Enqueue($false)
+    Assert-True (-not (Install-WorkshopNode)) 'declining first installation also prevents automatic default selection'
+    Assert-True ($script:Calls -notcontains 'nvm install 22.9.0') 'first-install activation cannot precede consent'
+    Reset-Fixture; $script:NvmVersion='2.0.1'; $script:NvmDefault=$false; $script:NodeProbeCode=1
+    $script:NvmList='No versions installed.'; $script:FirstActivationVersion='24.1.0'
+    Assert-True (-not (Install-WorkshopNode)) 'unexpected first-install default selection is not accepted'
+    Assert-True ($script:Calls -notcontains 'nvm use 22.9.0 --no-install') 'unexpected default is not overwritten'
+    Reset-Fixture; $script:NvmVersion='2.0.1'; $script:NvmDefault=$false; $script:NodeProbeCode=1
+    $script:NvmList='No versions installed.'; $script:NvmListCode=1
+    Assert-True (-not (Install-WorkshopNode)) 'textual empty list is accepted only with a successful nvm exit'
+    Assert-True ($script:Calls -notcontains 'nvm install 22.9.0') 'failed nvm listing never starts installation'
     Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmDefault = $false
     $script:Current = '24.1.0'; $script:Latest = [version]'24.9.0'; $script:InstalledVersion = '24.9.0'
     Assert-True (Install-WorkshopNode -Update) 'v2 detected runtime without default still preserves active major'
@@ -259,7 +282,7 @@ try {
     Assert-True (-not (Install-WorkshopNode -Update)) 'v2 auto-install requires manual preparation'
     Assert-True ($script:Calls -notcontains 'node --version' -and
         @($script:Calls | Where-Object { $_ -like 'nvm install *' }).Count -eq 0) 'v2 auto-install cannot bypass per-tool consent through shim probes'
-    foreach ($badList in @('{}', '[{}]', '[{"version":"bad","installed":true,"default":true}]', '[invalid]')) {
+    foreach ($badList in @('{}', '[{}]', '[{"version":"bad","installed":true,"default":true}]', '[invalid]', 'unexpected output')) {
         Reset-Fixture; $script:NvmVersion = '2.0.1'; $script:NvmList = $badList
         Assert-True (-not (Install-WorkshopNode -Update)) 'v2 malformed installed list rejected'
     }

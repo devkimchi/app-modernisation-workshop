@@ -113,32 +113,34 @@ WSL2 플랫폼만 설치된 상태의 `Windows Subsystem for Linux has no instal
 
 ### 설치 대상
 
-| 도구 | 설치와 확인 방식 |
-| --- | --- |
-| WinGet | App Installer를 등록하거나 항목별 동의 후 준비 |
-| PowerShell | 안정 7.x(`7.x.y`와 `7.x.y.z` 패키지 버전 지원), 기존 버전은 자동 업데이트하지 않음 |
-| WSL2 플랫폼 | 배포판 없이 `wsl.exe --install --no-distribution`으로 설치. 설치 후 직접 재부팅 |
-| Ubuntu | WSL2 플랫폼 준비 후 설치. `appmoduser`에 등록 |
-| MSMQ | Server 기능과 서비스 시작. 큐와 데이터는 생성하지 않음 |
-| .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
-| Git | `Git.Git` |
-| GitHub CLI | `GitHub.cli`, 2.45.0 이상 확인 |
-| GitHub Copilot CLI | GitHub CLI 다음에 `GitHub.Copilot` 설치. `copilot --version`으로 확인 |
-| nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의(`-Yes` 사용 시 일괄 동의에 포함) |
-| Azure CLI | `Microsoft.AzureCLI` |
-| azd | `Microsoft.Azd` |
-| Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
-| .NET 10 SDK | `Microsoft.DotNet.SDK.10`, 안정 10.x. 기존 다른 메이저 유지 |
-| .NET 11 SDK | `Microsoft.DotNet.SDK.11`, 안정 11.x. .NET 10과 별도 동의 후 함께 설치 |
-| Visual C++ x64 런타임 | PostgreSQL 클라이언트보다 먼저 `Microsoft.VCRedist.2015+.x64`를 별도 동의 후 설치. 필요한 런타임 DLL 확인 |
-| PostgreSQL 18 클라이언트 | `PostgreSQL.PostgreSQL.18`의 `commandlinetools`만 설치하고 실행 확인. 별도 동의 후 사용자 PATH에 추가(`-Yes`에 포함). 서버, pgAdmin과 Stack Builder는 설치하지 않으며 DB도 생성하지 않음 |
-| Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 및 .NET 데스크톱 빌드 도구, 4.8 Targeting Pack과 SDK |
-| IIS Express | Microsoft 공식 x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인 |
-| SQL Server LocalDB | Microsoft 공식 SQL Server 2025 Express LocalDB x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인. DB나 인스턴스는 생성하지 않음 |
-| Framework 빌드 및 실행 도구 확인 | 4.8 Targeting Pack, MSBuild 웹 빌드 도구, IIS Express와 SQL Server LocalDB 확인. DB를 만들거나 초기화하지 않음 |
-| VS Code | `Microsoft.VisualStudioCode` |
-| GitHub Copilot app | 공식 `github/app` 최신 정식 x64 MSI. 제공된 SHA-256과 GitHub 서명을 확인한 뒤 실행 |
-| Docker Desktop | WSL2 백엔드로 설치. 최초 실행과 약관 확인은 수동 진행 |
+다음 표의 순서로 진행하며, 실행 중에도 `[INFO]` 메시지로 현재 그룹을 표시합니다. 재부팅이 필요하면 해당 지점에서 중단합니다.
+
+| 그룹 | 도구 | 설치와 확인 방식 |
+| --- | --- | --- |
+| 1. 설치 실행 기반 | WinGet | App Installer를 등록하거나 항목별 동의 후 준비 |
+| 1. 설치 실행 기반 | PowerShell | 안정 7.x(`7.x.y`와 `7.x.y.z` 패키지 버전 지원), 기존 버전은 자동 업데이트하지 않음 |
+| 2. Windows 기능 | WSL2 플랫폼 | 배포판 없이 `wsl.exe --install --no-distribution`으로 설치. 설치 후 직접 재부팅 |
+| 2. Windows 기능 | Ubuntu | WSL2 플랫폼 준비 후 설치. `appmoduser`에 등록 |
+| 2. Windows 기능 | MSMQ | Server 기능과 서비스 시작. 큐와 데이터는 생성하지 않음 |
+| 3. 런타임 및 SDK | Visual C++ x64 런타임 | PostgreSQL 클라이언트보다 먼저 `Microsoft.VCRedist.2015+.x64`를 별도 동의 후 설치. 필요한 런타임 DLL 확인 |
+| 3. 런타임 및 SDK | .NET Framework | 4.8 이상 런타임 확인, 없으면 4.8.1 설치 |
+| 3. 런타임 및 SDK | .NET 10 SDK | `Microsoft.DotNet.SDK.10`, 안정 10.x. 기존 다른 메이저 유지 |
+| 3. 런타임 및 SDK | .NET 11 SDK | `Microsoft.DotNet.SDK.11`, 안정 11.x. .NET 10과 별도 동의 후 함께 설치 |
+| 3. 런타임 및 SDK | nvm-windows, Node.js | 정식 nvm 2.x, 새 Node는 22.x. 기존 지원 메이저 유지. 첫 설치의 자동 기본 버전 선택은 설치 동의에 포함하며, 그 외 활성화는 별도 동의(`-Yes` 사용 시 일괄 동의에 포함) |
+| 4. .NET Framework 빌드 및 실행 | Build Tools 2026 | 안정 18.x, [buildtools.vsconfig](scripts/buildtools.vsconfig)의 웹 및 .NET 데스크톱 빌드 도구, 4.8 Targeting Pack과 SDK |
+| 4. .NET Framework 빌드 및 실행 | IIS Express | Microsoft 공식 x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인 |
+| 4. .NET Framework 빌드 및 실행 | SQL Server LocalDB | Microsoft 공식 SQL Server 2025 Express LocalDB x64 MSI를 별도 동의 후 설치. SHA-256과 Microsoft 서명 확인. DB나 인스턴스는 생성하지 않음 |
+| 4. .NET Framework 빌드 및 실행 | Framework 빌드 및 실행 도구 확인 | 4.8 Targeting Pack, MSBuild 웹 빌드 도구, IIS Express와 SQL Server LocalDB 확인. DB를 만들거나 초기화하지 않음 |
+| 5. DB 및 컨테이너 | PostgreSQL 18 클라이언트 | `PostgreSQL.PostgreSQL.18`의 `commandlinetools`만 설치하고 실행 확인. 별도 동의 후 사용자 PATH에 추가(`-Yes`에 포함). 서버, pgAdmin과 Stack Builder는 설치하지 않으며 DB도 생성하지 않음 |
+| 5. DB 및 컨테이너 | Docker Desktop | WSL2 백엔드로 설치. 최초 실행과 약관 확인은 수동 진행 |
+| 6. GitHub 도구 | Git | `Git.Git` |
+| 6. GitHub 도구 | GitHub CLI | `GitHub.cli`, 2.45.0 이상 확인 |
+| 6. GitHub 도구 | GitHub Copilot CLI | GitHub CLI 다음에 `GitHub.Copilot` 설치. `copilot --version`으로 확인 |
+| 7. Azure 도구 | Azure CLI | `Microsoft.AzureCLI` |
+| 7. Azure 도구 | azd | `Microsoft.Azd` |
+| 8. 편집기 및 현대화 도구 | VS Code | `Microsoft.VisualStudioCode` |
+| 8. 편집기 및 현대화 도구 | GitHub Copilot app | 공식 `github/app` 최신 정식 x64 MSI. 제공된 SHA-256과 GitHub 서명을 확인한 뒤 실행 |
+| 8. 편집기 및 현대화 도구 | Modernize CLI | `GitHub.Copilot.modernization.agent`. `modernize --version`으로 확인 |
 
 Visual Studio Community IDE는 설치하지 않습니다. 기존 IDE가 있으면 제거하지 않습니다. IIS Express와 LocalDB는 Build Tools의 구성요소가 아니므로 별도 설치합니다. 설치 전 시스템 드라이브에 최소 50 GiB의 여유 공간을 요구하며, 이후 Docker 이미지와 WSL 데이터에 필요한 공간은 별도로 확보하세요.
 

@@ -835,31 +835,34 @@ function Enable-WindowsOptionalFeature {
     & {
         $script:RuntimeSteps=[Collections.Generic.List[string]]::new()
         $script:CliSteps=[Collections.Generic.List[string]]::new()
+        $script:InstallationOrder=[Collections.Generic.List[string]]::new()
         $script:CopilotCliCheck=$null
         function Test-VmRebootPending { return $false }
         function Get-PSDrive { [pscustomobject]@{Free=100GB} }
-        function Install-VmWslPlatform { return $true }
-        function Install-VmUbuntu { return $true }
-        function Install-VmMsmq { return $true }
+        function Install-VmWslPlatform { $script:InstallationOrder.Add('WSL2'); return $true }
+        function Install-VmUbuntu { $script:InstallationOrder.Add('Ubuntu'); return $true }
+        function Install-VmMsmq { $script:InstallationOrder.Add('MSMQ'); return $true }
         function Install-VmPackage {
             param($Id,$Name,$TestInstalled)
+            $script:InstallationOrder.Add($Id)
             if ($Id -in @('GitHub.cli','GitHub.Copilot')) { $script:CliSteps.Add($Id) }
             if ($Id -eq 'GitHub.Copilot') { $script:CopilotCliCheck=$TestInstalled }
             return $true
         }
-        function Install-VmNvm { $script:CliSteps.Add('nvm'); return $true }
-        function Install-VmDotnetSdk { return $true }
-        function Install-VmPostgresClient { return $true }
-        function Install-VmCopilot { return $true }
+        function Install-VmNvm { $script:InstallationOrder.Add('Node'); $script:CliSteps.Add('nvm'); return $true }
+        function Install-VmDotnetSdk { param($Major); $script:InstallationOrder.Add("SDK$Major"); return $true }
+        function Install-VmPostgresClient { $script:InstallationOrder.Add('PostgreSQL'); return $true }
+        function Install-VmCopilot { $script:InstallationOrder.Add('CopilotApp'); return $true }
         function Install-VmVisualStudio {
             param($Product,$ConfigFile)
             Assert-True ($Product -eq 'BuildTools') 'installer never requests a Community installation'
+            $script:InstallationOrder.Add('BuildTools')
             $script:RuntimeSteps.Add('BuildTools')
             return $true
         }
-        function Install-VmIisExpress { $script:RuntimeSteps.Add('IIS Express'); return $true }
-        function Install-VmLocalDb { $script:RuntimeSteps.Add('LocalDB'); return $true }
-        function Test-VmFrameworkTools { $script:RuntimeSteps.Add('Verify'); return $true }
+        function Install-VmIisExpress { $script:InstallationOrder.Add('IIS'); $script:RuntimeSteps.Add('IIS Express'); return $true }
+        function Install-VmLocalDb { $script:InstallationOrder.Add('LocalDB'); $script:RuntimeSteps.Add('LocalDB'); return $true }
+        function Test-VmFrameworkTools { $script:InstallationOrder.Add('FrameworkCheck'); $script:RuntimeSteps.Add('Verify'); return $true }
         $savedCI = $env:CI; $savedNoColor = $env:NO_COLOR; $savedTerm = $env:TERM
         $rendered = [Collections.Generic.List[object]]::new()
         function Test-WorkshopOutputTerminal { return $true }
@@ -871,7 +874,27 @@ function Enable-WindowsOptionalFeature {
             $env:CI = ''; $env:NO_COLOR = ''; $env:TERM = 'xterm'
             Assert-True ((Invoke-VmToolInstallation) -eq 0) 'Build Tools-only flow completes with separate runtime tools'
             Assert-True (($script:RuntimeSteps -join ',') -eq 'BuildTools,IIS Express,LocalDB,Verify') 'standalone runtime tools install after Build Tools and before final verification'
-            Assert-True (($script:CliSteps -join ',') -eq 'GitHub.cli,GitHub.Copilot,nvm') 'Copilot CLI installs immediately after GitHub CLI and before nvm'
+            Assert-True (($script:CliSteps -join ',') -eq 'nvm,GitHub.cli,GitHub.Copilot') 'Copilot CLI follows GitHub CLI after the runtime group'
+            $expectedOrder = @(
+                'WSL2', 'Ubuntu', 'MSMQ', 'Microsoft.VCRedist.2015+.x64',
+                'Microsoft.DotNet.Framework.Runtime', 'SDK10', 'SDK11', 'Node',
+                'BuildTools', 'IIS', 'LocalDB', 'FrameworkCheck',
+                'PostgreSQL', 'Docker.DockerDesktop', 'Git.Git', 'GitHub.cli', 'GitHub.Copilot',
+                'Microsoft.AzureCLI', 'Microsoft.Azd', 'Microsoft.VisualStudioCode',
+                'CopilotApp', 'GitHub.Copilot.modernization.agent'
+            )
+            Assert-True (($script:InstallationOrder -join ',') -ceq ($expectedOrder -join ',')) 'all tools run in the agreed dependency and purpose order'
+            $expectedGroups = @(
+                '[INFO] === [2/8] Windows features ===',
+                '[INFO] === [3/8] Runtimes and SDKs ===',
+                '[INFO] === [4/8] .NET Framework build and run tools ===',
+                '[INFO] === [5/8] Database and containers ===',
+                '[INFO] === [6/8] GitHub tools ===',
+                '[INFO] === [7/8] Azure tools ===',
+                '[INFO] === [8/8] Editors and modernization tools ==='
+            )
+            $groupMessages = @($rendered | Where-Object { $_.Text.StartsWith('[INFO] === ') })
+            Assert-True (($groupMessages.Text -join ',') -ceq ($expectedGroups -join ',')) 'each installation group heading appears once in order'
             $script:CopilotCliCode=0
             function Invoke-ToolProbe {
                 param($Name,$Arguments)
@@ -933,6 +956,7 @@ function Enable-WindowsOptionalFeature {
         $null = [IO.Directory]::CreateDirectory($yesFixture)
         Copy-Item -LiteralPath $installer -Destination (Join-Path $yesFixture 'install-vm-tools.ps1')
         $yesBootstrap = @'
+function Write-WorkshopMessage { param($Message); Write-Host $Message }
 function Assert-VmInstallerContext { }
 function Test-VmRebootPending { return $false }
 function Initialize-VmWinget { return $true }
@@ -948,8 +972,9 @@ function Initialize-WorkshopScript {
 }
 '@
         [IO.File]::WriteAllText((Join-Path $yesFixture 'powershell-bootstrap.ps1'),$yesBootstrap,[Text.UTF8Encoding]::new($true))
-        & powershell.exe -NoProfile -NonInteractive -File (Join-Path $yesFixture 'install-vm-tools.ps1') -Yes | Out-Host
+        $entryOutput = & powershell.exe -NoProfile -NonInteractive -File (Join-Path $yesFixture 'install-vm-tools.ps1') -Yes
         Assert-True ($LASTEXITCODE -eq 0) 'VM Yes reaches the 5.1 bootstrap delegation parameters'
+        Assert-True ($entryOutput -contains '[INFO] === [1/8] Installation prerequisites ===') 'bootstrap shows the first group before installing tools'
         $escaped = $installer.Replace("'", "''")
         & powershell.exe -NoProfile -NonInteractive -Command "try { . '$escaped'; exit 99 } catch { Write-Output 'expected dot-source rejection'; exit 0 }" | Out-Host
         Assert-True ($LASTEXITCODE -eq 0) '5.1 dot-sourcing throws without exiting caller'

@@ -288,6 +288,11 @@ function Test-VmVisualCppRuntime {
     return $true
 }
 
+function Install-VmVisualCppRuntime {
+    return (Install-VmPackage -Id Microsoft.VCRedist.2015+.x64 -Name 'Microsoft Visual C++ v14 Redistributable (x64)' `
+        -TestInstalled { Test-VmVisualCppRuntime })
+}
+
 function Get-VmPostgresClient {
     $paths = @((Join-Path $env:ProgramFiles 'PostgreSQL\18\bin\psql.exe'))
     $command = Get-Command psql -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -336,8 +341,7 @@ function Set-VmPostgresPath {
 }
 
 function Install-VmPostgresClient {
-    if (-not (Install-VmPackage -Id Microsoft.VCRedist.2015+.x64 -Name 'Microsoft Visual C++ v14 Redistributable (x64)' `
-        -TestInstalled { Test-VmVisualCppRuntime })) {
+    if (-not (Install-VmVisualCppRuntime)) {
         Write-WorkshopMessage '[MANUAL] PostgreSQL 18 client requires the x64 Visual C++ runtime. Complete that installation and any requested restart first.'
         return $false
     }
@@ -572,14 +576,30 @@ function Invoke-VmToolInstallation {
     $drive = Get-PSDrive -Name $env:SystemDrive.TrimEnd(':') -ErrorAction Stop
     if ($drive.Free -lt 50GB) { throw 'Free at least 50 GiB on the system drive before installation.' }
     $steps = @(
-        @{ Name='WSL2 platform'; Run={ Install-VmWslPlatform } },
+        @{ Group='[2/8] Windows features'; Name='WSL2 platform'; Run={ Install-VmWslPlatform } },
         @{ Name='Ubuntu WSL2'; Run={ Install-VmUbuntu } },
         @{ Name='MSMQ'; Run={ Install-VmMsmq } },
+        @{ Group='[3/8] Runtimes and SDKs'; Name='Visual C++ x64 runtime'; Run={ Install-VmVisualCppRuntime } },
         @{ Name='.NET Framework'; Run={
             Install-VmPackage Microsoft.DotNet.Framework.Runtime '.NET Framework 4.8.x runtime' `
                 -VersionPattern '^4\.8\.1$' -TestInstalled { Test-VmFrameworkRuntime }
         } },
-        @{ Name='Git'; Run={ Install-VmPackage Git.Git Git -TestInstalled { Test-VmCommand git } } },
+        @{ Name='.NET 10 SDK'; Run={ Install-VmDotnetSdk 10 } },
+        @{ Name='.NET 11 SDK'; Run={ Install-VmDotnetSdk 11 } },
+        @{ Name='nvm and Node.js'; Run={ Install-VmNvm } },
+        @{ Group='[4/8] .NET Framework build and run tools'; Name='Visual Studio Build Tools'; Run={
+            Install-VmVisualStudio BuildTools (Join-Path $PSScriptRoot 'buildtools.vsconfig')
+        } },
+        @{ Name='IIS Express'; Run={ Install-VmIisExpress } },
+        @{ Name='SQL Server LocalDB'; Run={ Install-VmLocalDb } },
+        @{ Name='Framework build and run tools'; Run={ Test-VmFrameworkTools } },
+        @{ Group='[5/8] Database and containers'; Name='PostgreSQL 18 client'; Run={ Install-VmPostgresClient } },
+        @{ Name='Docker Desktop'; Run={
+            Install-VmPackage Docker.DockerDesktop 'Docker Desktop (WSL2 backend)' -TestInstalled {
+                Test-VmDesktopApp @((Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'))
+            } -ExtraArguments @('--override', 'install --backend=wsl-2')
+        } },
+        @{ Group='[6/8] GitHub tools'; Name='Git'; Run={ Install-VmPackage Git.Git Git -TestInstalled { Test-VmCommand git } } },
         @{ Name='GitHub CLI'; Run={
             Install-VmPackage GitHub.cli 'GitHub CLI 2.45.0+' -TestInstalled {
                 $probe = Invoke-ToolProbe gh @('--version')
@@ -589,34 +609,22 @@ function Invoke-VmToolInstallation {
         @{ Name='GitHub Copilot CLI'; Run={
             Install-VmPackage GitHub.Copilot 'GitHub Copilot CLI' -TestInstalled { Test-VmCommand copilot }
         } },
-        @{ Name='nvm and Node.js'; Run={ Install-VmNvm } },
-        @{ Name='Azure CLI'; Run={ Install-VmPackage Microsoft.AzureCLI 'Azure CLI' -TestInstalled { Test-VmCommand az } } },
+        @{ Group='[7/8] Azure tools'; Name='Azure CLI'; Run={ Install-VmPackage Microsoft.AzureCLI 'Azure CLI' -TestInstalled { Test-VmCommand az } } },
         @{ Name='azd'; Run={ Install-VmPackage Microsoft.Azd azd -TestInstalled { Test-VmCommand azd @('version') } } },
-        @{ Name='Modernize CLI'; Run={
-            Install-VmPackage GitHub.Copilot.modernization.agent 'Modernize CLI' -TestInstalled { Test-VmCommand modernize }
-        } },
-        @{ Name='.NET 10 SDK'; Run={ Install-VmDotnetSdk 10 } },
-        @{ Name='.NET 11 SDK'; Run={ Install-VmDotnetSdk 11 } },
-        @{ Name='PostgreSQL 18 client'; Run={ Install-VmPostgresClient } },
-        @{ Name='Visual Studio Build Tools'; Run={ Install-VmVisualStudio BuildTools (Join-Path $PSScriptRoot 'buildtools.vsconfig') } },
-        @{ Name='IIS Express'; Run={ Install-VmIisExpress } },
-        @{ Name='SQL Server LocalDB'; Run={ Install-VmLocalDb } },
-        @{ Name='Framework build and run tools'; Run={ Test-VmFrameworkTools } },
-        @{ Name='VS Code'; Run={
+        @{ Group='[8/8] Editors and modernization tools'; Name='VS Code'; Run={
             Install-VmPackage Microsoft.VisualStudioCode 'VS Code' -TestInstalled {
                 Test-VmDesktopApp @((Join-Path $env:LOCALAPPDATA 'Programs\Microsoft VS Code\Code.exe'),
                     (Join-Path $env:ProgramFiles 'Microsoft VS Code\Code.exe'))
             }
         } },
         @{ Name='GitHub Copilot app'; Run={ Install-VmCopilot } },
-        @{ Name='Docker Desktop'; Run={
-            Install-VmPackage Docker.DockerDesktop 'Docker Desktop (WSL2 backend)' -TestInstalled {
-                Test-VmDesktopApp @((Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'))
-            } -ExtraArguments @('--override', 'install --backend=wsl-2')
+        @{ Name='Modernize CLI'; Run={
+            Install-VmPackage GitHub.Copilot.modernization.agent 'Modernize CLI' -TestInstalled { Test-VmCommand modernize }
         } }
     )
     $failed = $false
     foreach ($step in $steps) {
+        if ($step.ContainsKey('Group')) { Write-WorkshopMessage "[INFO] === $($step.Group) ===" }
         try {
             if (-not (& $step.Run)) { $failed = $true; Write-WorkshopMessage "[MANUAL] $($step.Name) is not ready." }
         }
@@ -652,6 +660,7 @@ else {
         Assert-VmInstallerContext
         $script:VmRestartRequired = $false
         if (Test-VmRebootPending) { Write-WorkshopMessage '[MANUAL] Restart manually and rerun this script.'; exit 3010 }
+        Write-WorkshopMessage '[INFO] === [1/8] Installation prerequisites ==='
         if (-not (Initialize-VmWinget)) { Write-WorkshopMessage '[MANUAL] winget is not ready.'; exit 1 }
         if (-not (Install-VmPowerShell)) {
             if ($script:VmRestartRequired) { exit 3010 }

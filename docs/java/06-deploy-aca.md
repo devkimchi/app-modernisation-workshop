@@ -113,16 +113,14 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 > [!NOTE]
 > 터미널에서 [ipify](https://www.ipify.org)의 API로 공인 IPv4 주소를 확인할 수도 있습니다. **Microsoft나 Azure가 운영하지 않는 외부 서비스**이며, 조회 시 공인 IP와 요청 정보가 해당 서비스에 전달됩니다. 조직의 외부 서비스 사용 정책을 확인한 뒤 필요한 경우에만 사용하세요.
 >
-> **Bash/Zsh**
->
 > ```bash
-> curl -4 --fail --silent --show-error --max-time 10 https://api.ipify.org
+> # zsh/bash
+> clientIp=$(curl -4 --fail --silent --show-error --max-time 10 https://api.ipify.org)
 > ```
 >
-> **PowerShell 7**
->
 > ```powershell
-> (Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec 10).Trim()
+> # PowerShell
+> $clientIp = (Invoke-RestMethod -Uri "https://api.ipify.org" -TimeoutSec 10).Trim()
 > ```
 >
 > 조회 결과가 실제 DB 접속의 송신 IP와 같은지 확인한 뒤 아래 `<확인한-공인-IPv4>`에 입력합니다. VPN이나 프록시 환경에서는 다를 수 있으므로 결과를 확인 없이 자동 등록하지 마세요.

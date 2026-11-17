@@ -133,17 +133,58 @@ function Get-VmWslExecutable {
     if (Test-Path -LiteralPath $path -PathType Leaf) { return $path }
 }
 
+function Invoke-VmWindowsFeature {
+    param(
+        [ValidateSet('VirtualMachinePlatform', 'MSMQ-Server')]
+        [string]$FeatureName,
+        [switch]$Enable
+    )
+    # DISM cmdlets can fail with "Class not registered" in MSIX PowerShell 7.
+    $command = @'
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+try {
+    if (__ENABLE__) {
+        $result = Enable-WindowsOptionalFeature -Online -FeatureName '__FEATURE__' -All -NoRestart -ErrorAction Stop
+        [pscustomobject]@{ RestartNeeded = [bool]$result.RestartNeeded } | ConvertTo-Json -Compress
+    }
+    else {
+        $result = Get-WindowsOptionalFeature -Online -FeatureName '__FEATURE__' -ErrorAction Stop
+        [pscustomobject]@{ State = [string]$result.State } | ConvertTo-Json -Compress
+    }
+}
+catch {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
+'@
+    $enabled = if ($Enable) { '$true' } else { '$false' }
+    $command = $command.Replace('__ENABLE__', $enabled).Replace('__FEATURE__', $FeatureName)
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    $engine = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $probe = Invoke-ToolProbe $engine @('-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded)
+    if ($probe.Code -ne 0) {
+        throw "Windows PowerShell feature operation failed for $FeatureName (exit code $($probe.Code)): $($probe.Text)"
+    }
+    $result = $probe.Text | ConvertFrom-Json -ErrorAction Stop
+    if (($Enable -and $result.RestartNeeded -isnot [bool]) -or
+        (-not $Enable -and [string]::IsNullOrWhiteSpace($result.State))) {
+        throw "Invalid Windows PowerShell feature response for ${FeatureName}: $($probe.Text)"
+    }
+    return $result
+}
+
 function Test-VmWslPlatform {
     $wsl = Get-VmWslExecutable
     if (-not $wsl) { return $false }
-    $feature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction Stop
+    $feature = Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform
     if ("$($feature.State)" -ne 'Enabled') { return $false }
     return (Invoke-ToolProbe $wsl @('--status')).Code -eq 0
 }
 
 function Install-VmWslPlatform {
     if (Test-VmWslPlatform) { Write-Host '[PASS] WSL2 platform is ready.'; return $true }
-    $feature = Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction Stop
+    $feature = Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform
     if ("$($feature.State)" -in @('EnablePending', 'DisablePending')) { $script:VmRestartRequired = $true; return $false }
     $wsl = Get-VmWslExecutable
     if (-not $wsl) { throw 'wsl.exe was not found. Check the Windows 11 image and the WSL documentation.' }
@@ -187,16 +228,16 @@ function Install-VmUbuntu {
 }
 
 function Install-VmMsmq {
-    $feature = Get-WindowsOptionalFeature -Online -FeatureName MSMQ-Server -ErrorAction Stop
+    $feature = Invoke-VmWindowsFeature -FeatureName MSMQ-Server
     if ("$($feature.State)" -in @('EnablePending', 'DisablePending')) {
         $script:VmRestartRequired = $true
         return $false
     }
     if ("$($feature.State)" -ne 'Enabled') {
         if (-not (Confirm-VmAction 'Enable MSMQ Server and the required Windows features. No automatic restart.')) { return $false }
-        $result = Enable-WindowsOptionalFeature -Online -FeatureName MSMQ-Server -All -NoRestart -ErrorAction Stop
+        $result = Invoke-VmWindowsFeature -FeatureName MSMQ-Server -Enable
         if ($result.RestartNeeded) { $script:VmRestartRequired = $true; return $false }
-        if ((Get-WindowsOptionalFeature -Online -FeatureName MSMQ-Server -ErrorAction Stop).State -ne 'Enabled') {
+        if ((Invoke-VmWindowsFeature -FeatureName MSMQ-Server).State -ne 'Enabled') {
             throw 'Could not verify that the MSMQ feature is enabled.'
         }
     }

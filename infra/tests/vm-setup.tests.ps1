@@ -229,9 +229,50 @@ namespace Appmod {
     }
 
     & {
+        function Get-WindowsOptionalFeature { throw 'Class not registered' }
+        function Enable-WindowsOptionalFeature { throw 'Class not registered' }
+        $script:FeatureResponse='{"State":"Enabled"}'
+        $script:FeatureCode=0
+        function Invoke-ToolProbe {
+            param($Name,$Arguments)
+            Assert-True ($Name -eq (Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe') -and
+                $Arguments -contains '-NoProfile' -and $Arguments -contains '-NonInteractive') 'servicing runs in Windows PowerShell 5.1 outside MSIX PowerShell 7'
+            $encodedIndex = [Array]::IndexOf($Arguments, '-EncodedCommand')
+            $command = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($Arguments[$encodedIndex + 1]))
+            $prefix = @'
+function Get-WindowsOptionalFeature {
+    param([switch]$Online, $FeatureName, $ErrorAction)
+    if (-not $Online -or $FeatureName -ne 'VirtualMachinePlatform') { throw 'Invalid feature query' }
+    [pscustomobject]@{ State='Enabled' }
+}
+function Enable-WindowsOptionalFeature {
+    param([switch]$Online, $FeatureName, [switch]$All, [switch]$NoRestart, $ErrorAction)
+    if (-not $Online -or -not $All -or -not $NoRestart -or $FeatureName -ne 'MSMQ-Server') { throw 'Unsafe feature activation' }
+    [pscustomobject]@{ RestartNeeded=$true }
+}
+'@
+            $testEncoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes("$prefix`n$command"))
+            $actual = (& $Name -NoLogo -NoProfile -NonInteractive -EncodedCommand $testEncoded | Out-String).Trim()
+            Assert-True ($LASTEXITCODE -eq 0 -and $actual -eq $script:FeatureResponse) 'Windows PowerShell worker queries state or enables with NoRestart and returns JSON'
+            [pscustomobject]@{ Code=$script:FeatureCode; Text=$script:FeatureResponse }
+        }
+        Assert-True ((Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform).State -eq 'Enabled') 'feature query avoids the current process DISM registration error'
+        $script:FeatureResponse='{"RestartNeeded":true}'
+        Assert-True (Invoke-VmWindowsFeature -FeatureName MSMQ-Server -Enable).RestartNeeded 'servicing preserves the restart-needed result'
+    }
+
+    & {
+        function Invoke-ToolProbe { [pscustomobject]@{ Code=1; Text='fixture servicing failure' } }
+        Assert-Throws { Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform } 'fixture servicing failure' 'servicing failures propagate instead of reporting a disabled feature'
+        function Invoke-ToolProbe { [pscustomobject]@{ Code=0; Text='{}' } }
+        Assert-Throws { Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform } 'Invalid.*response' 'missing feature state is rejected'
+        Assert-Throws { Invoke-VmWindowsFeature -FeatureName MSMQ-Server -Enable } 'Invalid.*response' 'missing reboot status is rejected'
+    }
+
+    & {
         function Get-VmWslExecutable { 'fixture-wsl.exe' }
         $script:FeatureState='Enabled'; $script:StatusCode=0
-        function Get-WindowsOptionalFeature { [pscustomobject]@{ State=$script:FeatureState } }
+        function Invoke-VmWindowsFeature { [pscustomobject]@{ State=$script:FeatureState } }
         function Invoke-ToolProbe {
             param($Name,$Arguments)
             Assert-True ($Name -eq 'fixture-wsl.exe' -and ($Arguments -join ' ') -eq '--status') 'WSL2 platform probe is read-only'
@@ -247,7 +288,7 @@ namespace Appmod {
     & {
         $script:Platform=$false; $script:FeatureState='Disabled'; $script:PlatformInstalls=0
         function Test-VmWslPlatform { $script:Platform }
-        function Get-WindowsOptionalFeature { [pscustomobject]@{ State=$script:FeatureState } }
+        function Invoke-VmWindowsFeature { [pscustomobject]@{ State=$script:FeatureState } }
         function Get-VmWslExecutable { 'C:\Windows\System32\wsl.exe' }
         function Confirm-VmAction { return $false }
         function Invoke-VmInstaller { throw 'must not install without consent' }
@@ -292,12 +333,12 @@ namespace Appmod {
     }
 
     & {
-        function Get-WindowsOptionalFeature { [pscustomobject]@{ State='Disabled' } }
         function Confirm-VmAction { return $true }
-        function Enable-WindowsOptionalFeature {
-            param([switch]$Online,$FeatureName,[switch]$All,[switch]$NoRestart,$ErrorAction)
-            Assert-True ($FeatureName -eq 'MSMQ-Server' -and $NoRestart) 'MSMQ uses NoRestart'
-            [pscustomobject]@{ RestartNeeded=$true }
+        function Invoke-VmWindowsFeature {
+            param($FeatureName,[switch]$Enable)
+            if (-not $Enable) { return [pscustomobject]@{ State='Disabled' } }
+            Assert-True ($FeatureName -eq 'MSMQ-Server') 'MSMQ enables its Windows feature'
+            return [pscustomobject]@{ RestartNeeded=$true }
         }
         $script:VmRestartRequired=$false
         Assert-True (-not (Install-VmMsmq)) 'MSMQ pending reboot stays incomplete'

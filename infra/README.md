@@ -95,6 +95,8 @@ Windows PowerShell 5.1에서는 WinGet과 안정 PowerShell 7.x를 준비한 뒤
 pwsh -NoProfile -File "$HOME/scripts/install-vm-tools.ps1"
 ```
 
+WSL2와 MSMQ의 Windows 기능 상태 조회 및 MSMQ 기능 활성화는 별도 Windows PowerShell 5.1 프로세스에서 수행합니다. 이는 MSIX PowerShell 7의 DISM 명령에서 발생할 수 있는 `Class not registered` 오류를 피하기 위한 것으로, 설치 동의와 수동 재부팅 절차는 동일합니다.
+
 재부팅 안내가 나오면 작업을 저장하고 VM을 직접 재부팅한 뒤 같은 명령을 다시 실행하세요. 자동 재부팅, 자동 로그인과 예약 작업에 의한 재개는 없습니다. 기존 설치본과 데이터를 유지하며, 아직 준비되지 않은 항목을 다시 확인합니다.
 
 CI, `-NonInteractive`, 입출력 리디렉션, SYSTEM이나 다른 사용자로 실행하면 설치하지 않습니다. 설치에 동의하지 않으면 해당 항목은 미완료로 남습니다. 모든 설치 후 상태 검사가 끝나야 종료 코드 `0`을 반환합니다. 미완료나 실패는 `1`, 재부팅 대기는 `3010`입니다.

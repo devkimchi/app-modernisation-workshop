@@ -45,7 +45,7 @@ function Invoke-VmInstaller {
     $code = $LASTEXITCODE
     if ($code -in @(1641, 3010)) {
         $script:VmRestartRequired = $true
-        Write-Host '[MANUAL] The installer requested a restart. Restart manually and rerun this script.'
+        Write-WorkshopMessage '[MANUAL] The installer requested a restart. Restart manually and rerun this script.'
         return $true
     }
     if ($code -ne 0) { throw "$Command installation failed (exit code $code)." }
@@ -72,9 +72,9 @@ function Install-VmPackage {
         [string]$VersionPattern,
         [string[]]$ExtraArguments = @()
     )
-    if (& $TestInstalled) { Write-Host "[PASS] $Name is installed. Keeping the existing installation."; return $true }
+    if (& $TestInstalled) { Write-WorkshopMessage "[PASS] $Name is installed. Keeping the existing installation."; return $true }
     if (-not (Confirm-VmAction "Install $Name ($Id). Review the license and installation details shown.")) {
-        Write-Host "[MANUAL] Skipped the $Name installation."
+        Write-WorkshopMessage "[MANUAL] Skipped the $Name installation."
         return $false
     }
     $arguments = @('install', '--id', $Id, '--exact', '--source', 'winget')
@@ -84,7 +84,7 @@ function Install-VmPackage {
     if ($script:VmRestartRequired) { return $false }
     if (Get-Command Update-ProcessPath -CommandType Function -ErrorAction SilentlyContinue) { Update-ProcessPath }
     if (-not (& $TestInstalled)) { throw "Could not verify $Name after installation. Rerun from a new terminal." }
-    Write-Host "[PASS] Verified the $Name installation."
+    Write-WorkshopMessage "[PASS] Verified the $Name installation."
     return $true
 }
 
@@ -183,7 +183,7 @@ function Test-VmWslPlatform {
 }
 
 function Install-VmWslPlatform {
-    if (Test-VmWslPlatform) { Write-Host '[PASS] WSL2 platform is ready.'; return $true }
+    if (Test-VmWslPlatform) { Write-WorkshopMessage '[PASS] WSL2 platform is ready.'; return $true }
     $feature = Invoke-VmWindowsFeature -FeatureName VirtualMachinePlatform
     if ("$($feature.State)" -in @('EnablePending', 'DisablePending')) { $script:VmRestartRequired = $true; return $false }
     $wsl = Get-VmWslExecutable
@@ -193,10 +193,10 @@ function Install-VmWslPlatform {
     }
     $null = Invoke-VmInstaller $wsl @('--install', '--no-distribution')
     if ($script:VmRestartRequired) { return $false }
-    if (Test-VmWslPlatform) { Write-Host '[PASS] WSL2 platform is ready.'; return $true }
+    if (Test-VmWslPlatform) { Write-WorkshopMessage '[PASS] WSL2 platform is ready.'; return $true }
     # wsl.exe can return 0 while VirtualMachinePlatform waits for a restart.
     $script:VmRestartRequired = $true
-    Write-Host '[MANUAL] The WSL2 platform becomes available after a restart. Restart manually and rerun.'
+    Write-WorkshopMessage '[MANUAL] The WSL2 platform becomes available after a restart. Restart manually and rerun.'
     return $false
 }
 
@@ -216,19 +216,19 @@ function Get-VmUbuntuVersion {
 
 function Install-VmUbuntu {
     if (-not (Test-VmWslPlatform)) {
-        Write-Host '[MANUAL] Ubuntu requires the WSL2 platform. Complete the WSL2 platform step and restart first.'
+        Write-WorkshopMessage '[MANUAL] Ubuntu requires the WSL2 platform. Complete the WSL2 platform step and restart first.'
         return $false
     }
     $version = Get-VmUbuntuVersion
     if ($version -eq 1) { throw 'The existing Ubuntu uses WSL1. Preserve its data and convert it to WSL2 manually.' }
-    if ($version -eq 2) { Write-Host '[PASS] Verified Ubuntu on WSL2 for appmoduser.'; return $true }
+    if ($version -eq 2) { Write-WorkshopMessage '[PASS] Verified Ubuntu on WSL2 for appmoduser.'; return $true }
     if (-not (Confirm-VmAction 'Install Ubuntu on WSL2 for appmoduser. Set up the first Linux user manually afterward.')) {
         return $false
     }
     $null = Invoke-VmInstaller wsl.exe @('--install', '--distribution', 'Ubuntu', '--no-launch')
     if ($script:VmRestartRequired) { return $false }
     if ((Get-VmUbuntuVersion) -ne 2) { throw 'Could not verify Ubuntu on WSL2. Check for a pending restart and the WSL status.' }
-    Write-Host '[MANUAL] Run wsl -d Ubuntu to set up the first Linux user.'
+    Write-WorkshopMessage '[MANUAL] Run wsl -d Ubuntu to set up the first Linux user.'
     return $true
 }
 
@@ -254,7 +254,7 @@ function Install-VmMsmq {
         $service = Get-Service MSMQ -ErrorAction Stop
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
     }
-    Write-Host '[PASS] Verified MSMQ Server and its running service.'
+    Write-WorkshopMessage '[PASS] Verified MSMQ Server and its running service.'
     return $true
 }
 
@@ -340,7 +340,7 @@ function Install-VmVisualStudio {
     param([ValidateSet('BuildTools')][string]$Product, [string]$ConfigFile)
     $config = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json -ErrorAction Stop
     $components = @($config.components)
-    if (Get-VmVsInstance $Product $components) { Write-Host "[PASS] Verified the Visual Studio 2026 $Product configuration."; return $true }
+    if (Get-VmVsInstance $Product $components) { Write-WorkshopMessage "[PASS] Verified the Visual Studio 2026 $Product configuration."; return $true }
     $instance = Get-VmVsInstance $Product
     if ($instance) {
         if (-not (Confirm-VmAction "Add the missing components from $ConfigFile to the existing Visual Studio 2026 $Product. Close Visual Studio first.")) { return $false }
@@ -377,7 +377,7 @@ function Get-VmCopilotVersion {
 
 function Install-VmCopilot {
     $existing = Get-VmCopilotVersion
-    if ($existing) { Write-Host "[PASS] Keeping GitHub Copilot app $existing. Sign in manually."; return $true }
+    if ($existing) { Write-WorkshopMessage "[PASS] Keeping GitHub Copilot app $existing. Sign in manually."; return $true }
     if (-not (Confirm-VmAction 'Install the GitHub Copilot app from the official github/app stable release. This is not Copilot CLI.')) { return $false }
     $release = Invoke-RestMethod 'https://api.github.com/repos/github/app/releases/latest' -ErrorAction Stop
     if ($release.prerelease -or $release.draft -or $release.tag_name -notmatch '^v?(\d+\.\d+\.\d+)$') {
@@ -405,7 +405,7 @@ function Install-VmCopilot {
         if ($process.ExitCode -ne 0) { throw "Copilot app MSI installation failed (exit code $($process.ExitCode))." }
         $installed = Get-VmCopilotVersion
         if (-not $installed -or $installed -lt $expectedVersion) { throw 'Could not verify the Copilot app version after installation.' }
-        Write-Host "[PASS] Installed GitHub Copilot app $installed. Sign in manually."
+        Write-WorkshopMessage "[PASS] Installed GitHub Copilot app $installed. Sign in manually."
         return $true
     }
     finally {
@@ -426,7 +426,7 @@ function Test-VmDesktopApp {
 
 function Install-VmMicrosoftMsi {
     param([string]$Name, [string]$Uri, [string]$Sha256, [scriptblock]$TestInstalled, [string]$Properties = '')
-    if (& $TestInstalled) { Write-Host "[PASS] $Name is installed. Keeping the existing installation."; return $true }
+    if (& $TestInstalled) { Write-WorkshopMessage "[PASS] $Name is installed. Keeping the existing installation."; return $true }
     if (-not (Confirm-VmAction "Install $Name from the official Microsoft MSI and accept its license terms. Review https://www.microsoft.com/licensing/terms/ before continuing. No database or instance will be created.")) {
         return $false
     }
@@ -444,7 +444,7 @@ function Install-VmMicrosoftMsi {
         if ($process.ExitCode -ne 0) { throw "$Name MSI installation failed (exit code $($process.ExitCode))." }
         Update-ProcessPath
         if (-not (& $TestInstalled)) { throw "Could not verify $Name after installation." }
-        Write-Host "[PASS] Verified the $Name installation."
+        Write-WorkshopMessage "[PASS] Verified the $Name installation."
         return $true
     }
     finally {
@@ -493,14 +493,14 @@ function Test-VmFrameworkTools {
     if (-not (Get-DotnetFrameworkBuildTools)) { throw 'MSBuild or the .NET Framework web build tools are missing.' }
     if (-not (Get-WorkshopIisExpress)) { throw 'IIS Express was not found.' }
     if (-not (Test-VmLocalDb)) { throw 'Could not verify the SQL Server LocalDB version.' }
-    Write-Host '[PASS] Verified the .NET Framework 4.8 Targeting Pack, web build tools, IIS Express and LocalDB.'
+    Write-WorkshopMessage '[PASS] Verified the .NET Framework 4.8 Targeting Pack, web build tools, IIS Express and LocalDB.'
     return $true
 }
 
 function Invoke-VmToolInstallation {
     $script:VmRestartRequired = $false
     if (Test-VmRebootPending) {
-        Write-Host '[MANUAL] A Windows restart is pending. Restart manually and rerun this script.'
+        Write-WorkshopMessage '[MANUAL] A Windows restart is pending. Restart manually and rerun this script.'
         return 3010
     }
     $drive = Get-PSDrive -Name $env:SystemDrive.TrimEnd(':') -ErrorAction Stop
@@ -549,21 +549,21 @@ function Invoke-VmToolInstallation {
     $failed = $false
     foreach ($step in $steps) {
         try {
-            if (-not (& $step.Run)) { $failed = $true; Write-Host "[MANUAL] $($step.Name) is not ready." }
+            if (-not (& $step.Run)) { $failed = $true; Write-WorkshopMessage "[MANUAL] $($step.Name) is not ready." }
         }
         catch {
             $failed = $true
-            Write-Host "[FAIL] $($step.Name): $($_.Exception.Message)"
+            Write-WorkshopMessage "[FAIL] $($step.Name): $($_.Exception.Message)"
         }
         if ($script:VmRestartRequired -or (Test-VmRebootPending)) {
-            Write-Host '[MANUAL] A restart is required. The script does not restart automatically. Restart and rerun the same command.'
+            Write-WorkshopMessage '[MANUAL] A restart is required. The script does not restart automatically. Restart and rerun the same command.'
             return 3010
         }
     }
-    Write-Host '[MANUAL] Set up the first Ubuntu user, start Docker Desktop and confirm Linux containers, sign in to the Copilot app, authenticate gh, and verify Modernize CLI.'
-    Write-Host '[INFO] Azure/GitHub sign-in, subscription changes, provider registration and lab database creation were not performed.'
+    Write-WorkshopMessage '[MANUAL] Set up the first Ubuntu user, start Docker Desktop and confirm Linux containers, sign in to the Copilot app, authenticate gh, and verify Modernize CLI.'
+    Write-WorkshopMessage '[INFO] Azure/GitHub sign-in, subscription changes, provider registration and lab database creation were not performed.'
     if ($failed) { return 1 }
-    Write-Host '[PASS] Verified the tool installations. Validate app builds and the VM runtime separately.'
+    Write-WorkshopMessage '[PASS] Verified the tool installations. Validate app builds and the VM runtime separately.'
     return 0
 }
 
@@ -581,8 +581,8 @@ else {
         . (Join-Path $helpers 'powershell-bootstrap.ps1')
         Assert-VmInstallerContext
         $script:VmRestartRequired = $false
-        if (Test-VmRebootPending) { Write-Host '[MANUAL] Restart manually and rerun this script.'; exit 3010 }
-        if (-not (Initialize-VmWinget)) { Write-Host '[MANUAL] winget is not ready.'; exit 1 }
+        if (Test-VmRebootPending) { Write-WorkshopMessage '[MANUAL] Restart manually and rerun this script.'; exit 3010 }
+        if (-not (Initialize-VmWinget)) { Write-WorkshopMessage '[MANUAL] winget is not ready.'; exit 1 }
         if (-not (Install-VmPowerShell)) {
             if ($script:VmRestartRequired) { exit 3010 }
             exit 1

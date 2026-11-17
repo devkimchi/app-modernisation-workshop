@@ -665,8 +665,39 @@ function Enable-WindowsOptionalFeature {
         function Install-VmIisExpress { $script:RuntimeSteps.Add('IIS Express'); return $true }
         function Install-VmLocalDb { $script:RuntimeSteps.Add('LocalDB'); return $true }
         function Test-VmFrameworkTools { $script:RuntimeSteps.Add('Verify'); return $true }
-        Assert-True ((Invoke-VmToolInstallation) -eq 0) 'Build Tools-only flow completes with separate runtime tools'
-        Assert-True (($script:RuntimeSteps -join ',') -eq 'BuildTools,IIS Express,LocalDB,Verify') 'standalone runtime tools install after Build Tools and before final verification'
+        $savedCI = $env:CI; $savedNoColor = $env:NO_COLOR; $savedTerm = $env:TERM
+        $rendered = [Collections.Generic.List[object]]::new()
+        function Test-WorkshopOutputTerminal { return $true }
+        function Write-Host {
+            param($Object,$ForegroundColor)
+            $rendered.Add([pscustomobject]@{ Text=$Object; Color=$ForegroundColor })
+        }
+        try {
+            $env:CI = ''; $env:NO_COLOR = ''; $env:TERM = 'xterm'
+            Assert-True ((Invoke-VmToolInstallation) -eq 0) 'Build Tools-only flow completes with separate runtime tools'
+            Assert-True (($script:RuntimeSteps -join ',') -eq 'BuildTools,IIS Express,LocalDB,Verify') 'standalone runtime tools install after Build Tools and before final verification'
+            foreach ($case in @(
+                @{ Status='PASS'; Color='Green' },
+                @{ Status='MANUAL'; Color='Cyan' },
+                @{ Status='INFO'; Color='Blue' }
+            )) {
+                $messages = @($rendered | Where-Object { $_.Text.StartsWith("[$($case.Status)]") })
+                Assert-True ($messages.Count -gt 0 -and @($messages | Where-Object Color -ne $case.Color).Count -eq 0) "VM $($case.Status) messages use the shared status color"
+            }
+            $rendered.Clear()
+            function Install-VmUbuntu { throw 'fixture Ubuntu failure' }
+            Assert-True ((Invoke-VmToolInstallation) -eq 1) 'colored failure output preserves the incomplete exit code'
+            Assert-True (@($rendered | Where-Object {
+                $_.Text -eq '[FAIL] Ubuntu WSL2: fixture Ubuntu failure' -and $_.Color -eq 'Red'
+            }).Count -eq 1) 'VM installation failures retain their details and render red'
+            $rendered.Clear()
+            $env:NO_COLOR = '1'
+            Assert-True ((Invoke-VmToolInstallation) -eq 1) 'plain output preserves the incomplete exit code'
+            Assert-True ($rendered.Count -gt 0 -and @($rendered | Where-Object Color).Count -eq 0) 'NO_COLOR disables colors throughout the VM installation flow'
+        }
+        finally {
+            $env:CI = $savedCI; $env:NO_COLOR = $savedNoColor; $env:TERM = $savedTerm
+        }
     }
 
     & {

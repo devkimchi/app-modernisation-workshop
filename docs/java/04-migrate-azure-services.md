@@ -87,6 +87,22 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 
 수정 후 변경 내용과 테스트 결과를 살펴봅니다. 파일이나 리소스를 변경하지 않는 검토를 다시 요청해 문제가 해결됐는지 확인합니다.
 
+## 스냅샷 적용
+
+Azure 통합 테스트 준비를 직접 수행하는 데 시간이 오래 걸리면 준비된 스냅샷을 대신 사용할 수 있습니다. 워크숍 저장소 루트에서 스냅샷 적용 스크립트를 실행합니다. 기존 `java` 디렉터리는 `java-04-1`으로 이동하고, 스냅샷이 새 `java` 디렉터리가 됩니다. 기존 백업이 있으면 덮어쓰지 않고 종료합니다. 스크립트 실행 후 앱 루트로 이동해 Azure 통합 테스트 준비를 진행합니다.
+
+```bash
+# macOS/Linux, zsh/bash
+./scripts/apply-java-04-1-snapshot.sh
+cd java
+```
+
+```powershell
+# Windows, PowerShell 7
+./scripts/apply-java-04-1-snapshot.ps1
+Set-Location java
+```
+
 ## Azure 통합 테스트 준비
 
 실제 Azure의 DB, Service Bus와 Blob에 연결해 검증할 테스트와 실행 스크립트를 준비합니다. 이 테스트는 앞서 실행한 모의 테스트와 별개입니다. Copilot app 채팅에 다음을 요청합니다.

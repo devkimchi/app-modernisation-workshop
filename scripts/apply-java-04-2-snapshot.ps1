@@ -43,13 +43,14 @@ function Invoke-ApplyJava042Snapshot {
             [IO.Directory]::Move($staging, $appRoot)
         }
         catch {
+            $applyError = $_.Exception.Message
             try {
                 [IO.Directory]::Move($backup, $appRoot)
             }
             catch {
                 throw "Could not apply the snapshot or restore the original application. The original remains in java-04-2. $($_.Exception.Message)"
             }
-            throw 'Could not apply the snapshot. The original application has been restored.'
+            throw "Could not apply the snapshot. The original application has been restored. $applyError"
         }
         Write-WorkshopMessage '[PASS] The original Java application is backed up in java-04-2.'
         Write-WorkshopMessage '[PASS] The Java 04-2 snapshot is now the java application.'

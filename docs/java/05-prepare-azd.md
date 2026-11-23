@@ -103,6 +103,22 @@ Java 검증이 필요하면 앱 루트에서 현재 셸에 맞는 `../scripts/`�
 
 로컬에서 확인할 수 없는 Azure 연결과 통합 테스트는 미검증으로 기록합니다. [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 승인 후 확인합니다. 다음 실습의 진행을 막는 문제가 남아 있다면 먼저 해결합니다.
 
+## 스냅샷 적용
+
+배포 산출물을 직접 준비하는 데 시간이 오래 걸리면 준비된 스냅샷을 대신 사용할 수 있습니다. 워크숍 저장소 루트에서 스냅샷 적용 스크립트를 실행합니다.
+
+```bash
+# zsh/bash
+./scripts/apply-java-05-snapshot.sh
+cd java
+```
+
+```powershell
+# PowerShell
+./scripts/apply-java-05-snapshot.ps1
+cd java
+```
+
 ## 비용과 배포 승인
 
 ACA가 scale-to-zero 상태여도 PostgreSQL, Service Bus, ACR, 로그 및 네트워크 리소스에는 비용이 발생할 수 있습니다. 리전별 SKU와 쿼터를 확인하고 [Azure 가격 계산기](https://azure.microsoft.com/pricing/calculator/)로 비용을 검토합니다.

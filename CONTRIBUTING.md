@@ -24,6 +24,7 @@ pwsh -NoProfile -File ./tests/windows-prerequisite-updates.tests.ps1
 pwsh -NoProfile -File ./tests/azure-actions.tests.ps1
 pwsh -NoProfile -File ./tests/powershell-bootstrap.tests.ps1
 pwsh -NoProfile -File ./tests/java-tools.tests.ps1
+pwsh -NoProfile -File ./tests/java-snapshot.tests.ps1
 ```
 
 The `scripts.tests.ps1` suite also runs `java-deployment.tests.ps1` with mocked Azure, HTTP and PostgreSQL commands. Run the latter directly when changing Java deployment helpers. It does not initialize a real database or deploy an application.
@@ -42,6 +43,7 @@ bash tests/install-prerequisites.tests.sh
 bash tests/azure-actions.tests.sh
 bash tests/use-java.tests.sh
 bash tests/shell-portability.tests.sh
+bash tests/java-snapshot.tests.sh
 ```
 
 The `scripts.tests.sh` suite also runs `java-deployment.tests.sh`; it can be run directly for focused, offline checks.

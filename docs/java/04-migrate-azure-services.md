@@ -87,6 +87,22 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 
 수정 후 변경 내용과 테스트 결과를 살펴봅니다. 파일이나 리소스를 변경하지 않는 검토를 다시 요청해 문제가 해결됐는지 확인합니다.
 
+## 스냅샷 적용
+
+Azure 연동 코드를 직접 검토하고 수정하는 데 시간이 오래 걸리면 준비된 스냅샷을 대신 사용할 수 있습니다. 워크숍 저장소 루트에서 스냅샷 적용 스크립트를 실행합니다.
+
+```bash
+# zsh/bash
+./scripts/apply-java-04-1-snapshot.sh
+cd java
+```
+
+```powershell
+# PowerShell
+./scripts/apply-java-04-1-snapshot.ps1
+cd java
+```
+
 ## Azure 통합 테스트 준비
 
 실제 Azure의 DB, Service Bus와 Blob에 연결해 검증할 테스트와 실행 스크립트를 준비합니다. 이 테스트는 앞서 실행한 모의 테스트와 별개입니다. Copilot app 채팅에 다음을 요청합니다.
@@ -119,6 +135,24 @@ JDK 25와 현재 Spring Boot 버전을 유지하고 web과 worker의 기존 기�
 생성된 테스트와 두 스크립트, 실행 안내를 검토합니다. `azure-it` 프로필이 테스트를 실행하도록 설정됐는지, 기본 빌드에서는 분리됐는지 확인합니다. 대상, 권한과 데이터 범위, 승인 절차와 실패 처리도 살펴봅니다.
 
 가짜 명령으로 검증한 결과를 기록하고 실제 Azure 연결 테스트는 미실행으로 구분합니다. 필요한 도구나 테스트 대상이 불분명하면 해결한 뒤 진행합니다. 실제 연결 테스트는 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 대상과 영향을 확인하고 승인한 뒤 실행합니다.
+
+## 스냅샷 적용
+
+Azure 통합 테스트를 직접 준비하는 데 시간이 오래 걸리면 준비된 스냅샷을 대신 사용할 수 있습니다. 워크숍 저장소 루트에서 스냅샷 적용 스크립트를 실행합니다.
+
+```bash
+# zsh/bash
+./scripts/apply-java-04-2-snapshot.sh
+cd java
+```
+
+```powershell
+# PowerShell
+./scripts/apply-java-04-2-snapshot.ps1
+cd java
+```
+
+Windows에서 스냅샷 이동이 실패하면 출력된 오류를 확인하고, 해당 폴더를 사용하는 프로그램을 종료한 뒤 다시 실행합니다.
 
 ## 완료 및 다음 단계
 

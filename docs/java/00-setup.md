@@ -198,6 +198,17 @@ modernize plan execute --help
 >
 > `modernize help models`로 사용할 수 있는 모델을 확인합니다. 선호하는 모델이 없다면 `auto`를 선택해도 됩니다.
 
+### Copilot app 플러그인 설치
+
+Copilot app의 **Customize**에서 다음 두 플러그인을 설치합니다. 마켓플레이스를 추가한 뒤 각 플러그인을 별도로 설치해야 합니다.
+
+1. Copilot app 왼쪽 사이드바에서 **Customize**를 선택합니다.
+2. 마켓플레이스 설정을 열고 GitHub 저장소 [`microsoft/azure-skills`](https://github.com/microsoft/azure-skills)와 [`justinyoo/skills`](https://github.com/justinyoo/skills)를 마켓플레이스로 추가합니다.
+3. **Browse**에서 `Azure`와 `justinyoo-skills`를 찾아 각각 **Install**을 선택합니다.
+4. **Installed**에서 두 플러그인이 설치되어 있고 켜져 있는지 확인합니다.
+
+자세한 사용 방법은 [Copilot app 사용자 지정](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app)을 참고하세요. Azure 플러그인은 `npx`로 Azure MCP Server를 실행하며 로컬 `.npmrc` 설정을 사용합니다. 신뢰할 수 있는 기기에 설치하고, 워크숍에서 명시적으로 필요한 경우가 아니면 Azure 리소스 변경 작업을 승인하지 마세요.
+
 ## 샘플 다운로드하기
 
 같은 **워크숍 루트**에서 실행합니다. 다운로드 대상인 `java` 폴더는 없거나 비어 있어야 합니다.
@@ -216,6 +227,7 @@ modernize plan execute --help
 
 - [ ] 필수 사전 점검을 마쳤습니다.
 - [ ] `az login`, `azd auth login`, `gh auth login`을 실행해 로그인을 마쳤습니다.
+- [ ] Copilot app에 `Azure`와 `justinyoo-skills` 플러그인을 설치했습니다.
 - [ ] 샘플의 `java/pom.xml` 파일이 있는지 확인했습니다.
 
 위 항목을 모두 마쳤다면 다음 단계인 [1. 원본 실행](01-run-locally.md)로 이동합니다.

@@ -60,6 +60,22 @@ modernize
 >
 > 실행이 중간에 멈추고 더 이상 진행되지 않을 수 있습니다. 이때는 Copilot app에서 원인을 확인하고 문제를 해결한 뒤 계속 진행합니다.
 
+## 스냅샷 적용
+
+승인한 계획을 실행하는 데 시간이 오래 걸리면 준비된 스냅샷을 대신 사용할 수 있습니다. 워크숍 저장소 루트에서 스냅샷 적용 스크립트를 실행합니다.
+
+```bash
+# zsh/bash
+./scripts/apply-java-03-snapshot.sh
+cd java
+```
+
+```powershell
+# PowerShell
+./scripts/apply-java-03-snapshot.ps1
+cd java
+```
+
 ## 업그레이드 결과 검증
 
 업그레이드 결과를 검증하려면 앱 루트에서 아래 명령을 실행합니다.

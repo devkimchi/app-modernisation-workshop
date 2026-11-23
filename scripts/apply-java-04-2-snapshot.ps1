@@ -5,6 +5,31 @@ param()
 $bootstrap = Initialize-WorkshopScript -ScriptPath $PSCommandPath -BoundParameters $PSBoundParameters -RemainingArguments $args -DotSourced ($MyInvocation.InvocationName -eq '.')
 if ($bootstrap.Handled) { exit $bootstrap.Code }
 
+function Move-JavaSnapshotDirectory([string]$Source, [string]$Destination) {
+    [IO.Directory]::Move($Source, $Destination)
+}
+
+function Move-JavaSnapshotWithRetry([string]$Source, [string]$Destination) {
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            Move-JavaSnapshotDirectory $Source $Destination
+            return
+        }
+        catch {
+            $exception = $_.Exception
+            if ($exception -is [System.Management.Automation.MethodInvocationException] -and $exception.InnerException) {
+                $exception = $exception.InnerException
+            }
+            if ($attempt -eq 10 -or $exception.HResult -notin @(-2147024891, -2147024864, -2147024863) -or
+                -not (Test-Path -LiteralPath $Source -PathType Container) -or
+                (Test-Path -LiteralPath $Destination)) {
+                throw
+            }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+}
+
 function Invoke-ApplyJava042Snapshot {
     $workshopRoot = Split-Path $PSScriptRoot -Parent
     $appRoot = Join-Path $workshopRoot 'java'
@@ -40,7 +65,7 @@ function Invoke-ApplyJava042Snapshot {
             Copy-Item -Destination $staging -Recurse -Force -ErrorAction Stop
         [IO.Directory]::Move($appRoot, $backup)
         try {
-            [IO.Directory]::Move($staging, $appRoot)
+            Move-JavaSnapshotWithRetry $staging $appRoot
         }
         catch {
             $applyError = $_.Exception.Message

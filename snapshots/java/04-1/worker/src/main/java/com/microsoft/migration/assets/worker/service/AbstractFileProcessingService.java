@@ -101,7 +101,7 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
     protected void processWithCoordination(ImageProcessingMessage message, ProcessingAction action) throws Exception {
         action.run();
     }
-    
+
     protected abstract String generateUrl(String key);
 
     /**
@@ -131,7 +131,7 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
         // Increased size significantly for better clarity (600px max dimension)
         int maxDimension = 600;
         int thumbnailWidth, thumbnailHeight;
-        
+
         double aspectRatio = (double) originalWidth / originalHeight;
 
         if (originalWidth > originalHeight) {
@@ -220,7 +220,7 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
 
         log.info("Successfully generated thumbnail: {}", output);
     }
-    
+
     /**
      * Performs progressive scaling of the image for better quality.
      * This method gradually scales down the image in multiple steps rather than all at once.
@@ -229,48 +229,48 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
         // Current dimensions
         int currentWidth = source.getWidth();
         int currentHeight = source.getHeight();
-        
+
         // Don't scale up images that are already smaller than target size
         if (currentWidth <= targetWidth && currentHeight <= targetHeight) {
             return source;
         }
-        
+
         // Use a multi-step approach for higher quality
         BufferedImage result = source;
-        
+
         // Scale down in multiple steps for better quality (not more than 50% each step)
         while (currentWidth > targetWidth * 1.5 || currentHeight > targetHeight * 1.5) {
             int newWidth = Math.max(currentWidth / 2, targetWidth);
             int newHeight = Math.max(currentHeight / 2, targetHeight);
-            
+
             result = scaleImage(result, newWidth, newHeight);
-            
+
             currentWidth = newWidth;
             currentHeight = newHeight;
         }
-        
+
         // Final scaling to exact target dimensions
         if (currentWidth != targetWidth || currentHeight != targetHeight) {
             result = scaleImage(result, targetWidth, targetHeight);
         }
-        
+
         return result;
     }
-    
+
     /**
      * Scale an image to specific dimensions using high quality settings.
      */
     private BufferedImage scaleImage(BufferedImage source, int width, int height) {
         // Create a new BufferedImage for the result
         BufferedImage result;
-        
+
         // Preserve transparency for images with alpha channel
         if (source.getTransparency() != BufferedImage.OPAQUE) {
             result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         } else {
             result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         }
-        
+
         // Set up the rendering process with maximum quality settings
         Graphics2D g2d = result.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
@@ -280,14 +280,14 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
         g2d.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
         g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
         g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-        
+
         // Draw the scaled image
         g2d.drawImage(source, 0, 0, width, height, null);
         g2d.dispose();
-        
+
         return result;
     }
-    
+
     /**
      * Apply a sharpening filter to enhance image clarity
      */
@@ -303,19 +303,19 @@ public abstract class AbstractFileProcessingService implements FileProcessor {
             -0.2f, 1.8f, -0.2f,
             0, -0.2f, 0
         };
-        
+
         java.awt.image.Kernel kernel = new java.awt.image.Kernel(3, 3, sharpenMatrix);
         java.awt.image.ConvolveOp convolveOp = new java.awt.image.ConvolveOp(
             kernel, java.awt.image.ConvolveOp.EDGE_NO_OP, null);
-        
+
         // Create a compatible destination image to avoid potential issues with some image types
         BufferedImage output;
         if (image.getTransparency() != BufferedImage.OPAQUE) {
             output = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
         } else {
-            output = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB); 
+            output = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
         }
-        
+
         // Apply the filter
         return convolveOp.filter(image, output);
     }

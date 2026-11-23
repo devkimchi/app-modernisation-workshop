@@ -189,13 +189,13 @@ Recommended fix:
   - Upgrade com.fasterxml.jackson.core:jackson-databind to 3.1.4 or later
   - Upgrade tools.jackson.core:jackson-databind to 3.1.4 or later
 
-### CVE-2026-91776: jackson-databind retains every unknown raw type ID 
+### CVE-2026-91776: jackson-databind retains every unknown raw type ID
 
 - **Severity:** mandatory
 - **Story Points:** 1
 - **Files:** worker/pom.xml:43
 
-[CVE-2026-91776](https://github.com/advisories/GHSA-wv8q-qhhj-9h54): jackson-databind retains every unknown raw type ID 
+[CVE-2026-91776](https://github.com/advisories/GHSA-wv8q-qhhj-9h54): jackson-databind retains every unknown raw type ID
 
 Severity: HIGH
 
@@ -209,13 +209,13 @@ Recommended fix:
   - Upgrade tools.jackson.core:jackson-databind to 3.1.7 or later
   - Upgrade tools.jackson.core:jackson-databind to 3.2.3 or later
 
-### CVE-2026-91777: jackson-databind quadratic forward-reference completion 
+### CVE-2026-91777: jackson-databind quadratic forward-reference completion
 
 - **Severity:** mandatory
 - **Story Points:** 1
 - **Files:** worker/pom.xml:43
 
-[CVE-2026-91777](https://github.com/advisories/GHSA-cxp5-3px4-pw24): jackson-databind quadratic forward-reference completion 
+[CVE-2026-91777](https://github.com/advisories/GHSA-cxp5-3px4-pw24): jackson-databind quadratic forward-reference completion
 
 Severity: HIGH
 
@@ -1284,13 +1284,13 @@ Recommended fix:
   - Upgrade io.netty:netty-codec-http2 to 4.2.16.Final or later
   - Upgrade io.netty:netty-codec-http2 to 4.1.136.Final or later
 
-### CVE-2026-42583: Netty Lz4FrameDecoder is vulnerable to resource exhaustion 
+### CVE-2026-42583: Netty Lz4FrameDecoder is vulnerable to resource exhaustion
 
 - **Severity:** mandatory
 - **Story Points:** 1
 - **Files:** web/pom.xml:33, web/pom.xml:71, worker/pom.xml:29, worker/pom.xml:60
 
-[CVE-2026-42583](https://github.com/advisories/GHSA-mj4r-2hfc-f8p6): Netty Lz4FrameDecoder is vulnerable to resource exhaustion 
+[CVE-2026-42583](https://github.com/advisories/GHSA-mj4r-2hfc-f8p6): Netty Lz4FrameDecoder is vulnerable to resource exhaustion
 
 Severity: HIGH
 
@@ -1657,4 +1657,3 @@ Recommended fix:
 - **Files:** web/src/main/java/com/microsoft/migration/assets/service/LocalFileStorageService.java, worker/src/main/java/com/microsoft/migration/assets/worker/service/LocalFileProcessingService.java, web/src/main/java/com/microsoft/migration/assets/controller/S3Controller.java
 
 > The externally controlled path variable key is used to construct and manipulate local file paths without confirming that the resolved path remains beneath rootLocation. In LocalFileStorageService, getObject() and deleteObject() call rootLocation.resolve(key) at lines 110 and 120, and LocalFileProcessingService uses rootLocation.resolve(key) for download and thumbnail paths at lines 38 and 47. S3Controller exposes key through @PathVariable and passes it to getObject/deleteObject at lines 80 and 97.
-

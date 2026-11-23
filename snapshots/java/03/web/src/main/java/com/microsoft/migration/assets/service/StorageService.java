@@ -14,17 +14,17 @@ import java.util.List;
  * (AWS S3, local file system, etc.)
  */
 public interface StorageService {
-    
+
     /**
      * List all objects in storage
      */
     List<S3StorageItem> listObjects();
-    
+
     /**
      * Upload file to storage
      */
     void uploadObject(MultipartFile file) throws IOException;
-    
+
     /**
      * Get object from storage by key
      */

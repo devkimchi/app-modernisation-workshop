@@ -13,12 +13,12 @@ import static com.microsoft.migration.assets.config.ServiceBusConfig.IMAGE_PROCE
 
 /**
  * A backup message processor that serves as a monitoring and logging service.
- * 
+ *
  * Only enabled when the "backup" profile is active.
  */
 @Slf4j
 @Component
-@Profile("backup") 
+@Profile("backup")
 public class BackupMessageProcessor {
 
     /**
@@ -30,9 +30,9 @@ public class BackupMessageProcessor {
                                     @Header(ServiceBusMessageHeaders.RECEIVED_MESSAGE_CONTEXT) ServiceBusReceivedMessageContext context) {
         try {
             log.info("[BACKUP] Monitoring message: {}", message.getKey());
-            log.info("[BACKUP] Content type: {}, Storage: {}, Size: {}", 
+            log.info("[BACKUP] Content type: {}, Storage: {}, Size: {}",
                     message.getContentType(), message.getStorageType(), message.getSize());
-            
+
             // Acknowledge (complete) the message
             if (context != null) {
                 context.complete();
@@ -40,7 +40,7 @@ public class BackupMessageProcessor {
             log.info("[BACKUP] Successfully processed message: {}", message.getKey());
         } catch (Exception e) {
             log.error("[BACKUP] Failed to process message: " + message.getKey(), e);
-            
+
             try {
                 // Abandon the message so it is made available for redelivery (equivalent to the
                 // original channel.basicNack(deliveryTag, false, true) with requeue=true).

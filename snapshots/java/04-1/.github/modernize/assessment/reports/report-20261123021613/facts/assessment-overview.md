@@ -39,4 +39,3 @@ Follow this recommended reading order for the most effective understanding:
 |----------|-------------|
 | [Configuration Inventory](configuration-inventory.md) | Configuration sources, build/runtime profiles, externalized properties, secrets management, and feature flags |
 | [Business Workflows](business-workflows.md) | Business processes end-to-end, domain entities, business rules, cross-service data flows, and decision logic |
-

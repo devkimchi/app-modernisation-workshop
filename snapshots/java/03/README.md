@@ -125,7 +125,7 @@ git clone https://github.com/Azure-Samples/java-migration-copilot-samples.git
 cd java-migration-copilot-samples/asset-manager
 ```
 
-**Prerequisites**: 
+**Prerequisites**:
 - [JDK 8](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-8): Required for running the initial application locally.
 - [Maven 3.6.0+](https://maven.apache.org/install.html): Required to build the application locally.
 - [Docker](https://docs.docker.com/desktop/): Required for running the application locally.
@@ -152,7 +152,7 @@ To stop, run `stopapp.cmd` or `stopapp.sh` in the `scripts` directory.
 
 The following sections guide you through the process of modernizing the sample Java application `asset-manager` to Azure using GitHub Copilot app modernization.
 
-**Prerequisites**: 
+**Prerequisites**:
 - A GitHub account with [GitHub Copilot](https://github.com/features/copilot) enabled. A Pro, Pro+, Business, or Enterprise plan is required.
 - One of the following IDEs:
   - The latest version of [Visual Studio Code](https://code.visualstudio.com/). Must be version 1.101 or later.
@@ -260,7 +260,7 @@ Now that you have successfully migrated your Java application to use Azure servi
 > Note: If you encounter any issues with the previous migration step, you can directly proceed with the containerization step using the [workshop/expected](https://github.com/Azure-Samples/java-migration-copilot-samples/tree/workshop/expected/asset-manager) branch.
 
 1. In the Activity sidebar, open the **GitHub Copilot app modernization** extension pane. In the **TASKS** section, expand **Common Tasks** > **Containerize Tasks** and click the run button for **Containerize Application**.
-  
+
     ![Run Containerize Application task](doc-media/containerization-run-task.png)
 
 1. A predefined prompt will be populated in the Copilot Chat panel with Agent Mode. Copilot Agent will start to analyze the workspace and to create a **containerization-plan.copiotmd** with the containerization plan.

@@ -49,7 +49,7 @@
             const pendingUploads = new Set();
             const refreshInterval = 3000; // 3 seconds
             let refreshTimer;
-            
+
             // Function to check if there's a new upload in progress
             function checkForNewUploads() {
                 const uploadSuccess = sessionStorage.getItem('uploadSuccess');
@@ -58,28 +58,28 @@
                     const uploadedKey = sessionStorage.getItem('uploadedKey');
                     if (uploadedKey && !pendingUploads.has(uploadedKey)) {
                         pendingUploads.add(uploadedKey);
-                        
+
                         // Clear the session storage
                         sessionStorage.removeItem('uploadSuccess');
                         sessionStorage.removeItem('uploadedKey');
-                        
+
                         // Start polling more frequently when an upload is detected
                         startPolling(true);
                     }
                 }
             }
-            
+
             // Start polling the server for updates
             function startPolling(immediate = false) {
                 clearTimeout(refreshTimer);
-                
+
                 if (immediate) {
                     refreshContent();
                 }
-                
+
                 refreshTimer = setTimeout(() => {
                     refreshContent();
-                    
+
                     // If there are pending uploads, keep the refresh rate higher
                     if (pendingUploads.size > 0) {
                         startPolling(false);
@@ -95,7 +95,7 @@
                     }
                 }, pendingUploads.size > 0 ? refreshInterval : refreshInterval * 2);
             }
-            
+
             // Start normal polling schedule
             function startNormalPolling() {
                 clearTimeout(refreshTimer);
@@ -104,27 +104,27 @@
                     startNormalPolling();
                 }, refreshInterval * 2);
             }
-            
+
             // Function to refresh the content
             function refreshContent() {
                 document.getElementById('refreshIndicator').style.display = 'block';
-                
+
                 fetch(window.location.href)
                     .then(response => response.text())
                     .then(html => {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, "text/html");
                         const newContainer = doc.getElementById('imageContainer');
-                        
+
                         if (newContainer) {
                             const currentContainer = document.getElementById('imageContainer');
-                            
+
                             // Check if there are differences
                             if (currentContainer && currentContainer.innerHTML !== newContainer.innerHTML) {
                                 // Update the content
                                 currentContainer.innerHTML = newContainer.innerHTML;
                                 lastRefresh = new Date().getTime();
-                                
+
                                 // Check if any of our pending uploads now have thumbnails
                                 pendingUploads.forEach(key => {
                                     const thumbnailKey = getThumbnailKey(key);
@@ -146,7 +146,7 @@
                         document.getElementById('refreshIndicator').style.display = 'none';
                     });
             }
-            
+
             // Helper function to get thumbnail key from original key
             function getThumbnailKey(key) {
                 const dotIndex = key.lastIndexOf('.');
@@ -155,7 +155,7 @@
                 }
                 return key + "_thumbnail";
             }
-            
+
             // Start polling when the page loads
             document.addEventListener('DOMContentLoaded', function() {
                 checkForNewUploads();

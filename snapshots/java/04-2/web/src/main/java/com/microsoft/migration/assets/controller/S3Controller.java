@@ -54,7 +54,7 @@ public class S3Controller {
             return "redirect:/" + StorageConstants.STORAGE_PATH + "/upload";
         }
     }
-    
+
     @GetMapping("/view-page/{key}")
     public String viewObjectPage(@PathVariable String key, Model model, RedirectAttributes redirectAttributes) {
         try {
@@ -62,7 +62,7 @@ public class S3Controller {
             Optional<S3StorageItem> foundObject = storageService.listObjects().stream()
                     .filter(obj -> obj.getKey().equals(key))
                     .findFirst();
-            
+
             if (foundObject.isPresent()) {
                 model.addAttribute("object", foundObject.get());
                 return "view";
@@ -80,11 +80,11 @@ public class S3Controller {
     public ResponseEntity<InputStreamResource> viewObject(@PathVariable String key) {
         try {
             InputStream inputStream = storageService.getObject(key);
-            
+
             HttpHeaders headers = new HttpHeaders();
             // Use a generic content type if we don't know the exact type
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            
+
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(new InputStreamResource(inputStream));

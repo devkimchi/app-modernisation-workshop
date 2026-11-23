@@ -45,7 +45,7 @@ jobs:
             [[ "$(bash -c 'printf "%s" "$BASH_VERSION"')" == 3.2.* ]]
           fi
           for script in scripts/*.sh tests/*.tests.sh; do bash -n "$script"; done
-          for suite in scripts install-prerequisites azure-actions use-java shell-portability; do
+          for suite in scripts install-prerequisites azure-actions use-java shell-portability java-snapshot; do
             if [[ "$RUNNER_OS" == macOS ]]; then
               /bin/bash "tests/$suite.tests.sh"
             else
@@ -73,14 +73,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pwsh -NoLogo -NoProfile -File .\tests\dotnet-original.tests.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          foreach ($test in @('java-tools', 'install-prerequisites', 'windows-prerequisite-updates', 'azure-actions', 'powershell-bootstrap')) {
+          foreach ($test in @('java-tools', 'install-prerequisites', 'windows-prerequisite-updates', 'azure-actions', 'powershell-bootstrap', 'java-snapshot')) {
             pwsh -NoLogo -NoProfile -File ".\tests\$test.tests.ps1"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Verify Windows PowerShell 5.1 entrypoints
         shell: pwsh
         run: |
-          foreach ($test in @('scripts', 'dotnet-original', 'java-tools', 'install-prerequisites', 'windows-prerequisite-updates', 'azure-actions', 'powershell-bootstrap')) {
+          foreach ($test in @('scripts', 'dotnet-original', 'java-tools', 'install-prerequisites', 'windows-prerequisite-updates', 'azure-actions', 'powershell-bootstrap', 'java-snapshot')) {
             powershell.exe -NoLogo -NoProfile -NonInteractive -File ".\tests\$test.tests.ps1"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }

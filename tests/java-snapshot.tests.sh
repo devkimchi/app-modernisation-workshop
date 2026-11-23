@@ -24,7 +24,7 @@ new_fixture() {
     printf 'original-web\n' > "$fixture/java/web/marker.txt"
 }
 
-for version in 03 04-1 04-2; do
+for version in 03 04-1 04-2 05; do
     success="$TEMPORARY/$version-success"
     new_fixture "$success" "$version"
     (cd "$success" && bash "scripts/apply-java-$version-snapshot.sh") > "$TEMPORARY/$version-success.log"

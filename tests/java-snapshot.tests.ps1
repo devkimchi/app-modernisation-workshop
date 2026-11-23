@@ -41,7 +41,7 @@ function Invoke-SnapshotScript([string]$Fixture) {
 }
 
 try {
-    foreach ($version in @('03', '04-1', '04-2')) {
+    foreach ($version in @('03', '04-1', '04-2', '05')) {
         $success = New-Fixture "success-$version" $version
         $result = Invoke-SnapshotScript $success
         Assert-True ($result.Code -eq 0) "$version successful apply exit code: $($result.Output)"

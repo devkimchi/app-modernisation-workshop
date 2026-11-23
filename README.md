@@ -10,6 +10,9 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 ├── docs
 │   ├── java        # Java 트랙 목차, 준비, 실습, 문제 해결
 │   └── dotnet      # .NET 트랙 목차, 준비, 실습, 문제 해결
+├── snapshots
+│   ├── java        # Java 트랙의 단계별 결과 스냅샷
+│   └── dotnet      # .NET 트랙의 단계별 결과 스냅샷
 ├── scripts         # 사전 점검, 설치, 샘플 다운로드 도우미
 ├── java            # 다운로드되는 Java 앱
 └── dotnet          # 다운로드되는 .NET 앱

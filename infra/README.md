@@ -2,7 +2,7 @@
 
 [전체 목차](../README.md) | [.NET 준비](../docs/dotnet/00-setup.md)
 
-`azure.yaml`로 Windows 11 VM을 만들고, 로컬 관리자 `appmoduser`의 `$HOME/scripts`에 설치 도우미를 복사합니다. 도구는 VM에 로그인한 뒤 설치합니다.
+`azure.yaml`로 Windows 11 VM을 만들고, 로컬 관리자 `appmoduser`의 `$HOME/scripts`에 설치 스크립트를 복사합니다. 도구는 VM에 로그인한 뒤 설치합니다.
 
 ## 기본 구성
 

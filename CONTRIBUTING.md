@@ -8,6 +8,8 @@ Keep changes focused on workshop documentation, preparation scripts, and regress
 
 Write user-facing script messages in English; keep participant documentation in Korean.
 
+The Java track instructor slide deck is `docs/slides/app-modernisation-workshop-java-instructor.pptx`. Fill in the presenter, survey link and QR code, and closing contact placeholders before presenting.
+
 Preserve the download scripts' pinned source commits, `upstream-source.json` records, and `UPSTREAM-*` licenses and notices. Downloads must not modify sample code or target frameworks, create a nested `.git`, or commit or push files.
 
 ## Local checks

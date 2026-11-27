@@ -15,7 +15,7 @@ Modernize CLI는 작업별 커밋을 만들 수 있습니다. 각 실행 직전 
 ```powershell
 git status --short
 $before = git rev-parse HEAD
-modernize plan execute "승인한 ws03-baseline과 .github/skills/dotnet-aca-workshop/SKILL.md를 따라 원본 v4.8의 기준 테스트만 보강하고 실행해 줘. Framework MSBuild와 기존 도우미를 사용하고 테스트를 삭제하거나 건너뛰지 마. 업그레이드, Azure 변경과 배포는 하지 마." --source . --language dotnet --plan-name ws03-baseline --delegate local
+modernize plan execute "승인한 ws03-baseline과 .github/skills/dotnet-aca-workshop/SKILL.md를 따라 원본 v4.8의 기준 테스트만 보강하고 실행해 줘. Framework MSBuild와 기존 원본 실행 스크립트를 사용하고 테스트를 삭제하거나 건너뛰지 마. 업그레이드, Azure 변경과 배포는 하지 마." --source . --language dotnet --plan-name ws03-baseline --delegate local
 ```
 
 아래 [실행 결과 검토](#실행-결과-검토)로 자동 커밋과 미커밋 변경을 함께 확인합니다. 원본 테스트, LocalDB/MSMQ의 실행 조건과 사람이 확인한 UI 결과가 구분되어야 다음 계획을 만듭니다.

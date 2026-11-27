@@ -77,7 +77,7 @@ Get-CimInstance Win32_Process -Filter "Name='iisexpress.exe'" |
     Select-Object ProcessId, ExecutablePath, CommandLine
 ```
 
-관련 프로세스가 종료된 뒤 필요하면 이번 앱의 `.vs/workshop` 구성 파일만 지웁니다. 도우미는 실행마다 새 구성을 만들어 기존 IIS Express/IDE 설정을 덮어쓰지 않습니다. 생성 구성에는 로컬 절대 경로가 들어가므로 커밋하지 않습니다.
+관련 프로세스가 종료된 뒤 필요하면 이번 앱의 `.vs/workshop` 구성 파일만 지웁니다. 원본 실행 스크립트는 실행마다 새 구성을 만들어 기존 IIS Express/IDE 설정을 덮어쓰지 않습니다. 생성 구성에는 로컬 절대 경로가 들어가므로 커밋하지 않습니다.
 
 LocalDB 인스턴스, MSMQ 서비스, 개발 인증서는 다른 프로젝트가 사용할 수 있습니다. **서비스/기능 전체를 제거하지 않습니다.** 이 실습에서 만든 DB/큐와 데이터인지 원본 설정과 대조하고, 삭제가 필요한 경우 해당 DB/큐만 관리 도구에서 선택해 직접 삭제합니다.
 

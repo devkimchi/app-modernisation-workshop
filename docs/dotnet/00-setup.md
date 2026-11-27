@@ -6,7 +6,7 @@
 
 원본 .NET Framework 앱은 **Windows**에서 진행합니다. Copilot app의 **PowerShell 7 터미널, MSBuild와 IIS Express**를 사용하며 Visual Studio IDE를 열 필요는 없습니다.
 
-[GitHub Copilot app](https://gh.io/app), [Git](https://git-scm.com/downloads), [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)을 준비합니다. Windows PowerShell 5.1에서도 준비 스크립트를 직접 실행할 수 있으며 PowerShell 7에 위임합니다. PowerShell 7이 없으면 설치 도우미만 별도 동의를 받아 설치를 제안합니다.
+[GitHub Copilot app](https://gh.io/app), [Git](https://git-scm.com/downloads), [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)을 준비합니다. Windows PowerShell 5.1에서도 준비 스크립트를 직접 실행할 수 있으며 PowerShell 7에 위임합니다. PowerShell 7이 없으면 설치 스크립트만 별도 동의를 받아 설치를 제안합니다.
 
 ## 1. 템플릿으로 저장소 만들고 클론하기
 
@@ -59,7 +59,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ./scripts/install-prerequisites.ps1 -Track dotnet -Update
 ```
 
-설치 도우미는 설치와 Azure 준비 후 `check-prerequisites.ps1` 점검을 다시 실행하며, `[INFO]` 메시지로 실행할 스크립트를 알립니다.
+설치 스크립트는 설치와 Azure 준비 후 `check-prerequisites.ps1` 점검을 다시 실행하며, `[INFO]` 메시지로 실행할 스크립트를 알립니다.
 
 | 대상 | 설치와 업데이트 |
 | --- | --- |
@@ -76,7 +76,7 @@ Node.js와 npm은 Modernize CLI의 배포 도구 서버가 `npx`를 사용할 �
 
 ### Windows 빌드 및 실행 도구 준비
 
-아래 구성요소는 도우미가 **자동 설치하지 않습니다**. 점검에서 누락된 항목만 준비합니다.
+아래 구성요소는 설치 스크립트가 **자동 설치하지 않습니다**. 점검에서 누락된 항목만 준비합니다.
 
 | 구성요소 | 수동 준비 |
 | --- | --- |
@@ -89,7 +89,7 @@ Node.js와 npm은 Modernize CLI의 배포 도구 서버가 `npx`를 사용할 �
 ### 직접 준비할 항목
 
 - **Azure 권한**: 구독, 테넌트, 리전, 쿼터, 역할 할당과 DB Entra 관리자 설정 권한을 확인합니다. Contributor만으로 역할 할당 권한이 확보되지는 않습니다. 필요한 범위만 요청하고 구독 전체 Owner를 무조건 요청하지 않습니다.
-- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 Linux containers 모드로 시작합니다. [Podman](https://podman.io/docs/installation)은 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 따릅니다. 도우미는 엔진을 자동 설치하지 않습니다.
+- **컨테이너 엔진**: [Docker Desktop](https://docs.docker.com/desktop/)을 설치하고 Linux containers 모드로 시작합니다. [Podman](https://podman.io/docs/installation)은 [문제 해결](08-troubleshooting.md#대체-엔진-설정)을 따릅니다. 설치 스크립트는 엔진을 자동 설치하지 않습니다.
 - **인증**: 로그인, 구독 변경과 공급자 등록은 항목별로 승인합니다. 점검 스크립트는 조회만 수행합니다.
 
 ## 3. Copilot app과 Modernize CLI 준비
@@ -115,4 +115,4 @@ gh에 로그인하지 않았다면 참가자가 `gh auth login`을 직접 수행
 ./scripts/download-sample.ps1 -Track dotnet
 ```
 
-대상 `dotnet` 폴더는 없거나 비어 있어야 합니다. `dotnet/ContosoUniversity.sln`을 확인한 뒤 [원본 실행](01-run-locally.md)으로 이동합니다. 개인 실습 복제본에서는 원본 실행 후 생성 파일과 비밀을 제외하고 기준선 커밋을 만듭니다. 도우미는 앱을 커밋하거나 별도 `.git`을 만들지 않습니다.
+대상 `dotnet` 폴더는 없거나 비어 있어야 합니다. `dotnet/ContosoUniversity.sln`을 확인한 뒤 [원본 실행](01-run-locally.md)으로 이동합니다. 개인 실습 복제본에서는 원본 실행 후 생성 파일과 비밀을 제외하고 기준선 커밋을 만듭니다. 다운로드 스크립트는 앱을 커밋하거나 별도 `.git`을 만들지 않습니다.

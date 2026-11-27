@@ -95,7 +95,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 ./scripts/install-prerequisites.ps1 -Track java -Update
 ```
 
-설치와 Azure 환경 준비가 끝나면 도우미가 `check-prerequisites`를 다시 실행합니다. 실행할 스크립트는 `[INFO]` 메시지로 안내합니다.
+설치와 Azure 환경 준비가 끝나면 설치 스크립트가 `check-prerequisites`를 다시 실행합니다. 실행할 스크립트는 `[INFO]` 메시지로 안내합니다.
 
 #### 도구별 설치 및 업데이트 방법
 
@@ -109,13 +109,13 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 > [!NOTE]
 >
-> - Windows에서 JDK를 설치할 때 권한 확인 창이 나타나면 승인합니다. 실습에 사용할 JDK는 제공된 도우미에서 선택합니다.
+> - Windows에서 JDK를 설치할 때 권한 확인 창이 나타나면 승인합니다. 실습에 사용할 JDK는 JDK 선택 스크립트로 선택합니다.
 > - `nvm use`로 사용할 Node.js 버전을 선택합니다.
 > - Linux에서는 glibc 2.27 이상이 필요합니다. 버전이 2.27 미만이거나 확인할 수 없다면 지원되는 배포판을 사용하세요.
 
 ### PostgreSQL 클라이언트 설치
 
-[실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)의 Azure DB 초기화와 연결 확인에는 PostgreSQL 클라이언트 `psql`이 필요합니다. 위 도우미는 PostgreSQL 클라이언트를 설치하거나 점검하지 않으므로 별도로 준비합니다. 로컬 PostgreSQL 서버는 설치하거나 실행할 필요가 없습니다.
+[실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)의 Azure DB 초기화와 연결 확인에는 PostgreSQL 클라이언트 `psql`이 필요합니다. 위 설치 스크립트는 PostgreSQL 클라이언트를 설치하거나 점검하지 않으므로 별도로 준비합니다. 로컬 PostgreSQL 서버는 설치하거나 실행할 필요가 없습니다.
 
 먼저 실습에 사용할 터미널에서 다음 명령을 실행합니다. 버전이 표시되면 설치를 건너뜁니다.
 

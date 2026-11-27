@@ -19,7 +19,7 @@
 
 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 산출물을 검토하고 승인한 뒤, 같은 Copilot app 터미널의 **앱 루트**를 사용합니다.
 
-이 문서의 `../scripts/` 도우미는 앱 루트에서 직접 실행합니다. Windows PowerShell 5.1에서는 PowerShell 7로 실행을 위임합니다. 방화벽이나 DB를 변경하는 도우미는 대상 정보를 표시하고 `APPLY` 입력으로 승인을 받습니다. CI나 비대화형 환경에서는 변경 작업을 실행하지 않습니다. 오류가 나면 다음 단계로 넘어가지 마세요.
+이 문서의 `../scripts/`에 있는 스크립트는 앱 루트에서 직접 실행합니다. Windows PowerShell 5.1에서는 PowerShell 7로 실행을 위임합니다. 방화벽이나 DB를 변경하는 스크립트는 대상 정보를 표시하고 `APPLY` 입력으로 승인을 받습니다. CI나 비대화형 환경에서는 변경 작업을 실행하지 않습니다. 오류가 나면 다음 단계로 넘어가지 마세요.
 
 로컬 이미지 빌드를 위해 Docker Engine을 실행하고 `docker info`로 연결을 확인합니다.
 
@@ -122,7 +122,7 @@ Azure Portal에서 대상 PostgreSQL 서버의 **네트워킹**을 열고 **현�
 
 #### 스크립트로 등록
 
-`<확인한-공인-IPv4>`를 실제 주소로 바꾸고 도우미를 실행합니다. 표시된 서버와 IP 주소를 확인한 뒤 승인합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. 도우미는 IP 하나만 등록하며 기존 규칙을 삭제하거나 허용 범위를 덮어쓰지 않습니다. Azure 서비스 전체나 모든 IP를 허용하는 규칙도 만들지 않습니다.
+`<확인한-공인-IPv4>`를 실제 주소로 바꾸고 IP 등록 스크립트를 실행합니다. 표시된 서버와 IP 주소를 확인한 뒤 승인합니다. 방화벽 규칙을 조회하고 변경할 권한이 필요합니다. 스크립트는 IP 하나만 등록하며 기존 규칙을 삭제하거나 허용 범위를 덮어쓰지 않습니다. Azure 서비스 전체나 모든 IP를 허용하는 규칙도 만들지 않습니다.
 
 ```bash
 # zsh/bash
@@ -182,7 +182,7 @@ $clientIp = "<확인한-공인-IPv4>"
 
 ### DB 연결용 루트 인증서 준비
 
-`psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 도우미를 실행해 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받습니다. 도우미가 출력한 PEM 파일 경로를 `PGSSLROOTCERT`에 지정합니다. Bash 도우미에는 `curl`과 `openssl`이 필요합니다. 시스템 인증서 저장소는 변경하지 않습니다.
+`psql`은 서버 인증서와 호스트 이름을 검증합니다. DB에 연결할 셸에서 루트 인증서 준비 스크립트를 실행해 [Azure PostgreSQL이 사용하는 루트 CA](https://learn.microsoft.com/en-us/azure/postgresql/security/security-tls#root-cas-used-by-azure-database-for-postgresql)를 내려받습니다. 스크립트가 출력한 PEM 파일 경로를 `PGSSLROOTCERT`에 지정합니다. Bash 스크립트에는 `curl`과 `openssl`이 필요합니다. 시스템 인증서 저장소는 변경하지 않습니다.
 
 ```bash
 # zsh/bash
@@ -203,7 +203,7 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 
 **로컬 PC의 Azure CLI에 로그인한 Entra 관리자로 DB 사용자와 테이블을 생성하고 권한을 부여**합니다. 앱은 web/worker 관리 ID로 연결합니다. 현재 PC에서 DB에 접근할 수 있고 현재 셸에 `PGSSLROOTCERT`가 설정되어 있어야 합니다.
 
-앱 루트에서 아래 도우미를 실행합니다. 기본 SQL 경로는 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`입니다. 경로가 다르면 Bash의 `--sql-path`, PowerShell의 `-SqlPath`로 지정합니다.
+앱 루트에서 아래 DB 정보 조회 스크립트를 실행합니다. 초기화 스크립트의 기본 SQL 경로는 `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`입니다. 경로가 다르면 Bash의 `--sql-path`, PowerShell의 `-SqlPath`로 지정합니다.
 
 초기화 전에 서버, 관리자, web/worker 관리 ID 이름과 DB 이름을 조회해 승인한 대상과 대조합니다. 앱마다 사용자 할당 관리 ID가 정확히 하나여야 하며 조회에 실패하거나 값이 비어 있으면 중단합니다.
 
@@ -219,7 +219,7 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 
 #### 1. DB 사용자와 기본 권한 설정
 
-`postgres` DB에 Entra 관리자로 연결해 검토한 SQL을 실행합니다. SQL은 web/worker 보안 주체를 생성하고 DB 연결 권한을 부여합니다. 이후 앱 DB에 연결해 스키마 사용 권한을 설정해야 합니다. 실행이 끝나면 도우미가 두 역할에 `CONNECT`와 `USAGE`가 허용되고 스키마 `CREATE`는 금지됐는지 유효 권한을 확인합니다.
+`postgres` DB에 Entra 관리자로 연결해 검토한 SQL을 실행합니다. SQL은 web/worker 보안 주체를 생성하고 DB 연결 권한을 부여합니다. 이후 앱 DB에 연결해 스키마 사용 권한을 설정해야 합니다. 실행이 끝나면 스크립트가 두 역할에 `CONNECT`와 `USAGE`가 허용되고 스키마 `CREATE`는 금지됐는지 유효 권한을 확인합니다.
 
 ```bash
 # zsh/bash
@@ -233,7 +233,7 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 
 #### 2. 테이블 생성과 앱 권한 설정
 
-같은 Entra 관리자 계정으로 앱 DB에 연결해 테이블과 앱 권한을 설정합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 실행 후 도우미가 테이블 소유자와 web/worker의 유효 권한을 확인합니다.
+같은 Entra 관리자 계정으로 앱 DB에 연결해 테이블과 앱 권한을 설정합니다. 관리자 단계만 끝낸 경우에도 이 단계는 필요합니다. 실행 후 스크립트가 테이블 소유자와 web/worker의 유효 권한을 확인합니다.
 
 ```bash
 # zsh/bash
@@ -247,7 +247,7 @@ if ($LASTEXITCODE -ne 0) { throw "Root CA preparation failed." }
 
 #### 초기화 결과 확인
 
-두 초기화 도우미는 [권한 검증 SQL](../../scripts/java-db-permissions.sql)을 자동으로 실행하므로 별도 쿼리를 입력할 필요는 없습니다. 각 도우미 실행 끝에 `[PASS] SQL and effective permission checks completed.`로 시작하는 메시지가 나오는지 확인합니다.
+두 초기화 스크립트는 [권한 검증 SQL](../../scripts/java-db-permissions.sql)을 자동으로 실행하므로 별도 쿼리를 입력할 필요는 없습니다. 각 스크립트 실행 끝에 `[PASS] SQL and effective permission checks completed.`로 시작하는 메시지가 나오는지 확인합니다.
 
 출력에서 테이블 소유자가 초기화한 관리자이고, web은 조회, 추가, 수정, 삭제를, worker는 조회와 수정만 할 수 있는지 확인합니다. 두 앱 역할에는 스키마 생성이나 테이블 변경 권한이 없어야 합니다.
 
@@ -285,7 +285,7 @@ Azure 포털에서 앞서 확인한 리소스 그룹을 열고 web과 worker Con
 2. **설정 → 수신(Ingress)** 에서 web과 worker의 수신 설정이 [실습 5: azd 배포 산출물 준비하기](05-prepare-azd.md)에서 검토한 구성과 일치하는지 확인합니다.
 3. worker의 **모니터링 → 로그 스트림(Log stream) → 콘솔(Console)** 에서 처리 로그와 오류를 확인합니다. 수정 버전, 복제본 또는 컨테이너가 여러 개라면 해당 대상을 선택합니다.
 
-터미널에서는 아래 도우미로 두 앱의 최신 수정 버전이 준비 완료 상태인지, 활성화되어 정상 동작하는지 확인합니다. web은 외부 ingress와 8080 포트를 사용하고 worker는 ingress가 꺼져 있는지도 확인합니다. 각 앱의 최근 시스템 로그 20줄과 web의 HTTP 응답도 조회합니다. 필요한 azd 출력이 없거나 검사에 실패하면 오류로 종료합니다.
+터미널에서는 아래 배포 점검 스크립트로 두 앱의 최신 수정 버전이 준비 완료 상태인지, 활성화되어 정상 동작하는지 확인합니다. web은 외부 ingress와 8080 포트를 사용하고 worker는 ingress가 꺼져 있는지도 확인합니다. 각 앱의 최근 시스템 로그 20줄과 web의 HTTP 응답도 조회합니다. 필요한 azd 출력이 없거나 검사에 실패하면 오류로 종료합니다.
 
 ```bash
 # zsh/bash

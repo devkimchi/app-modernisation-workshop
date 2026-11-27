@@ -27,13 +27,13 @@ git diff
 git diff --cached
 ```
 
-Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 변경됐는지 확인합니다. 토큰, 자격 증명, 비공개 키, 연결 문자열 등 비밀정보가 포함됐는지도 살핍니다. Copilot app 채팅에서 Java 검증을 요청할 때는 먼저 해당 셸에서 도우미로 JDK 25를 선택하도록 안내합니다.
+Git 변경 목록에서 `java/` 앱 밖의 파일(예: `docs/`, `scripts/`)이 변경됐는지 확인합니다. 토큰, 자격 증명, 비공개 키, 연결 문자열 등 비밀정보가 포함됐는지도 살핍니다. Copilot app 채팅에서 Java 검증을 요청할 때는 먼저 해당 셸에서 JDK 선택 스크립트로 JDK 25를 선택하도록 안내합니다.
 
 ## 배포 산출물 요구사항 확인
 
 다음 프롬프트로 생성된 배포 산출물에 요구사항이 반영됐는지 확인합니다. 이미 생성된 산출물은 `azd init --from-code`로 다시 생성하지 않습니다.
 
-DB 도우미 연동은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 사용하는 `../scripts/` 도우미를 기준으로 검토합니다.
+DB 초기화 스크립트 연동은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)에서 사용하는 `../scripts/`의 스크립트를 기준으로 검토합니다.
 
 ```text
 `.github/modernize/rulebook/`과 실제 Azure 연동 코드 및 환경 변수 정의를 읽고
@@ -60,8 +60,8 @@ DB 도우미 연동은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)�
   앱은 web/worker 관리 ID로 연결해야 해. web에는 테이블 조회, 추가, 수정, 삭제를, worker에는 조회와 수정만 허용해야 해. 스키마 생성이나 테이블 변경 권한은 주지 마.
   사용하지 않는 마이그레이션 관리 ID의 생성 코드, 매개변수, 출력과 SQL 입력 프롬프트가 남아 있으면 수정 대상으로 보고해 줘.
   새 데모 DB만 대상으로 하고 기존 DB를 삭제하거나 덮어쓰지 않는지도 확인해 줘. 컨트롤 플레인의 RBAC 권한만으로 DB 인증이 가능하다고 판단하지 말고, 실제 DB 작업도 실행하지 마.
-- **DB 도우미 연동:** `../scripts/` 도우미에 필요한 azd 출력 `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`, `POSTGRESQL_SERVER`, `POSTGRESQL_DATABASE`, `POSTGRESQL_ADMIN_NAME`, `POSTGRESQL_ADMIN_OBJECT_ID`, `WEB_CONTAINER_APP_NAME`, `WORKER_CONTAINER_APP_NAME`이 실제 리소스와 연결되는지 확인해 줘.
-  `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`은 도우미가 `--set`으로 전달하는 `web_identity_name`, `worker_identity_name`, `database_name`을 사용해야 해. `\prompt`나 마이그레이션 관리 ID 입력은 요구하지 않아야 해.
+- **DB 초기화 스크립트 연동:** `../scripts/`의 초기화 스크립트에 필요한 azd 출력 `AZURE_SUBSCRIPTION_ID`, `AZURE_RESOURCE_GROUP`, `POSTGRESQL_SERVER`, `POSTGRESQL_DATABASE`, `POSTGRESQL_ADMIN_NAME`, `POSTGRESQL_ADMIN_OBJECT_ID`, `WEB_CONTAINER_APP_NAME`, `WORKER_CONTAINER_APP_NAME`이 실제 리소스와 연결되는지 확인해 줘.
+  `infra/db/bootstrap-identities.sql`과 `infra/db/initialize-image-metadata.sql`은 초기화 스크립트가 `--set`으로 전달하는 `web_identity_name`, `worker_identity_name`, `database_name`을 사용해야 해. `\prompt`나 마이그레이션 관리 ID 입력은 요구하지 않아야 해.
   SQL 값은 `:'변수명'`, 식별자는 `:"변수명"`으로 안전하게 인용해야 해.
   bootstrap SQL은 `postgres` DB에서 시작해 앱 DB에 연결한 상태로 끝나야 해. schema SQL은 앱 DB에서 실행해야 해.
   변수 이름, 재실행 시 동작과 SQL 오류 시 중단 방식이 README 및 관련 테스트와 일치하는지 확인해 줘. 실제 SQL은 실행하지 마.
@@ -93,7 +93,7 @@ DB 도우미 연동은 [실습 6: azd로 ACA에 배포하기](06-deploy-aca.md)�
 
 ```text
 위에서 승인한 배포 산출물과 관련 테스트, 문서만 수정해 줘.
-Java 검증이 필요하면 앱 루트에서 현재 셸에 맞는 `../scripts/`의 `use-java` 도우미로 JDK 25를 선택해 줘.
+Java 검증이 필요하면 앱 루트에서 현재 셸에 맞는 `../scripts/`의 `use-java` 스크립트로 JDK 25를 선택해 줘.
 변경 내용에 필요한 로컬 템플릿 검증을 실행하고, 단위 빌드가 필요하면 같은 셸에서 실행해 줘.
 도구 설치, 실제 Azure 연결, 이미지 빌드와 게시, 프로비저닝, DB 변경과 배포는 하지 마.
 변경 파일과 검증 결과를 보고하고 실행할 수 없는 검증은 이유와 함께 미검증으로 표시해 줘.

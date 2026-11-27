@@ -20,7 +20,7 @@ Java 8/Spring Boot 2.7.18 앱을 **JDK 25**로 업그레이드하고 Azure 서�
 | 7 | [정리](07-cleanup.md) | Azure 리소스와 로컬 실습 프로세스 정리 |
 | 8 | [문제 해결](08-troubleshooting.md) | 진행 중 발생한 오류의 원인과 조치 확인 |
 
-Windows는 PowerShell 7, macOS와 Linux 데스크톱은 Bash 또는 Zsh 터미널에서 진행합니다. `.sh` 파일을 직접 실행하면 Bash로 실행되며, macOS 기본 Bash 3.2도 지원합니다. JDK 선택 도우미만 현재 셸에서 `source` 또는 dot-sourcing으로 불러옵니다.
+Windows는 PowerShell 7, macOS와 Linux 데스크톱은 Bash 또는 Zsh 터미널에서 진행합니다. `.sh` 파일을 직접 실행하면 Bash로 실행되며, macOS 기본 Bash 3.2도 지원합니다. JDK 선택 스크립트만 현재 셸에서 `source` 또는 dot-sourcing으로 불러옵니다.
 
 Copilot app 터미널에서 Modernize CLI로 앱을 평가하고 하나의 현대화 계획을 작성합니다. CLI 화면에서 계획을 검토한 뒤 실행합니다. 실제 Azure 배포와 정리는 참가자가 azd로 직접 진행합니다.
 

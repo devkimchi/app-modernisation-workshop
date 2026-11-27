@@ -12,7 +12,7 @@
 Set-Location ./dotnet
 ```
 
-이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가하고 **This computer**, **Current checkout**을 사용합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 별도 worktree 세션을 사용하면 앱과 도우미가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다. Modernize CLI용 터미널과 IIS Express용 장기 실행 터미널은 분리합니다.
+이후 명령은 **앱 루트**에서 실행합니다. Copilot app에서 **이 앱 폴더**를 프로젝트로 추가하고 **This computer**, **Current checkout**을 사용합니다. 워크숍 최상위나 `docs/dotnet`을 열지 않습니다. 별도 worktree 세션을 사용하면 앱과 스크립트가 그 작업 경로에도 있는지 확인하고 `-AppPath`에는 반드시 **그 세션의 실제 앱 경로**를 전달합니다. Modernize CLI용 터미널과 IIS Express용 장기 실행 터미널은 분리합니다.
 
 ```powershell
 Get-Location
@@ -51,14 +51,14 @@ Visual Studio IDE를 열지 말고, 워크숍 scripts/run-dotnet-original.ps1에
 if ($LASTEXITCODE -ne 0) { throw '원본 복원/빌드 실패. 다음 단계로 진행하지 마세요.' }
 ```
 
-사용자 지정 다운로드 위치라면 `../scripts` 대신 **워크숍 자료 폴더의 도우미 절대 경로**를 지정합니다. 도우미는 `vswhere`로 IDE/Build Tools의 MSBuild와 웹 타깃을 찾고, 공백이 있는 경로도 인자로 보존합니다. 별도 `nuget.exe`나 Developer Command Prompt는 필요하지 않습니다. 원본은 솔루션과 프로젝트가 같은 폴더이며 `HintPath`가 `packages/...`를 참조하므로 다음 순서로 실행합니다.
+사용자 지정 다운로드 위치라면 `../scripts` 대신 **워크숍 자료 폴더의 원본 실행 스크립트 절대 경로**를 지정합니다. 스크립트는 `vswhere`로 IDE/Build Tools의 MSBuild와 웹 타깃을 찾고, 공백이 있는 경로도 인자로 보존합니다. 별도 `nuget.exe`나 Developer Command Prompt는 필요하지 않습니다. 원본은 솔루션과 프로젝트가 같은 폴더이며 `HintPath`가 `packages/...`를 참조하므로 다음 순서로 실행합니다.
 
 ```text
 MSBuild.exe <앱 루트>/ContosoUniversity.sln /t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=<앱 루트>/packages
 MSBuild.exe <앱 루트>/ContosoUniversity.sln /t:Build /p:Configuration=Debug
 ```
 
-위 두 줄은 실행 구조 설명이며 실제 경로의 따옴표/버전 설정은 도우미가 처리합니다. 두 명령 모두 선택한 설치본의 `VisualStudioVersion` 및 `VSToolsPath`를 명시해 원본의 오래된 웹 타깃 기본값을 피합니다. 복원 실패 시 빌드하지 않고, 빌드 실패 시 IIS Express를 실행하지 않습니다. `dotnet restore/build/run`으로 대체하거나 NuGet의 TLS 검증을 끄지 않습니다.
+위 두 줄은 실행 구조 설명이며 실제 경로의 따옴표/버전 설정은 스크립트가 처리합니다. 두 명령 모두 선택한 설치본의 `VisualStudioVersion` 및 `VSToolsPath`를 명시해 원본의 오래된 웹 타깃 기본값을 피합니다. 복원 실패 시 빌드하지 않고, 빌드 실패 시 IIS Express를 실행하지 않습니다. `dotnet restore/build/run`으로 대체하거나 NuGet의 TLS 검증을 끄지 않습니다.
 
 ## 2. DB 대상을 확인한 뒤 IIS Express 실행
 
@@ -70,7 +70,7 @@ Get-Content ./Data/DbInitializer.cs
 Get-Content ./Services/NotificationService.cs
 ```
 
-원본 연결은 `(LocalDb)\MSSQLLocalDB`의 `ContosoUniversityNoAuthEFCore`, 큐는 `.\Private$\ContosoUniversityNotifications`입니다. 다른 실습도 같은 이름을 사용할 수 있으니 소유와 데이터 보존 필요를 확인하세요. 도우미는 연결 문자열 변경, LocalDB 인스턴스/큐 생성 또는 데이터 삭제를 직접 수행하지 않지만 앱 자체는 요청 처리 중 DB/큐에 쓰기 작업을 할 수 있습니다. 특히 원본 `NotificationService`는 큐가 없으면 생성하고 `Everyone`에 FullControl을 부여합니다. 전용 로컬 실습 환경에서만 사용하고, 공유 PC에서는 실행 전 관리자와 최소 권한 큐를 별도로 준비할지 검토합니다. 앱을 무조건 관리자 권한으로 올려 해결하지 않습니다.
+원본 연결은 `(LocalDb)\MSSQLLocalDB`의 `ContosoUniversityNoAuthEFCore`, 큐는 `.\Private$\ContosoUniversityNotifications`입니다. 다른 실습도 같은 이름을 사용할 수 있으니 소유와 데이터 보존 필요를 확인하세요. 스크립트는 연결 문자열 변경, LocalDB 인스턴스/큐 생성 또는 데이터 삭제를 직접 수행하지 않지만 앱 자체는 요청 처리 중 DB/큐에 쓰기 작업을 할 수 있습니다. 특히 원본 `NotificationService`는 큐가 없으면 생성하고 `Everyone`에 FullControl을 부여합니다. 전용 로컬 실습 환경에서만 사용하고, 공유 PC에서는 실행 전 관리자와 최소 권한 큐를 별도로 준비할지 검토합니다. 앱을 무조건 관리자 권한으로 올려 해결하지 않습니다.
 
 LocalDB가 PATH에 없다면 설치 폴더의 `SqlLocalDB.exe` 절대 경로로 다음을 실행합니다.
 
@@ -94,9 +94,9 @@ Web.config와 DB 생성/재생성 경로를 확인했고 실습 전용 데이터
 ../scripts/run-dotnet-original.ps1 -AppPath . -Run -AllowDatabaseInitialization
 ```
 
-도우미는 IIS Express 설치본의 `AppServer/applicationhost.config`를 기반으로 앱 내부 `.vs/workshop/applicationhost-<고유값>.config`를 생성합니다. 전역 IIS 설정, `Web.config`와 기존 `.vs` 설정은 바꾸지 않습니다. CLR v4 Integrated 풀과 원본 프로젝트의 **Windows 인증 활성/익명 인증 비활성**을 유지합니다. 기본 주소는 **`http://localhost:58801/`**입니다. 원본 IDE 프로필의 `https://localhost:44300/`과 달리, CLI 기본은 localhost 전용 HTTP 바인딩으로 인증서/HTTP.sys SSL 등록 없이 실행합니다. 외부 공개나 실제 비밀 데이터 전송에 사용하지 않습니다.
+스크립트는 IIS Express 설치본의 `AppServer/applicationhost.config`를 기반으로 앱 내부 `.vs/workshop/applicationhost-<고유값>.config`를 생성합니다. 전역 IIS 설정, `Web.config`와 기존 `.vs` 설정은 바꾸지 않습니다. CLR v4 Integrated 풀과 원본 프로젝트의 **Windows 인증 활성/익명 인증 비활성**을 유지합니다. 기본 주소는 **`http://localhost:58801/`**입니다. 원본 IDE 프로필의 `https://localhost:44300/`과 달리, CLI 기본은 localhost 전용 HTTP 바인딩으로 인증서/HTTP.sys SSL 등록 없이 실행합니다. 외부 공개나 실제 비밀 데이터 전송에 사용하지 않습니다.
 
-포트가 사용 중이면 해당 앱을 종료하지 말고 `-Port 58802` 등 빈 포트를 선택합니다. 브라우저에 출력된 주소를 직접 엽니다. 도우미는 브라우저/HTTP 요청을 자동 실행하지 않으며, 성공 종료 코드나 IIS 시작 로그만으로 DB/큐/화면 동작 성공이라 하지 않습니다.
+포트가 사용 중이면 해당 앱을 종료하지 말고 `-Port 58802` 등 빈 포트를 선택합니다. 브라우저에 출력된 주소를 직접 엽니다. 스크립트는 브라우저/HTTP 요청을 자동 실행하지 않으며, 성공 종료 코드나 IIS 시작 로그만으로 DB/큐/화면 동작 성공이라 하지 않습니다.
 
 IIS Express는 **전경 프로세스**입니다. Copilot app에서 실행할 때 명령 시간 제한으로 종료되지 않도록 장기 실행 터미널을 유지하고 PID를 기록하도록 요청합니다. 참가자가 직접 실행하면 이 터미널을 유지하고 다른 터미널/브라우저에서 검증합니다. 종료는 해당 터미널에서 `Q` 또는 `Ctrl+C`를 사용합니다. 자동 종료되면 오류와 종료 코드를 확인하고 실제 앱 응답은 미검증으로 남깁니다.
 
@@ -107,7 +107,7 @@ IIS Express는 **전경 프로세스**입니다. Copilot app에서 실행할 때
 3. 시작 프로젝트와 IIS Express 프로필을 확인합니다. `Web.config`의 LocalDB 연결 대상은 기본적으로 `(LocalDb)\MSSQLLocalDB`입니다.
 4. 디버깅 없이 시작하거나 디버깅을 시작합니다. 기본 HTTPS 주소는 `https://localhost:44300/`이며 실제 실행 프로필의 주소를 사용합니다.
 
-CLI에서도 HTTPS가 필요하면 별도의 IIS Express 사이트/SSL 바인딩과 인증서 신뢰를 직접 준비해야 합니다. 도우미는 이를 자동 등록하지 않습니다. 개발 인증서와 출처를 확인해 해결하고 브라우저 보안 경고를 무조건 무시하거나 TLS 검사를 끄지 않습니다.
+CLI에서도 HTTPS가 필요하면 별도의 IIS Express 사이트/SSL 바인딩과 인증서 신뢰를 직접 준비해야 합니다. 스크립트는 이를 자동 등록하지 않습니다. 개발 인증서와 출처를 확인해 해결하고 브라우저 보안 경고를 무조건 무시하거나 TLS 검사를 끄지 않습니다.
 
 ## 기준 동작 기록
 

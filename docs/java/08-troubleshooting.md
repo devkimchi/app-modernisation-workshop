@@ -13,7 +13,7 @@
 | PowerShell 7 누락 | Windows PowerShell 5.1에서 `./scripts/install-prerequisites.ps1 -Track java`를 실행하면 설치를 제안하고 별도 동의를 받습니다. 다른 스크립트는 본 작업을 시작하기 전에 종료합니다. |
 | `pwsh`를 찾을 수 없음 | 기본 설치 경로와 갱신된 PATH에서도 찾지 못한 경우입니다. PowerShell 7을 준비하고 새 터미널에서 확인합니다. |
 | Windows 스크립트 실행 차단 | `Get-ExecutionPolicy`가 `Restricted`이면 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`를 현재 창에만 적용하고 `./scripts/check-prerequisites.ps1 -Track java`를 다시 실행합니다. 시스템과 사용자 범위는 바꾸지 않습니다. 조직 정책이면 관리자에게 문의합니다. |
-| `.sh`의 셸 오류 | `sh`나 `zsh`로 실행하지 말고 `./scripts/check-prerequisites.sh --track java`처럼 직접 실행합니다. 터미널의 셸과 스크립트를 실행하는 Bash는 별개입니다. JDK 선택 도우미 `use-java.sh`는 직접 실행하지 않고 Bash나 Zsh에서 `source`합니다. |
+| `.sh`의 셸 오류 | `sh`나 `zsh`로 실행하지 말고 `./scripts/check-prerequisites.sh --track java`처럼 직접 실행합니다. 터미널의 셸과 스크립트를 실행하는 Bash는 별개입니다. JDK 선택 스크립트 `use-java.sh`는 직접 실행하지 않고 Bash나 Zsh에서 `source`합니다. |
 | `permission denied` 또는 줄바꿈 오류 | Git 복제본의 실행 권한과 LF를 확인합니다. 파일 복사로 권한이 사라졌다면 해당 스크립트에 실행 권한을 부여한 뒤 직접 실행합니다. CRLF 파일은 변경 내용을 보존하며 LF로 변환합니다. |
 | `MANUAL`인데 종료 코드 0 | 수동 항목은 미검증입니다. Copilot 로그인과 사용 권한, RBAC와 쿼터를 직접 확인합니다. |
 | 엔진 인자 충돌 | `AZD_CONTAINER_RUNTIME`과 `-ContainerEngine` 또는 `--container-engine`을 같은 값으로 맞춥니다. |
@@ -30,11 +30,11 @@
 
 ### Windows 도구와 JDK
 
-필요한 업데이트는 워크숍 루트에서 `./scripts/install-prerequisites.ps1 -Track java -Update`를 실행해 항목별로 승인합니다. 누락된 도구만 설치하려면 `-Update`를 생략합니다. Windows PowerShell 5.1에서 이 도우미를 실행하면 PowerShell 7 설치만 제안하며, winget 자체는 설치하지 않습니다.
+필요한 업데이트는 워크숍 루트에서 `./scripts/install-prerequisites.ps1 -Track java -Update`를 실행해 항목별로 승인합니다. 누락된 도구만 설치하려면 `-Update`를 생략합니다. Windows PowerShell 5.1에서 이 스크립트를 실행하면 PowerShell 7 설치만 제안하며, winget 자체는 설치하지 않습니다.
 
-- **Temurin**: UAC 승인을 거부하면 설치가 완료되지 않습니다. 승인 가능한 환경에서 다시 실행하거나 관리자가 준비한 정식 JDK 8과 25를 사용합니다. 설치 도우미의 `FeatureMain` 구성은 시스템 `PATH`, `JAVA_HOME`과 파일 연결을 변경하지 않습니다. 기존 기본 JDK를 임의로 바꾸지 않습니다.
+- **Temurin**: UAC 승인을 거부하면 설치가 완료되지 않습니다. 승인 가능한 환경에서 다시 실행하거나 관리자가 준비한 정식 JDK 8과 25를 사용합니다. 설치 스크립트의 `FeatureMain` 구성은 시스템 `PATH`, `JAVA_HOME`과 파일 연결을 변경하지 않습니다. 기존 기본 JDK를 임의로 바꾸지 않습니다.
 - **JDK 선택**: PowerShell 7에서 **앱 루트**로 이동한 뒤 `. ../scripts/use-java.ps1 -Jdk 8` 또는 `. ../scripts/use-java.ps1 -Jdk 25`를 실행합니다. 앞의 점과 공백은 필수입니다. 스크립트를 직접 실행하면 현재 터미널의 환경을 바꿀 수 없습니다. Windows PowerShell 5.1에서는 dot-sourcing을 지원하지 않습니다. `mvnw.cmd`, Temurin 설치 경로, `java -version`과 `javac -version`을 확인합니다. JRE나 EA 버전으로 대체하지 않습니다.
-- **PowerShell 업데이트**: 실행 경로, MSI 등록 정보와 winget 출처가 일치하는 정식 PowerShell 7 설치본에만 업데이트를 제안합니다. Store나 ZIP 등 도우미가 관리 방식을 확인할 수 없는 설치본은 원래 설치 방법으로 업데이트합니다. 업데이트가 예약됐더라도 완료된 것은 아니며, 도우미는 종료 코드 1로 멈춥니다. 현재 pwsh를 닫은 뒤 업데이트 프로세스의 `PASS` 또는 `FAIL`을 확인하고 새 터미널에서 다시 점검합니다.
+- **PowerShell 업데이트**: 실행 경로, MSI 등록 정보와 winget 출처가 일치하는 정식 PowerShell 7 설치본에만 업데이트를 제안합니다. Store나 ZIP 등 스크립트가 관리 방식을 확인할 수 없는 설치본은 원래 설치 방법으로 업데이트합니다. 업데이트가 예약됐더라도 완료된 것은 아니며, 스크립트는 종료 코드 1로 멈춥니다. 현재 pwsh를 닫은 뒤 업데이트 프로세스의 `PASS` 또는 `FAIL`을 확인하고 새 터미널에서 다시 점검합니다.
 - **Azure CLI와 azd**: 누락된 도구는 winget으로 설치하며 기존 설치본 업데이트는 원래 설치 관리자를 사용합니다.
 
 ### Node.js 설치와 활성화
@@ -46,13 +46,13 @@
 - 없으면 winget의 `AuthorSoftware.NVMWindows` 설치부터 제안합니다. 2.x는 `nvm config get root mode --json`의 루트와 shim 및 링크 경로를, 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 `node.exe`를 확인합니다.
 - 다른 방식으로 설치한 Node.js나 일반 디렉터리가 해당 경로에 있으면 자동으로 덮어쓰지 않습니다. [nvm-windows 안내](https://github.com/nvm-windows/nvm)를 참고해 기존 설치 방식을 확인하고 직접 전환합니다.
 - 설치와 `nvm use`를 통한 버전 선택은 각각 동의를 받습니다. 버전을 선택하면 Windows에서 공통으로 사용하는 Node.js 버전이 바뀌어 이후 터미널에도 영향을 줍니다. 이미 실행 중인 Node 프로세스는 바뀌지 않습니다.
-- 2.x에서 `auto_install=true`이면 점검만으로 설치가 시작될 수 있어 도우미가 중단합니다. `nvm config get auto_install --json`으로 확인하고 설정 변경은 직접 결정합니다. `.nvmrc`, `.node-version`, `package.json`은 수정하지 않습니다. Windows에서 선택한 버전과 프로젝트에서 실제 사용하는 버전이 다르면 실패로 알립니다.
+- 2.x에서 `auto_install=true`이면 점검만으로 설치가 시작될 수 있어 스크립트가 중단합니다. `nvm config get auto_install --json`으로 확인하고 설정 변경은 직접 결정합니다. `.nvmrc`, `.node-version`, `package.json`은 수정하지 않습니다. Windows에서 선택한 버전과 프로젝트에서 실제 사용하는 버전이 다르면 실패로 알립니다.
 
 **macOS와 Linux nvm**
 
 - `command -v node`, `node --version`, `nvm which current`를 비교합니다. 선택된 Node.js를 다른 설치 관리자가 관리하고 있다면 자동으로 변경하지 않습니다.
 - `nvm install --no-use "<버전>"`으로 설치하고 별도 동의 후 스크립트 환경에서 활성화합니다. 기존 버전과 기본 별칭은 유지합니다.
-- 도우미를 실행한 터미널의 환경은 바뀌지 않습니다. 출력된 초기화 명령과 `nvm use "<새-버전>"`을 현재 Bash/Zsh에서도 실행합니다. 활성화를 거부했을 때 기존 Node.js가 없거나 22 미만이면 최종 점검은 실패합니다.
+- 스크립트를 실행한 터미널의 환경은 바뀌지 않습니다. 출력된 초기화 명령과 `nvm use "<새-버전>"`을 현재 Bash/Zsh에서도 실행합니다. 활성화를 거부했을 때 기존 Node.js가 없거나 22 미만이면 최종 점검은 실패합니다.
 
 `npx`로 도구 서버를 다운로드하지 못하면 Node.js와 npm의 실제 경로, 네트워크, 프록시와 npm 레지스트리 설정을 확인합니다. TLS 검증을 끄지 않습니다. 오류 메시지와 비밀정보를 제거한 로그를 기록합니다. 패키지 다운로드에 성공했더라도 전체 현대화가 성공한 것은 아닙니다.
 
@@ -60,7 +60,7 @@
 
 macOS에서는 Homebrew가 필수입니다. 일반 설치와 `--update` 모두 다른 도구를 확인하기 전에 Homebrew부터 확인합니다. 설치에는 관리자 승인과 Xcode Command Line Tools가 필요할 수 있습니다. 설치를 거부하거나 설치에 실패하면 Homebrew가 필요한 도구는 건너뛰고 최종 점검도 실패합니다. Node.js와 JDK 준비는 별도로 진행할 수 있습니다.
 
-[공식 안내](https://brew.sh)에 따라 복구하고 출력된 `brew shellenv`를 로그인 셸 파일(`~/.zprofile` 또는 `~/.bash_profile`)에 직접 반영합니다. 도우미는 이 파일을 수정하지 않습니다. Modernize는 전체 cask 이름으로 설치합니다.
+[공식 안내](https://brew.sh)에 따라 복구하고 출력된 `brew shellenv`를 로그인 셸 파일(`~/.zprofile` 또는 `~/.bash_profile`)에 직접 반영합니다. 설치 스크립트는 이 파일을 수정하지 않습니다. Modernize는 전체 cask 이름으로 설치합니다.
 
 ```bash
 brew tap microsoft/modernize https://github.com/microsoft/modernize-cli
@@ -221,7 +221,7 @@ Set-Location worker
 
 ### 대체 엔진 설정
 
-실습 문서는 Docker를 기준으로 합니다. Podman을 사용한다면 [공식 설치 안내](https://podman.io/docs/installation)를 따르되, 기존 머신과 연결 설정부터 확인합니다. 도우미는 엔진을 자동으로 설치하지 않습니다.
+실습 문서는 Docker를 기준으로 합니다. Podman을 사용한다면 [공식 설치 안내](https://podman.io/docs/installation)를 따르되, 기존 머신과 연결 설정부터 확인합니다. 설치 스크립트는 엔진을 자동으로 설치하지 않습니다.
 
 Linux Docker Engine의 권한 문제는 [공식 설치 후 안내](https://docs.docker.com/engine/install/linux-postinstall/)를 따릅니다. docker 그룹에 사용자를 추가하면 높은 권한이 부여됩니다. 영향을 확인한 뒤 `sudo` 없이 연결할 수 있도록 준비합니다. 소켓을 모든 사용자에게 개방하지 않습니다.
 

@@ -13,7 +13,7 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 ├── snapshots
 │   ├── java        # Java 트랙의 단계별 결과 스냅샷
 │   └── dotnet      # .NET 트랙의 단계별 결과 스냅샷
-├── scripts         # 사전 점검, 설치, 샘플 다운로드 도우미
+├── scripts         # 사전 점검, 설치, 샘플 다운로드 스크립트
 ├── java            # 다운로드되는 Java 앱
 └── dotnet          # 다운로드되는 .NET 앱
 ```
@@ -35,6 +35,8 @@ GitHub Copilot app과 Modernize CLI로 앱을 현대화한 뒤, Azure Developer 
 | 업그레이드 목표 | Java 25, Spring Boot 4.1.2 | .NET 10, ASP.NET Core MVC |
 | 서비스 이전 | PostgreSQL, RabbitMQ, 파일(`dev`: 로컬, 그 외: AWS S3) → Azure PostgreSQL, Service Bus, Blob | LocalDB, MSMQ, 파일 → Azure SQL, Service Bus, Blob |
 | 배포 구성 | 웹 앱과 워커를 각각 Azure Container Apps에 배포 | 웹 앱을 배포하며, 처리기를 분리할지는 계획 단계에서 결정 |
+
+강사 노트: [Java 워크숍](docs/instructor-notes/java.md) | [.NET 워크숍 (TBD)](docs/instructor-notes/dotnet.md) | [통합 워크숍 (TBD)](docs/instructor-notes/combined.md)
 
 ## 워크숍 진행 순서
 

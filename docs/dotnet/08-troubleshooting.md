@@ -11,7 +11,7 @@
 | 증상 | 확인과 조치 |
 | --- | --- |
 | PowerShell 7 누락 | Windows PowerShell 5.1에서 `./scripts/install-prerequisites.ps1 -Track dotnet`을 실행하면 별도 동의를 받아 설치를 제안합니다. 다른 진입점은 본 작업 전에 멈춥니다. |
-| `pwsh`를 찾을 수 없음 | Windows PowerShell 5.1에서 `.ps1`을 실행하면 기본 설치 경로와 갱신된 PATH에서도 PowerShell 7을 찾습니다. 발견하지 못하면 설치 안내와 함께 종료합니다. 위 설치 도우미로 준비하거나 PowerShell 7 설치 후 새 터미널을 엽니다. |
+| `pwsh`를 찾을 수 없음 | Windows PowerShell 5.1에서 `.ps1`을 실행하면 기본 설치 경로와 갱신된 PATH에서도 PowerShell 7을 찾습니다. 발견하지 못하면 설치 안내와 함께 종료합니다. 위 설치 스크립트로 준비하거나 PowerShell 7 설치 후 새 터미널을 엽니다. |
 | `MANUAL`인데 종료 코드 0 | 수동 항목은 미검증입니다. Copilot 로그인/사용 권한, RBAC와 쿼터를 직접 확인합니다. |
 | 스크립트 실행 권한/인코딩/줄바꿈 | `./scripts/check-prerequisites.ps1 -Track dotnet`처럼 직접 실행합니다. `Get-ExecutionPolicy`가 `Restricted`이면 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`를 현재 창에만 적용합니다. 시스템/사용자 범위는 바꾸지 않으며 조직 정책은 관리자에게 문의합니다. `.ps1`은 5.1 파서를 위해 UTF-8 BOM과 LF를 유지합니다. |
 | 엔진 인자 충돌 | `AZD_CONTAINER_RUNTIME`과 `-ContainerEngine`/`--container-engine`을 같은 값으로 맞춥니다. |
@@ -28,21 +28,21 @@
 
 ## 사전 준비 수동 복구
 
-점검과 설치 도우미의 조치를 거부했거나 실패한 경우에만 아래에서 필요한 항목을 수행합니다. Windows PowerShell 7에서 실행합니다. 조치 후 같은 환경에서 사전 점검을 다시 실행하세요.
+점검 및 설치 스크립트의 조치를 거부했거나 실패한 경우에만 아래에서 필요한 항목을 수행합니다. Windows PowerShell 7에서 실행합니다. 조치 후 같은 환경에서 사전 점검을 다시 실행하세요.
 
 ### Windows 호스트 도구 설치와 업데이트
 
-PowerShell 7이 없으면 스크립트는 본 작업 전에 종료합니다. 설치 도우미만 기존 winget의 `Microsoft.PowerShell`로 설치할지 묻습니다. winget 자체는 설치하지 않습니다.
+PowerShell 7이 없으면 스크립트는 본 작업 전에 종료합니다. 설치 스크립트만 기존 winget의 `Microsoft.PowerShell`로 설치할지 묻습니다. winget 자체는 설치하지 않습니다.
 
 `-Update`는 실행 경로, MSI와 winget 출처가 확인되는 PowerShell만 업데이트합니다. 관리 출처를 확인하지 못하면 자동 업데이트만 `MANUAL`로 건너뛰므로 원래 설치 관리자를 사용하세요. 업데이트를 예약하고 종료한 경우에는 작업 결과를 확인한 뒤 새 터미널에서 다시 실행합니다.
 
-도우미는 OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Azure CLI/azd는 누락된 도구만 기존 winget으로 설치하며 업데이트는 원래 설치 관리자로 직접 진행합니다. 관리자 승인과 winget 약관은 직접 확인합니다.
+설치 스크립트는 OS 전체를 업그레이드하거나 자동 재부팅하지 않습니다. Azure CLI/azd는 누락된 도구만 기존 winget으로 설치하며 업데이트는 원래 설치 관리자로 직접 진행합니다. 관리자 승인과 winget 약관은 직접 확인합니다.
 
 ### Node.js 설치와 업데이트
 
 기존 nvm-windows가 없으면 winget의 `AuthorSoftware.NVMWindows` 설치부터 제안합니다.
 
-Windows 설치 도우미는 Java 트랙과 같은 nvm-windows 설치 경로를 사용합니다. 2.x는 `nvm config get root mode --json`의 설치 루트와 shim/link 경로를, 기존 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 `node.exe`의 경로를 확인합니다. 독립 설치나 일반 디렉터리가 실행 경로를 차지하면 덮어쓰지 않습니다. 원래 설치 관리자를 확인하고 [nvm-windows 안내](https://github.com/nvm-windows/nvm)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
+Windows 설치 스크립트는 Java 트랙과 같은 nvm-windows 설치 경로를 사용합니다. 2.x는 `nvm config get root mode --json`의 설치 루트와 shim/link 경로를, 기존 1.x는 `NVM_HOME`, `NVM_SYMLINK`, `settings.txt`와 활성 `node.exe`의 경로를 확인합니다. 독립 설치나 일반 디렉터리가 실행 경로를 차지하면 덮어쓰지 않습니다. 원래 설치 관리자를 확인하고 [nvm-windows 안내](https://github.com/nvm-windows/nvm)에 따라 직접 전환한 뒤 새 터미널에서 점검하세요.
 
 `-Update`는 현재 Node.js 메이저가 22 이상이면 해당 메이저의 최신 정식 버전, 없거나 오래됐으면 22.x를 준비합니다. 기존 버전은 삭제하지 않습니다. 설치와 `nvm use` 활성화는 별도 동의를 받으며, 활성화를 승인하면 공용 선택(shim/link)과 이후 터미널의 선택이 변경됩니다. 실행 중인 Node.js 프로세스는 바뀌지 않습니다. 활성화를 거부하고 기존 Node.js가 없거나 22 미만이면 점검은 실패합니다. CI와 비대화형 환경에서는 설치하거나 업데이트하지 않습니다.
 
@@ -107,12 +107,12 @@ IIS Express에는 실행 파일뿐 아니라 `AppServer/applicationhost.config` 
 | --- | --- |
 | Framework 참조 어셈블리 누락 | 런타임과 별개로 **4.8 Targeting Pack**을 설치합니다. 4.8.2 다운로드를 찾거나 csproj를 임의 retarget하지 않습니다. |
 | `framework-build` 검사 실패 | VS 2022/2026 IDE 또는 Build Tools를 사용할 수 있습니다. `vswhere`와 선택 설치본의 MSBuild 실행 파일, `WebApplications/Microsoft.WebApplication.targets`를 확인합니다. Build Tools에는 Web development build tools가 필요하며 기본 MSBuild만으로는 부족합니다. IDE 실행은 필요하지 않습니다. |
-| MSB4019 / 웹 타깃 import 실패 | `dotnet build`가 아니라 도우미의 전체 Framework MSBuild를 사용합니다. 도우미는 해당 설치본의 `VSToolsPath`/`VisualStudioVersion`을 전달합니다. 웹 타깃 없이 프로젝트 import를 삭제해 우회하지 않습니다. |
-| 패키지/HintPath 누락 | 원본은 `packages.config`이며 앱 루트의 `packages`를 참조합니다. 도우미의 `/t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=...` 성공을 먼저 확인하고 프록시/패키지 소스 오류를 해결합니다. |
+| MSB4019 / 웹 타깃 import 실패 | `dotnet build`가 아니라 원본 실행 스크립트가 호출하는 전체 Framework MSBuild를 사용합니다. 스크립트는 해당 설치본의 `VSToolsPath`/`VisualStudioVersion`을 전달합니다. 웹 타깃 없이 프로젝트 import를 삭제해 우회하지 않습니다. |
+| 패키지/HintPath 누락 | 원본은 `packages.config`이며 앱 루트의 `packages`를 참조합니다. 원본 실행 스크립트가 호출하는 `/t:Restore /p:RestorePackagesConfig=true /p:RestoreRepositoryPath=...`의 성공을 먼저 확인하고 프록시/패키지 소스 오류를 해결합니다. |
 | IIS Express CLI가 종료되거나 주소 접근 실패 | 장기 실행 터미널, 실행 PID와 로그를 확인합니다. 기본 CLI는 `http://localhost:58801/`이며 IDE의 HTTPS 44300과 다릅니다. 포트 충돌은 `-Port`로 해결하고 관리자 실행/URL ACL/방화벽 전역 변경으로 우회하지 않습니다. HTTP 응답 확인은 DB 초기화를 유발할 수 있습니다. |
 | IIS 401 / 500.19 / 500.21 | 생성 구성의 Windows 인증(활성), 익명 인증(비활성), CLR4 Integrated 풀과 IIS Express ASP.NET 모듈을 확인합니다. Windows 통합 인증을 지원하는 로컬 브라우저를 사용하고 로그의 모듈/설정 오류를 구분합니다. 전역 인증을 풀거나 무조건 관리자 실행하지 않습니다. |
 | MSMQ 오류 | Windows 기능, Running 서비스, 정확한 private queue 이름/권한/트랜잭션 설정을 확인합니다. Linux로 MSMQ를 가져가지 않습니다. |
-| .NET 10 SDK 검사 실패 | `dotnet --list-sdks`를 봅니다. 런타임만 설치했거나 preview만 있는 경우는 통과하지 않습니다. 설치 도우미에서 SDK 설치를 승인하거나 [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0)를 따릅니다. `-Update`는 winget의 최신 정식 10.x보다 낮을 때 별도 동의를 받아 업데이트하고 요청한 버전을 다시 확인합니다. 다른 메이저 SDK와 `global.json`은 변경하지 않지만 같은 기능 밴드의 이전 패치는 설치 관리자에 의해 교체될 수 있습니다. `global.json`의 버전 요구도 확인합니다. |
+| .NET 10 SDK 검사 실패 | `dotnet --list-sdks`를 봅니다. 런타임만 설치했거나 preview만 있는 경우는 통과하지 않습니다. 설치 스크립트에서 SDK 설치를 승인하거나 [공식 설치 안내](https://dotnet.microsoft.com/download/dotnet/10.0)를 따릅니다. `-Update`는 winget의 최신 정식 10.x보다 낮을 때 별도 동의를 받아 업데이트하고 요청한 버전을 다시 확인합니다. 다른 메이저 SDK와 `global.json`은 변경하지 않지만 같은 기능 밴드의 이전 패치는 설치 관리자에 의해 교체될 수 있습니다. `global.json`의 버전 요구도 확인합니다. |
 | LocalDB/IIS Express 없음 | Visual Studio Installer 개별 구성요소를 확인합니다. 일반 SQL Server를 다른 DB에 연결해 대신 쓰지 않습니다. |
 | HTTPS 인증서 경고 | 개발 인증서와 발급/신뢰 상태를 참가자가 확인해 해결합니다. 보안 경고 우회나 TLS 검증 비활성화를 기본으로 하지 않습니다. |
 
@@ -120,7 +120,7 @@ IIS Express에는 실행 파일뿐 아니라 `AppServer/applicationhost.config` 
 
 ### 대체 엔진 설정
 
-본문은 Docker 기준입니다. Podman이 필요한 경우 [공식 설치 안내](https://podman.io/docs/installation)에 따라 설치하고 Linux 서버에 연결합니다. 기존 machine과 연결을 먼저 확인하고 필요한 경우에만 직접 생성하거나 시작합니다. 설치 도우미는 컨테이너 엔진을 자동 설치하지 않습니다. .NET Framework 원본의 MSBuild, IIS Express, LocalDB와 MSMQ 실행은 계속 Windows에서 진행합니다.
+본문은 Docker 기준입니다. Podman이 필요한 경우 [공식 설치 안내](https://podman.io/docs/installation)에 따라 설치하고 Linux 서버에 연결합니다. 기존 machine과 연결을 먼저 확인하고 필요한 경우에만 직접 생성하거나 시작합니다. 설치 스크립트는 컨테이너 엔진을 자동 설치하지 않습니다. .NET Framework 원본의 MSBuild, IIS Express, LocalDB와 MSMQ 실행은 계속 Windows에서 진행합니다.
 
 엔진 선택은 명시 인자, `AZD_CONTAINER_RUNTIME`, 기본값 `docker` 순서입니다. 인자와 환경 변수가 다르면 오류가 발생하고, 선택한 엔진이 멈춰도 다른 엔진으로 전환하지 않습니다. Podman machine 목록만으로 현재 연결된 엔진을 판단하지 말고 `podman info`와 연결 설정을 함께 확인하세요. Docker 호환 대체 제품은 Linux 실행, `linux/amd64` 빌드, 포트 접근과 ACR 게시까지 직접 확인한 경우에만 조건부로 사용합니다.
 
@@ -133,7 +133,7 @@ $env:AZD_CONTAINER_RUNTIME = 'podman'
 ./scripts/download-sample.ps1 -Track dotnet -ContainerEngine podman
 ```
 
-설치 도우미는 누락된 도구가 있을 때만 필요한 항목을 직접 승인해 실행합니다. 다운로드는 점검을 통과한 뒤 한 번만 수행합니다.
+설치 스크립트는 누락된 도구가 있을 때만 필요한 항목을 직접 승인해 실행합니다. 다운로드는 점검을 통과한 뒤 한 번만 수행합니다.
 
 앱 루트에서 인프라를 준비하거나 배포할 때도 프롬프트의 Docker 엔진 요구를 Podman으로 바꾸고 `$env:AZD_CONTAINER_RUNTIME = 'podman'`을 유지합니다. 문서의 컨테이너 명령은 `docker` 대신 `podman`으로 실행하되 Dockerfile, `remoteBuild: false`와 로컬 빌드 원칙은 유지합니다. Docker의 `docker buildx`와 Podman의 내장 `podman build`는 구분해야 하며, Podman에는 Docker Buildx가 필요하지 않습니다. `azd`는 1.37.3 이상을 사용합니다.
 

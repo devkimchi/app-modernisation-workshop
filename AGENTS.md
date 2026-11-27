@@ -16,7 +16,7 @@
 ├── snapshots
 │   ├── java               # Java 트랙의 단계별 결과 스냅샷
 │   └── dotnet             # .NET 트랙의 단계별 결과 스냅샷
-├── scripts                # 사전 점검, 설치, 샘플 다운로드와 원본 실행 도우미
+├── scripts                # 사전 점검, 설치, 샘플 다운로드와 원본 실행 스크립트
 ├── tests                  # 격리된 입력과 가짜 명령 응답을 사용하는 회귀 테스트
 └── .github
     └── workflows
@@ -57,10 +57,10 @@ README는 참가자 안내에 집중하고, 유지보수와 개발자용 테스�
 - `.sh`는 Bash 3.2(macOS 기본)와 Bash 5에서 동일하게 동작해야 합니다. 외부 명령은 BSD와 GNU 모두에서 지원하는 옵션만 사용하세요. `use-java.sh`는 Bash와 Zsh에서 source할 수 있어야 합니다.
 - 참가자 문서는 스크립트를 직접 실행하는 형식으로 쓰세요. 직접 실행하는 `.sh`는 Git 모드 `100755`와 `#!/usr/bin/env bash`를, source 전용 `.sh`는 `100644`를 유지하세요. 복사할 Bash/Zsh 명령 블록에는 주석 줄을 넣지 말고 glob 문자가 있는 인자는 따옴표로 감싸세요.
 - Windows 실행 정책은 현재 창의 `Process` 범위 `RemoteSigned`만 안내하고 시스템과 사용자 범위는 바꾸지 마세요. 조직 정책으로 제한되면 관리자에게 문의하도록 안내하세요.
-- .NET Framework 원본의 빌드와 실행 환경은 Windows입니다. Visual Studio IDE 실행을 필수로 만들지 말고 기존 MSBuild/IIS Express 도우미를 활용하세요.
+- .NET Framework 원본의 빌드와 실행 환경은 Windows입니다. Visual Studio IDE 실행을 필수로 만들지 말고 기존 MSBuild/IIS Express 스크립트를 활용하세요.
 - 기존 옵션, 출력 상태(`PASS`, `FAIL`, `WARN`, `MANUAL`, `INFO`)와 종료 코드의 의미를 유지하세요. 오류를 숨기거나 성공으로 처리하지 마세요.
 - [.gitattributes](.gitattributes)에 따라 Markdown, Bash와 PowerShell 파일의 줄바꿈은 LF로 유지하세요.
-- `.ps1`은 Windows PowerShell 5.1 파서가 한국어를 올바르게 읽도록 UTF-8 BOM을 유지하세요. 진입점은 공통 `powershell-bootstrap.ps1`에서 Windows의 PowerShell 7을 검사하고 5.1에서는 7에 위임합니다. PowerShell 7이 없으면 본 작업 전에 종료하며, 설치 도우미만 항목별 동의를 받아 설치를 제안합니다.
+- `.ps1`은 Windows PowerShell 5.1 파서가 한국어를 올바르게 읽도록 UTF-8 BOM을 유지하세요. 진입점은 공통 `powershell-bootstrap.ps1`에서 Windows의 PowerShell 7을 검사하고 5.1에서는 7에 위임합니다. PowerShell 7이 없으면 본 작업 전에 종료하며, 설치 스크립트만 항목별 동의를 받아 설치를 제안합니다.
 - 함수를 정의하거나 변수를 설정할 때 호출자 셸에 반영해야 한다면 PowerShell 7에서 dot-sourcing하세요. Windows PowerShell 5.1에서는 명확한 오류를 표시하되 호출자 셸을 종료하지 마세요. 자식 프로세스에서 정의한 함수와 변수는 호출자 셸에 반영되지 않습니다. 공통 함수 파일을 dot-sourcing할 때는 본 작업이나 호스트 설치를 실행하지 마세요. 단, `use-java.ps1`은 현재 세션의 JDK를 선택하며 설치나 시스템 환경 변수 변경은 하지 않습니다.
 
 ## 6. 안전과 사용자 동의
